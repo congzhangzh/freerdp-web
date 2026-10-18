@@ -152,7 +152,7 @@ function updateRoute() {
   const m = /^(?:127\.0\.0\.1|localhost|\[::1\]):(\d{1,5})$/.exec($("host").value.trim());
   const port = m ? m[1] : "3390";
   $("hopGateway").textContent = $("direct").checked ? "none (direct TCP)" : $("host").value.trim() || "127.0.0.1:3390";
-  $("sshCmd").textContent = `ssh -t -L 127.0.0.1:${port}:127.0.0.1:3390 ${$("user").value.trim() || "user"}@server websockify 127.0.0.1:3390 127.0.0.1:3389`;
+  $("sshCmd").textContent = `ssh -tt -L 127.0.0.1:${port}:127.0.0.1:3390 ${$("user").value.trim() || "user"}@server websockify 127.0.0.1:3390 127.0.0.1:3389`;
 }
 $("host").addEventListener("input", updateRoute); $("user").addEventListener("input", updateRoute);
 $("copyCmd").onclick = () => navigator.clipboard.writeText($("sshCmd").textContent).then(

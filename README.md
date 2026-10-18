@@ -49,7 +49,7 @@ your computer needs nothing but ssh, which Windows 10/11, macOS and Linux
 include:
 
 ```sh
-ssh -t -L 127.0.0.1:3390:127.0.0.1:3390 user@server websockify 127.0.0.1:3390 127.0.0.1:3389
+ssh -tt -L 127.0.0.1:3390:127.0.0.1:3390 user@server websockify 127.0.0.1:3390 127.0.0.1:3389
 ```
 
 Then open the page and connect with the gateway `127.0.0.1:3390` (the
@@ -58,7 +58,8 @@ line matter:
 
 - `websockify 127.0.0.1:3390 …` listens on the server's loopback only;
   `websockify 3390 localhost:3389` would offer the bridge to the network.
-- `-t` gives websockify a terminal, so it ends when you disconnect;
+- `-tt` always gives websockify a terminal (even when ssh has none), so it gets
+  the hang-up signal and ends when the connection ends;
   without it, websockify keeps running on the server.
 
 When the page comes from a web site (for example GitHub Pages), Chrome asks

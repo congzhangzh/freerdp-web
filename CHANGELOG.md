@@ -6,6 +6,11 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 0.4.3
+
+- The SSH lines use `ssh -tt` (was `-t`): websockify always gets a terminal on the server, so it
+  stops when the connection ends, even when ssh was started without a terminal.
+
 ## 0.4.2
 
 - **The safety notice's SSH line** keeps the server side fixed (websockify on the server's

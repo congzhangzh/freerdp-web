@@ -5,7 +5,7 @@
 #
 # runs, in one ssh command:
 #
-#   ssh -t -L 127.0.0.1:3390:127.0.0.1:3390 user@server \
+#   ssh -tt -L 127.0.0.1:3390:127.0.0.1:3390 user@server \
 #       websockify 127.0.0.1:3390 127.0.0.1:3389
 #
 # so websockify runs on the server, next to the RDP server, and this side
@@ -14,7 +14,7 @@
 # 127.0.0.1:3390, its default gateway. Two details matter:
 #   - websockify listens on the server's 127.0.0.1 only; "websockify 3390
 #     localhost:3389" would offer the bridge to the whole network
-#   - -t gives it a terminal, so it ends with the connection (without it,
+#   - -tt gives it a terminal, so it ends with the connection (without it,
 #     websockify keeps running on the server after you disconnect)
 # The RDP server itself can then listen on 127.0.0.1 only too (for xrdp:
 # port=tcp://.:3389 in /etc/xrdp/xrdp.ini). The server needs websockify

@@ -53,14 +53,16 @@
   <h3>1. websockify installed on the server (recommended)</h3>
   <p>Install it once with the server's package manager (Debian and Ubuntu: <code>apt install websockify</code>;
     Fedora: <code>dnf install python3-websockify</code>). One line then starts the tunnel and the gateway:</p>
-  <div class="copyable"><pre>ssh -t -L 127.0.0.1:3390:127.0.0.1:3390 user@server websockify 127.0.0.1:3390 127.0.0.1:3389</pre><button class="small" data-copy>Copy</button></div>
-  <p><code>-t</code> gives websockify a terminal on the server, so it ends when the SSH connection ends; without it,
-    websockify keeps running there. From a script, where there is no terminal to give, use <code>-tt</code>.</p>
+  <div class="copyable"><pre>ssh -tt -L 127.0.0.1:3390:127.0.0.1:3390 user@server websockify 127.0.0.1:3390 127.0.0.1:3389</pre><button class="small" data-copy>Copy</button></div>
+  <p><code>-tt</code> always gives websockify a terminal on the server, even when ssh itself runs without one (from a
+    script or a shortcut). When the connection ends, the server closes that terminal and websockify gets the hang-up
+    signal and stops. Without a terminal it keeps running there. A connection that dies silently (the network gone)
+    is noticed by the server after its keepalive timeout, and then cleaned up the same way.</p>
 
   <h3>2. websockify through uvx, nothing to install</h3>
   <p>If the server has <a href="https://docs.astral.sh/uv/" target="_blank" rel="noopener">uv</a>, uvx downloads
     and caches websockify the first time:</p>
-  <div class="copyable"><pre>ssh -t -L 127.0.0.1:3390:127.0.0.1:3390 user@server uvx websockify 127.0.0.1:3390 127.0.0.1:3389</pre><button class="small" data-copy>Copy</button></div>
+  <div class="copyable"><pre>ssh -tt -L 127.0.0.1:3390:127.0.0.1:3390 user@server uvx websockify 127.0.0.1:3390 127.0.0.1:3389</pre><button class="small" data-copy>Copy</button></div>
 
   <h3>3. A gateway that already runs on the server</h3>
   <p>If websockify already listens on the server's 127.0.0.1:3390 (a service you set up), only forward the port:</p>
@@ -79,7 +81,7 @@
       shows <code>ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS</code>.</td></tr>
     <tr><td>The connection fails at once</td><td>Nothing listens on the gateway port, or the server's RDP port is not
       3389. The page's Log (under the form) shows the stage that failed.</td></tr>
-    <tr><td>websockify keeps running after the session</td><td>The tunnel was started without <code>-t</code>, or the
+    <tr><td>websockify keeps running after the session</td><td>The tunnel was started without <code>-tt</code>, or the
       network dropped before the server noticed. Log in and stop it (<code>pkill -f websockify</code>).</td></tr>
   </table>
 
