@@ -1,0 +1,12 @@
+# build output and caches (rebuilt by the scripts)
+cache/
+.chrome/
+dist/
+dist-test/
+dist-ubsan/
+# headless Chrome test profiles
+*.log
+out/
+
+# isolated integration build and compiler cache
+cache-vault/

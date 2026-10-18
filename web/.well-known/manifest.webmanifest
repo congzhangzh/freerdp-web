@@ -1,0 +1,42 @@
+{
+  "name": "FreeRDP Web",
+  "short_name": "FreeRDP",
+  "id": "/",
+  "start_url": "/",
+  "display": "standalone",
+  "version": "0.1.37",
+  "description": "FreeRDP SDL3 client compiled to WebAssembly",
+  "icons": [
+    {
+      "src": "/icon-256.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    }
+  ],
+  "permissions_policy": {
+    "cross-origin-isolated": [
+      "self"
+    ],
+    "direct-sockets": [
+      "self"
+    ],
+    "loopback-network": [
+      "self"
+    ],
+    "local-network": [
+      "self"
+    ],
+    "fullscreen": [
+      "self"
+    ],
+    "autoplay": [
+      "self"
+    ],
+    "clipboard-read": [
+      "self"
+    ],
+    "clipboard-write": [
+      "self"
+    ]
+  }
+}

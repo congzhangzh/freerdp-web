@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FreeRDP Web</title>
+<link rel="manifest" href="/.well-known/manifest.webmanifest">
+<style>
+  :root { --bg:#f5f5f3; --fg:#1c1c1a; --muted:#6b6b66; --line:#d8d8d2; --card:#fff; --accent:#2e6b8a; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#151514; --fg:#ececea; --muted:#9a9a94; --line:#34342f; --card:#1f1f1d; --accent:#6fb3d6; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui, sans-serif; }
+  header { display:flex; flex-wrap:wrap; gap:8px; align-items:end; padding:10px 16px; border-bottom:1px solid var(--line); background:var(--card); }
+  label { display:flex; flex-direction:column; font-size:12px; color:var(--muted); gap:2px; }
+  input { font:inherit; padding:5px 8px; border:1px solid var(--line); border-radius:6px; background:var(--bg); color:var(--fg); min-width:0; }
+  select { font:inherit; padding:5px 8px; background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:6px; }
+  #vaultControls { display:flex; flex-wrap:wrap; gap:8px; align-items:end; flex-basis:100%; }
+  #vaultStatus { font-size:12px; color:var(--muted); }
+  #extra { width:22em; }
+  button { font:inherit; padding:6px 14px; border:0; border-radius:6px; background:var(--accent); color:#fff; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  #status { color:var(--muted); font-size:12px; margin-left:auto; }
+  main { padding:12px 16px; }
+  /* the stylesheet sizes the canvas, so SDL treats its size as external and follows it:
+     with /dynamic-resolution the remote desktop then resizes with the window */
+  canvas { display:block; width:100%; height:calc(100vh - var(--hdr, 64px) - 24px); background:#000; outline:none; }
+  /* fullscreen session: only the remote desktop is visible (SDL sets inline sizes, hence !important) */
+  body.fs header { display:none; }   /* the log stays available as an overlay (toolbar: Log) */
+  /* during a session the toolbar has all controls: give the remote screen the whole window */
+  body.session header { display:none; }
+  body.session main { padding:8px 12px 0; }
+  body.fs main { padding:0; }
+  body.fs canvas { position:fixed; inset:0; width:100vw; height:100vh; }
+  /* session toolbar: top centre of the remote screen; in full screen it hides and comes back
+     when the mouse reaches the top edge */
+  #toolbar { position:fixed; top:var(--tbtop, 86px); left:50%; transform:translateX(-50%); z-index:10; display:none; gap:6px;
+             padding:5px 8px; border-radius:0 0 10px 10px; background:rgba(28,28,26,.82); box-shadow:0 2px 10px rgba(0,0,0,.3);
+             transition:opacity .2s, transform .2s; }
+  body.session #toolbar { display:flex; }
+  body.fs #toolbar { top:0; }
+  body.fs.tbhide:not(.tbpinned) #toolbar { opacity:0; transform:translate(-50%, -100%); pointer-events:none; }
+  #toolbar #tbPin { opacity:.55; } #toolbar #tbPin.on { opacity:1; background:var(--accent); }
+  #toolbar button { font-size:12px; padding:4px 10px; background:#3a3a37; color:#fff; }
+  #toolbar button:hover { background:var(--accent); }
+  /* connection info overlay, toggled from the toolbar */
+  #info { position:fixed; top:calc(var(--tbtop, 86px) + 44px); right:24px; z-index:10; min-width:260px; padding:8px 12px;
+          border-radius:8px; background:rgba(28,28,26,.85); color:#eee; font:12px/1.6 ui-monospace, Consolas, monospace; pointer-events:none; }
+  body.fs #info { top:44px; }
+  #info td:first-child { color:#9a9a94; padding-right:12px; }
+  #help { color:var(--accent); font-size:12px; }
+  details { margin-top:12px; }
+  /* during a session the log is an overlay at the bottom (toggled with the toolbar's Log button),
+     so it stays reachable even though the remote screen fills the page */
+  body.session details { position:fixed; left:12px; right:12px; bottom:0; margin:0; z-index:9; background:var(--card);
+                         border:1px solid var(--line); border-bottom:0; border-radius:8px 8px 0 0; padding:4px 8px; opacity:.95; }
+  body.session details pre { max-height:35vh; margin:4px 0; }
+  body.session details:not([open]) { display:none; }   /* only the toolbar's Log button shows it */
+  pre { max-height:40vh; overflow:auto; font-size:12px; background:var(--card); border:1px solid var(--line); border-radius:6px; padding:8px; }
+  /* notice about the saved log of a session that ended unexpectedly (hidden during a session) */
+  #lastlog { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px; padding:6px 10px; font-size:13px;
+             border:1px solid var(--line); border-left:4px solid #c0392b; border-radius:6px; background:var(--card); }
+  #lastlog[hidden], body.session #lastlog { display:none; }
+  #lastlog button { font-size:12px; padding:3px 10px; }
+  /* standing safety notice: who this is from, and what the user must take care of */
+  #safety { flex-basis:100%; margin:0; padding:4px 10px; font-size:12px; color:var(--muted);
+            border:1px solid var(--line); border-left:4px solid #d4a017; border-radius:6px; background:var(--card); }
+  #safety a { color:var(--accent); }
+  body.session #safety { display:none; }
+</style>
+</head>
+<body>
+<header>
+  <div id="vaultControls" aria-label="Saved hosts">
+    <label>Saved host<select id="vaultHosts" disabled><option value="">Manual connection</option></select></label>
+    <button id="vaultCreate" type="button" disabled>Create vault</button>
+    <button id="vaultUnlock" type="button" disabled>Unlock with passkey</button>
+    <button id="vaultLock" type="button" disabled>Lock</button>
+    <button id="vaultNew" type="button" disabled>New host</button>
+    <label>Saved name<input id="vaultName" size="14" autocomplete="off" disabled></label>
+    <button id="vaultSave" type="button" disabled>Save host</button>
+    <button id="vaultDelete" type="button" disabled>Delete host</button>
+    <span id="vaultStatus" role="status" aria-live="polite">Checking local vault…</span>
+  </div>
+  <label id="hostLabel">Gateway (host:port)<input id="host" placeholder="127.0.0.1:6080" size="18" list="recentHosts" autocomplete="off"><datalist id="recentHosts"></datalist></label>
+  <label>User<input id="user" size="12"></label>
+  <label>Password<input id="pass" type="password" size="12" autocomplete="current-password"></label>
+  <label>Extra options<input id="extra" placeholder="/gfx:AV1:i444"></label>
+  <label id="directLabel" style="flex-direction:row;align-items:center;gap:4px"><input id="direct" type="checkbox">Direct TCP (IWA)</label>
+  <label style="flex-direction:row;align-items:center;gap:4px" title="FreeRDP hotkey: Right Shift + Enter"><input id="fs" type="checkbox">Full screen</label>
+  <button id="go" disabled>Loading…</button>
+  <span id="status"></span>
+  <a id="help" href="install.html">Install as app</a>
+  <p id="safety" role="note">A hobby project, not written by security professionals: keeping your
+    servers safe is up to you. Never put RDP on the internet; reach it through SSH, in one step with
+    <code>rdp-gateway.sh user@server</code>, and stop the gateway after the session.
+    <a href="https://github.com/congzhangzh/freerdp-web#safety" target="_blank" rel="noopener">How and why</a></p>
+</header>
+<div id="toolbar" role="toolbar" aria-label="Session">
+  <button id="tbPin" aria-label="Pin toolbar">📌</button>
+  <button id="tbFs" title="Right Shift + Enter">Full screen</button>
+  <button id="tbInfo">Info</button>
+  <button id="tbLog">Log</button>
+  <button id="tbQuit">Disconnect</button>
+</div>
+<div id="info" hidden><table id="infoTable"></table></div>
+<main>
+  <div id="lastlog" role="alert" hidden><span id="lastlogText"></span>
+    <button id="lastlogCopy">Copy log</button> <button id="lastlogShow">Show</button> <button id="lastlogDismiss">Dismiss</button></div>
+  <canvas id="canvas" tabindex="-1"></canvas>
+  <details><summary>Log</summary><pre id="log"></pre></details>
+</main>
+<script src="tt-policy.js"></script>
+<script src="tcp-shim.js"></script>
+<script src="vault.js"></script>
+<script src="vault-ui.js"></script>
+<script src="app.js"></script>
+<script src="sdl-freerdp.js"></script>
+</body>
+</html>

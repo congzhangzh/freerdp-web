@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install FreeRDP Web</title>
+<style>
+  :root { --bg:#f5f5f3; --fg:#1c1c1a; --muted:#6b6b66; --line:#d8d8d2; --card:#fff; --accent:#2e6b8a; --ok:#1f7a3a; --warn:#8a5a00; --code:#efefeb; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#151514; --fg:#ececea; --muted:#9a9a94; --line:#34342f; --card:#1f1f1d; --accent:#6fb3d6; --ok:#5cc17a; --warn:#e0b04a; --code:#262624; } }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.6 system-ui, sans-serif; }
+  main { max-width:760px; margin:0 auto; padding:28px 16px 64px; }
+  h1 { font-size:24px; margin:0 0 4px; } h2 { font-size:17px; margin:28px 0 8px; }
+  p.lead { color:var(--muted); margin:0 0 20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin:12px 0; }
+  ol { padding-left:20px; } li { margin:6px 0; }
+  code, .addr { font-family:ui-monospace, SFMono-Regular, Consolas, monospace; font-size:13px; background:var(--code); border-radius:5px; padding:1px 6px; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:6px 0; }
+  .addr { padding:5px 8px; word-break:break-all; }
+  button { font:inherit; font-size:13px; padding:4px 12px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--fg); cursor:pointer; }
+  table { border-collapse:collapse; width:100%; } td { padding:5px 4px; border-bottom:1px solid var(--line); vertical-align:top; }
+  td.s { width:9em; font-weight:600; } .ok { color:var(--ok); } .warn { color:var(--warn); }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Install FreeRDP Web as an app</h1>
+  <p class="lead">Installed as an <b>Isolated Web App</b> (IWA), FreeRDP connects to your RDP server with a direct TCP connection: no gateway, no plugin. As a normal web page it works too, but needs a WebSocket gateway.</p>
+
+  <div class="card">
+    <b>Your browser right now</b>
+    <table id="checks"></table>
+  </div>
+
+  <h2>1. Use Chrome or Edge on Windows, macOS, Linux or ChromeOS</h2>
+  <p>Isolated Web Apps are a Chromium feature. Firefox and Safari can use the web version through a gateway, but not the app.</p>
+
+  <h2>2. Turn on Isolated Web Apps (one time)</h2>
+  <p>Copy each address into the address bar, set the option to <b>Enabled</b>, then click <b>Relaunch</b>. (Web pages are not allowed to open <code>chrome://</code> links themselves.)</p>
+  <div class="row"><span class="addr">chrome://flags/#enable-isolated-web-apps</span><button data-copy="chrome://flags/#enable-isolated-web-apps">Copy</button></div>
+  <div class="row"><span class="addr">chrome://flags/#enable-isolated-web-app-dev-mode</span><button data-copy="chrome://flags/#enable-isolated-web-app-dev-mode">Copy</button></div>
+  <p class="warn">Developer mode lets Chrome install unsigned apps from a URL. Only install apps from servers you trust; you can turn the flags off again afterwards (installed apps keep working until you remove them).</p>
+
+  <h2>3. Install the app</h2>
+  <ol>
+    <li>Open <span class="addr">chrome://web-app-internals</span> <button data-copy="chrome://web-app-internals">Copy</button></li>
+    <li>Under <b>Isolated Web Apps</b>, find <b>Install IWA via Dev Mode Proxy</b> and enter this address:
+      <div class="row"><span class="addr" id="origin"></span><button id="copyOrigin">Copy</button></div></li>
+    <li>Click <b>Install</b>. Chrome adds <b>FreeRDP Web</b> to the Start menu / Launchpad / app list and, on Windows, to the desktop.</li>
+  </ol>
+  <p>Updating: when this site changes, open <code>chrome://web-app-internals</code> again and click <b>Update</b> next to FreeRDP Web.</p>
+
+  <h2>4. Connect</h2>
+  <ol>
+    <li>Start <b>FreeRDP Web</b> from the desktop or Start menu, <i>not</i> from a browser tab. The first field then reads <b>RDP server</b> and <b>Direct TCP (IWA)</b> is ticked.</li>
+    <li>Enter the RDP server as <code>host:port</code> (usually port 3389), your user name and password. The password is never stored.</li>
+    <li>Optional: tick <b>Full screen</b>. Hold <b>Esc</b> to leave full screen.</li>
+  </ol>
+
+  <h2>Good to know</h2>
+  <ul>
+    <li><b>Servers on your own PC or LAN</b> (<code>localhost</code>, <code>192.168.x.x</code>) need extra permissions, which the app requests in its manifest; Chrome may ask you to allow them.</li>
+    <li><b>Without developer mode</b>, Chrome on Windows, macOS and Linux only installs IWAs pushed by an administrator through enterprise policy (from an allowlist since Chrome 143). On ChromeOS IWAs are fully supported.</li>
+    <li>The web version (no install) is at <a href="index.html">index.html</a> and needs a WebSocket-to-TCP gateway such as <code>websockify</code> next to the RDP server.</li>
+  </ul>
+  <p><a href="index.html">← Back to FreeRDP Web</a></p>
+</main>
+<script src="install.js"></script>
+</body>
+</html>

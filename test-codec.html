@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>FreeRDP codec tests</title></head>
+<body>
+<pre id="out"></pre>
+<script>
+// Runs one FreeRDP codec unit test in the browser (?test=Name); window.__done holds the exit code.
+const outEl = document.getElementById("out");
+const test = new URLSearchParams(location.search).get("test") || "TestFreeRDPCodecAV1";
+var Module = {
+  print: (t) => { outEl.textContent += t + "\n"; console.log(t); },
+  printErr: (t) => { outEl.textContent += t + "\n"; console.log(t); },
+  onRuntimeInitialized() { console.log("[test] running " + test); Module.callMain([test]); },
+  onExit(code) { console.log("[test] exit " + code); window.__done = code; },
+};
+</script>
+<script src="TestFreeRDPCodec.js"></script>
+</body></html>
