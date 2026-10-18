@@ -9,11 +9,12 @@ On this repository's own GitHub Pages, built and published by
 
     https://congzhangzh.github.io/freerdp-web/
 
-The owner's user site has a custom domain, and GitHub then serves every project site of the
-account under it: that address answers with a redirect to the same path on that domain.
-The site was published from rdp-release-kit before (`…/rdp-release-kit/`); that address now
-redirects here. Both are on the same origin, so the browser's saved hosts, passwords and
-passkey vault are still there after the move.
+That is the site's own address: the account's user site has no custom domain (one set there
+would move every project site of the account under it, with a redirect). The site was
+published from rdp-release-kit before (`…/rdp-release-kit/`); that address now redirects here,
+on the same origin, so the browser's saved hosts, passwords and passkey vault come along.
+Browser data saved while the account still had a custom domain belongs to that domain's
+origin and does not appear here; export it there first if needed.
 
 GitHub Pages serves static files only: the page, the WebAssembly client and the demo videos.
 It never sees a session; the browser connects to a gateway the user starts (normally through
