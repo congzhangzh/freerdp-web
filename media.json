@@ -1,0 +1,24 @@
+{
+  "repository": "congzhangzh/freerdp-web",
+  "release": "demo-media-1",
+  "files": {
+    "demo-xfce.mp4": "e86ccc17ec7b2cc782ef73232fe1b88f44edde58a8fbf3b6afcb661fba02f0b7",
+    "demo-xfce.jpg": "f089c197bc8cfb9643149d0628c0df1d3083466026dce998d60da5cfb96aee1a",
+    "demo-gnome.mp4": "6c2691b3d90d849f756aed892eba40c8bbdcaa8887b8ed5e43d0712a24242fc9",
+    "demo-gnome.jpg": "a3f2db9b123740de75a38a3bdd137ce8e76c141feba6d825ea6dacc66131360b"
+  },
+  "videos": [
+    {
+      "title": "xrdp + Xfce",
+      "src": "demo/demo-xfce.mp4",
+      "poster": "demo/demo-xfce.jpg",
+      "caption": "xrdp 0.10.6 with Xfce on Debian 13, reached over SSH and websockify: the page, a session, typing, then Firefox on the server with web video and WebGL, with sound. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD."
+    },
+    {
+      "title": "gnome-remote-desktop + GNOME Wayland",
+      "src": "demo/demo-gnome.mp4",
+      "poster": "demo/demo-gnome.jpg",
+      "caption": "gnome-remote-desktop 48 with GNOME Shell on Wayland, headless, on Debian 13: the same visit, with GNOME Console started from the search. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD."
+    }
+  ]
+}

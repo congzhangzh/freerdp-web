@@ -11,6 +11,9 @@ through a WebSocket gateway, [websockify](https://github.com/novnc/websockify).
 
 ## The page
 
+It runs at **https://congzhangzh.github.io/freerdp-web/**, published from this repository
+only on purpose (a `v*` tag, or *Run workflow* with **publish**): [docs/hosting.md](docs/hosting.md).
+
 Open it, enter the gateway, user and password, and connect: the browser's password
 manager keeps the password. The bar above the form keeps your hosts, each with its own
 settings, and exports or imports them as a file (passwords only if you ask, encrypted with

@@ -4,42 +4,47 @@ Decided on 2026-10-18. See [Web UI design](webui-design.md) for the page itself.
 
 ## Where the page lives
 
-GitHub Pages serves the page for free from a public repository: HTML, JavaScript and the
-WASM client, nothing else. It does not run websockify, SSH or an RDP server and never
-sees a session; the browser connects to a gateway the user starts (normally through an
-SSH tunnel), or, in the installed app, to the RDP server directly.
+On this repository's own GitHub Pages, built and published by
+[`.github/workflows/pages.yml`](../.github/workflows/pages.yml):
 
-| Repository | Owns |
+    https://congzhangzh.github.io/freerdp-web/
+
+The owner's user site has a custom domain, and GitHub then serves every project site of the
+account under it: that address answers with a redirect to the same path on that domain.
+The site was published from rdp-release-kit before (`…/rdp-release-kit/`); that address now
+redirects here. Both are on the same origin, so the browser's saved hosts, passwords and
+passkey vault are still there after the move.
+
+GitHub Pages serves static files only: the page, the WebAssembly client and the demo videos.
+It never sees a session; the browser connects to a gateway the user starts (normally through
+an SSH tunnel), or, in the installed app, to the RDP server directly.
+
+## How the site is built
+
+| Step | What |
 |---|---|
-| freerdp-web (this one) | the page: `web/`, its help pages, design notes |
-| [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit) | the pinned build (FreeRDP + this page at a commit in `sources.lock`), the browser login test, and the GitHub Pages deployment |
+| the client | the release kit at the commit in [`kit.lock`](../kit.lock) builds FreeRDP for WebAssembly with this page (`PAGE_SRC`, `PAGE_REV`: the `MANIFEST` names this commit) |
+| the demo videos | [`fetch-media.sh`](../fetch-media.sh) downloads them from the `demo-media-1` release, checks their SHA-256 ([`media.json`](../media.json)); not in git |
+| tests | `test-page.mjs` (the page with the client, no server) and the kit's login test: xrdp in a throwaway container, over SSH and websockify |
+| publication | only on purpose, see below; then the `check` job logs in from the published page |
 
-The site is published from the release kit, because that is where the page and the WASM
-client are built and tested together. A page is never combined with a client it was not
-tested with.
-
-The address follows the GitHub owner: `https://<owner>.github.io/<repository>/`. A
-`freerdp-web.github.io` address would need a GitHub organization named `freerdp-web`;
-none is assumed.
+A page is never published with a client it was not tested with: both come from the same run.
 
 ## Publishing is a decision, never a side effect
 
-A push to main builds and tests the page, and does not publish it. The site changes only:
+A push to main or a pull request builds and tests the page, and does not publish it. The site
+changes only:
 
-1. **by version**: pushing a `v*` tag of the release kit publishes the tested page of that
-   tag, together with the release; or
-2. **by hand**: *Run workflow* in the release kit's Actions tab with **publish** ticked
-   publishes the tested page of the chosen branch or tag (for example to republish an
-   older tag as a rollback).
+1. **by version**: pushing a `v*` tag publishes that tag's tested page; or
+2. **by hand**: *Run workflow* with **publish** ticked publishes the tested page of the chosen
+   branch or tag (for example an older tag, to roll back).
 
-After each publication the kit's `pages-check` job logs in from the published site, as a
-user would. GitHub's `github-pages` environment must allow the tag pattern `v*` as well
-as `main`, or the tag deployment is refused.
+GitHub's `github-pages` environment allows `main` and the tag pattern `v*`.
 
 ## Paths, caching and updates
 
 - The page uses relative paths only, so it works under a project path such as
-  `/rdp-release-kit/` as well as at a site root. The IWA manifest keeps its root-relative
+  `/freerdp-web/` as well as at a site root. The IWA manifest keeps its root-relative
   `id` and `start_url`, which the installed app needs.
 - GitHub Pages cannot send COOP/COEP headers; `coi-serviceworker.js` adds them so the
   client's threads work. It caches nothing.

@@ -6,6 +6,16 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 0.4.0
+
+- **A splash on the first visit**: two one-minute demos, xrdp + Xfce and gnome-remote-desktop
+  + GNOME Wayland, with web video, WebGL and sound on the remote desktop. Skip closes it;
+  the header's *Demo* shows it again. The videos are downloaded only when played.
+- **Theme**: System, Light or Dark, in the header of every page, remembered.
+- **A new home**: the site is published from this repository's own Pages
+  (`congzhangzh.github.io/freerdp-web/`); the old address redirects here, and your saved
+  hosts come along (same origin).
+
 ## 0.3.0
 
 - **Hosts.** A bar under the safety notice lists your hosts; the form, Session settings
