@@ -4,7 +4,7 @@
   "id": "/",
   "start_url": "/",
   "display": "standalone",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "FreeRDP SDL3 client compiled to WebAssembly",
   "icons": [
     {

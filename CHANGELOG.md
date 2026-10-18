@@ -6,6 +6,13 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 0.4.4
+
+- `web/release-notes.html`: release notes for users (what changed for them, plainly), linked
+  before the theme switch on every page. This file stays the developer view.
+- The header's items (▶ Intro, links, theme select) share one style: same height, padding,
+  colour; a frame on hover; the current page highlighted; the select with a caret, no box.
+
 ## 0.4.3
 
 - The SSH lines use `ssh -tt` (was `-t`): websockify always gets a terminal on the server, so it

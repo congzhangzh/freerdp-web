@@ -82,7 +82,7 @@ await send("Runtime.enable"); await send("Page.enable");
 
 // phone width first: the form must not scroll sideways
 await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
-for (const page of ["index.html", "safety.html", "keyboard.html", "install.html"]) {
+for (const page of ["index.html", "safety.html", "keyboard.html", "install.html", "release-notes.html"]) {
   await send("Page.navigate", { url: `${ORIGIN}/${page}` }); await sleep(1000);
   const w = await ev("document.documentElement.scrollWidth");
   check(`${page} fits 390 px`, w <= 390, `${w} px`);

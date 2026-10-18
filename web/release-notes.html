@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Release notes · FreeRDP Web</title>
+<link rel="stylesheet" href="ui.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<main class="help">
+  <header class="top">
+    <a href="index.html"><b>FreeRDP Web</b></a>
+    <nav aria-label="Help">
+      <a href="safety.html">Safety and tunnels</a>
+      <a href="keyboard.html">Keyboard</a>
+      <a href="install.html">Install as app</a>
+      <a href="release-notes.html" aria-current="page">Release notes</a>
+      <label><span class="sr-only">Theme</span><select id="theme" aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+    </nav>
+  </header>
+  <h1>Release notes</h1>
+  <p class="lead">What changed for you, newest first. The version you are running is shown in a session's
+    <b>Info</b> panel, on the <b>Client</b> line. A new version arrives the next time you load the page; a session
+    that is already open keeps going.</p>
+
+  <h2>0.4.4 <span class="muted">· 18 October 2026</span></h2>
+  <ul>
+    <li>This page: what changed for you in each version, linked at the top of every page.</li>
+    <li>The header's items (▶ Intro, the help pages, Release notes, the theme) share one style.</li>
+  </ul>
+
+  <h2>0.4.3 <span class="muted">· 18 October 2026</span></h2>
+  <ul>
+    <li>The SSH line in the safety notice and on <a href="safety.html">Safety and tunnels</a> now starts with
+      <code>ssh -tt</code>. The gateway on your server then stops by itself when you close the tunnel, even if
+      you started ssh from a script or a shortcut.</li>
+  </ul>
+
+  <h2>0.4.2 <span class="muted">· 18 October 2026</span></h2>
+  <ul>
+    <li>The SSH line now sends your local gateway port to the server's port 3390, where websockify runs next to
+      RDP. If you use another port on your computer, copy the line again.</li>
+    <li>If you never changed a host's gateway, it moves from 127.0.0.1:6080 to the new default 127.0.0.1:3390 by
+      itself. Gateways you typed yourself stay as they are.</li>
+    <li><b>▶ Intro</b> in the header shows the demo videos again.</li>
+  </ul>
+
+  <h2>0.4.1 <span class="muted">· 18 October 2026</span></h2>
+  <ul>
+    <li>The default gateway is 127.0.0.1:3390, next to RDP's 3389, in the page, the help and
+      <code>rdp-gateway.sh</code>.</li>
+  </ul>
+
+  <h2>0.4.0 <span class="muted">· 18 October 2026</span></h2>
+  <ul>
+    <li><b>Two one-minute demos</b> on your first visit: Xfce through xrdp, and GNOME on Wayland through
+      gnome-remote-desktop, with web video, WebGL and sound on the remote desktop. Skip them if you like; they
+      download only when they play.</li>
+    <li><b>Theme</b>: System, Light or Dark, at the top of every page.</li>
+    <li><b>A new address</b>: <a href="https://congzhangzh.github.io/freerdp-web/">congzhangzh.github.io/freerdp-web</a>.
+      The old one forwards here.</li>
+  </ul>
+
+  <h2>0.3.0 <span class="muted">· 18 October 2026</span></h2>
+  <ul>
+    <li><b>Hosts</b>: keep several servers in the bar under the safety notice. Each remembers its gateway, user,
+      session settings and advanced options; the form edits the selected one as you type. Your earlier settings
+      became the first host.</li>
+    <li><b>The passkey vault, per host</b> (Advanced): keep a host's password encrypted in this browser and unlock it
+      with a passkey when you connect. Otherwise your browser's password manager keeps it.</li>
+    <li><b>Export and import</b> your hosts as a file to move them to another browser, with the vault's passwords
+      only if you tick it, and encrypted with a passphrase if you tick that.</li>
+  </ul>
+
+  <h2>0.2.0 <span class="muted">· 18 October 2026</span></h2>
+  <ul>
+    <li><b>A simpler start</b>: gateway, user, password, Connect. The browser's password manager offers to save
+      the password.</li>
+    <li><b>The route at the top</b>: how the page reaches your desktop, with the one SSH line that sets it up.</li>
+    <li><b>Session settings</b>: sound, clipboard, full screen, the video codec, and a priority: save bandwidth,
+      or reduce the server's load.</li>
+    <li><b>Advanced</b>: Direct TCP in the installed app, the passkey vault, extra FreeRDP options.</li>
+    <li><b>Keyboard</b>: Windows Remote Desktop (mstsc) shortcuts if your hands know those:
+      <a href="keyboard.html">Keyboard</a>.</li>
+    <li>The remote desktop now fills the window; before, it was drawn at 800 × 600.</li>
+  </ul>
+
+  <h2>0.1 <span class="muted">· October 2026</span></h2>
+  <ul>
+    <li>The first version: FreeRDP's client in your browser through a WebSocket gateway, or with Direct TCP in the
+      installed app; clipboard text and images, full screen with the keyboard captured, sound, the session toolbar
+      and Info panel, and a saved log when a session ends unexpectedly.</li>
+  </ul>
+
+  <p class="muted">For developers: the detailed changes are in
+    <a href="https://github.com/congzhangzh/freerdp-web/blob/main/CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md</a>.</p>
+  <p><a href="index.html">Back to FreeRDP Web</a></p>
+</main>
+</body>
+</html>

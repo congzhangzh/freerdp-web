@@ -39,12 +39,16 @@ input:disabled, select:disabled { opacity:.55; }
 .shell { max-width:620px; margin:0 auto; padding:28px 16px 48px; }
 .top { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:6px 16px; margin-bottom:18px; }
 .top h1 { margin:0; font-size:22px; letter-spacing:-.2px; }
-.top nav { display:flex; flex-wrap:wrap; gap:4px 14px; font-size:13px; }
-.top nav a { color:var(--muted); text-decoration:none; }
-.top nav a:hover, .top nav a[aria-current=page] { color:var(--signal); }
-.top nav select { font-size:13px; padding:1px 4px; border:1px solid var(--line); border-radius:5px; background:var(--panel); color:var(--muted); }
-.top nav button.link { padding:0; border:0; background:none; font-size:13px; color:var(--muted); }
-.top nav button.link:hover { color:var(--signal); }
+/* the header's items, one style: links, the Intro button and the theme select alike */
+.top nav { display:flex; flex-wrap:wrap; align-items:center; gap:2px 4px; font-size:13px; }
+.top nav a, .top nav button, .top nav select { box-sizing:border-box; height:28px; display:inline-flex; align-items:center;
+  padding:0 10px; font:inherit; font-size:13px; line-height:1; color:var(--muted); text-decoration:none;
+  background:transparent; border:1px solid transparent; border-radius:6px; cursor:pointer; }
+.top nav a:hover, .top nav button:hover, .top nav select:hover { color:var(--signal); border-color:var(--line); }
+.top nav a[aria-current=page] { color:var(--signal); background:var(--soft); }
+.top nav select { width:auto; appearance:none; -webkit-appearance:none; padding-right:22px;
+  background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E") no-repeat right 8px center; }
+.top nav select option { color:var(--ink); background:var(--panel); }
 
 /* the route from this browser to the remote desktop, with the command that builds it */
 .route { margin:0 0 20px; padding:12px 14px; border:1px solid var(--line); border-left:4px solid var(--caution);
