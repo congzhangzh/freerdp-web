@@ -6,6 +6,14 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 0.4.2
+
+- **The safety notice's SSH line** keeps the server side fixed (websockify on the server's
+  3390, next to RDP on 3389); only the local end follows the Gateway field. With a gateway on
+  127.0.0.1:13390 it reads `ssh -t -L 127.0.0.1:13390:127.0.0.1:3390 … websockify 127.0.0.1:3390 127.0.0.1:3389`.
+- A saved host still on the old default gateway (127.0.0.1:6080) moves to 127.0.0.1:3390, once.
+- **▶ Intro** in the header shows the demo videos again.
+
 ## 0.4.1
 
 - **The gateway's default port is 3390**, next to RDP's 3389 (was 6080): the safety notice's

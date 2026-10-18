@@ -54,3 +54,13 @@ test("files that are not ours are refused", async () => {
   await assert.rejects(H.importText(JSON.stringify({format: "other", version: 1})), /not a FreeRDP Web hosts file/);
   await assert.rejects(H.importText(JSON.stringify({format: H.FORMAT, version: 1, hosts: [{name: "x", extra: "/p:y"}]})));
 });
+test("a host still on the old default gateway moves to 3390, once; others keep theirs", () => {
+  const st = memory({[H.KEY]: JSON.stringify({hosts: [{name: "A", host: "127.0.0.1:6080"}, {name: "B", host: "127.0.0.1:13390"}]})});
+  const s = H.load(st);
+  assert.deepEqual(s.hosts.map(h => h.host), ["127.0.0.1:3390", "127.0.0.1:13390"]);
+  H.save(st, s);
+  s.hosts[0].host = "127.0.0.1:6080"; H.save(st, s);   // chosen again after the move: kept
+  assert.equal(H.load(st).hosts[0].host, "127.0.0.1:6080");
+  const old = H.load(memory({"freerdp-web-settings": JSON.stringify({host: "127.0.0.1:6080"})}));
+  assert.equal(old.hosts[0].host, "127.0.0.1:3390");
+});

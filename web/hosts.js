@@ -10,13 +10,16 @@
   const KEY = "freerdp-web-hosts", OLD_KEY = "freerdp-web-settings";
   const FORMAT = "freerdp-web-hosts", PBKDF2_ITERATIONS = 600000;
   const OLD_DEFAULT_EXTRA = "/gfx:AV1:i444";
+  // the gateway's default before 0.4.1; a host still on it moves to the new one (state version 2)
+  const OLD_DEFAULT_GATEWAY = "127.0.0.1:6080", DEFAULT_GATEWAY = "127.0.0.1:3390";
+  const VERSION = 2;
   const enc = new TextEncoder(), dec = new TextDecoder();
   const b64 = (bytes) => btoa(String.fromCharCode(...new Uint8Array(bytes)));
   const unb64 = (text) => Uint8Array.from(atob(text), (c) => c.charCodeAt(0));
   const str = (v, d = "") => (typeof v === "string" ? v : d);
 
   function blank(name = "My server") {
-    return { id: crypto.randomUUID(), name, host: "127.0.0.1:3390", directHost: "", direct: false, user: "",
+    return { id: crypto.randomUUID(), name, host: DEFAULT_GATEWAY, directHost: "", direct: false, user: "",
       session: { ...Options.DEFAULTS }, extra: "", fullscreen: false, vault: false, vaultSaved: false };
   }
   // a host from storage or a file: known fields only, of the right types; no password
@@ -34,6 +37,7 @@
     const h = blank();
     if (old && typeof old === "object") {
       h.host = str(old.host, h.host); h.directHost = str(old.directHost); h.user = str(old.user);
+      if (h.host === OLD_DEFAULT_GATEWAY) h.host = DEFAULT_GATEWAY;
       h.direct = old.direct === true; h.fullscreen = old.fullscreen === true;
       h.session = Options.normalize(old.session);
       const extra = str(old.extra).trim();
@@ -48,6 +52,7 @@
     if (state && Array.isArray(state.hosts)) {
       const hosts = [];
       for (const h of state.hosts) { try { hosts.push(clean(h)); } catch (e) { /* skip a broken entry */ } }
+      if (!(state.version >= 2)) for (const h of hosts) if (h.host === OLD_DEFAULT_GATEWAY) h.host = DEFAULT_GATEWAY;
       if (hosts.length) return { selected: hosts.some((h) => h.id === state.selected) ? state.selected : hosts[0].id, hosts };
     }
     let old = null;
@@ -55,7 +60,7 @@
     return migrate(old);
   }
   function save(storage, state) {
-    try { storage.setItem(KEY, JSON.stringify({ selected: state.selected, hosts: state.hosts.map(clean) })); return true; }
+    try { storage.setItem(KEY, JSON.stringify({ version: VERSION, selected: state.selected, hosts: state.hosts.map(clean) })); return true; }
     catch (e) { return false; }
   }
   // a name not used yet: "Office", "Office 2", ...

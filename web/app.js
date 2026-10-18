@@ -146,12 +146,13 @@ $("extra").addEventListener("change", updateSessionText);
 $("advancedPanel").addEventListener("toggle", () => { uiPrefs.advancedOpen = $("advancedPanel").open; saveUiPrefs(); });
 window.addEventListener("storage", (e) => { if (e.key === FreeRDPKeyboard.KEY) setRadio("keys", FreeRDPKeyboard.get()); });
 
-// ---- the one-line SSH command of the safety notice follows the gateway's port
+// ---- the one-line SSH command of the safety notice: the local end follows the gateway's
+// port; on the server, websockify stays on 3390, next to RDP on 3389
 function updateRoute() {
   const m = /^(?:127\.0\.0\.1|localhost|\[::1\]):(\d{1,5})$/.exec($("host").value.trim());
   const port = m ? m[1] : "3390";
   $("hopGateway").textContent = $("direct").checked ? "none (direct TCP)" : $("host").value.trim() || "127.0.0.1:3390";
-  $("sshCmd").textContent = `ssh -t -L 127.0.0.1:${port}:127.0.0.1:${port} ${$("user").value.trim() || "user"}@server websockify 127.0.0.1:${port} 127.0.0.1:3389`;
+  $("sshCmd").textContent = `ssh -t -L 127.0.0.1:${port}:127.0.0.1:3390 ${$("user").value.trim() || "user"}@server websockify 127.0.0.1:3390 127.0.0.1:3389`;
 }
 $("host").addEventListener("input", updateRoute); $("user").addEventListener("input", updateRoute);
 $("copyCmd").onclick = () => navigator.clipboard.writeText($("sshCmd").textContent).then(
