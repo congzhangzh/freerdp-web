@@ -21,14 +21,17 @@ an SSH tunnel), or, in the installed app, to the RDP server directly.
 
 ## How the site is built
 
-| Step | What |
-|---|---|
-| the client | the release kit at the commit in [`kit.lock`](../kit.lock) builds FreeRDP for WebAssembly with this page (`PAGE_SRC`, `PAGE_REV`: the `MANIFEST` names this commit) |
-| the demo videos | [`fetch-media.sh`](../fetch-media.sh) downloads them from the `demo-media-1` release, checks their SHA-256 ([`media.json`](../media.json)); not in git |
-| tests | `test-page.mjs` (the page with the client, no server) and the kit's login test: xrdp in a throwaway container, over SSH and websockify |
-| publication | only on purpose, see below; then the `check` job logs in from the published page |
+The release kit ([rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit)) builds;
+this repository publishes. Nothing is compiled here.
 
-A page is never published with a client it was not tested with: both come from the same run.
+| Where | What |
+|---|---|
+| the kit, on each push | builds the WebAssembly client with the page commit pinned in its `sources.lock`, logs in from a browser to xrdp over SSH and websockify, and hands the tested client over as its pre-release `web-<commit>`, with the xrdp packages |
+| here, on each push or pull request | the page's unit tests (Node) |
+| here, on publication | downloads `web-<this commit>` (SHA-256 checked; its `MANIFEST` must name this commit), adds the demo videos ([`media.json`](../media.json), checked), runs `test-page.mjs` on exactly these files, deploys, then logs in from the published page with the kit's test and xrdp packages |
+
+So publishing a commit takes two steps: pin it in the kit's `sources.lock` (the kit builds and
+tests it), then publish it here. A commit the kit has not built cannot be published.
 
 ## Publishing is a decision, never a side effect
 

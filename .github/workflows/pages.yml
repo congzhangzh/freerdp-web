@@ -1,10 +1,12 @@
 name: pages
 
-# The page, built into the WebAssembly client with the release kit (kit.lock:
-# its pinned commit), tested in a browser (test-page.mjs, and a login to xrdp
-# over SSH and websockify), and published on this repository's GitHub Pages
-# only on purpose: a v* tag, or Run workflow with "publish". A push to main or
-# a pull request builds and tests only.
+# This repository's GitHub Pages. The release kit (rdp-release-kit) builds the
+# WebAssembly client with this page, tests it (a browser login to xrdp over
+# SSH and websockify) and hands it over as its pre-release web-<commit>; this
+# workflow builds nothing. A push or a pull request runs the page's own tests.
+# Publishing happens only on purpose, a v* tag or Run workflow with "publish":
+# the kit's tested client for this exact commit, with the demo videos, checked
+# with test-page.mjs, deployed, then a login from the published page.
 on:
   push:
     branches: [main]
@@ -13,81 +15,77 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Publish the tested page on GitHub Pages
+        description: Publish this commit's tested page on GitHub Pages
         type: boolean
         default: false
 
 permissions:
   contents: read
 
+env:
+  KIT: congzhangzh/rdp-release-kit
+
 jobs:
-  build:
+  test:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
-        with:
-          path: page
-
-      - name: The release kit, at the commit in kit.lock
-        run: |
-          sha=$(grep -v '^#' page/kit.lock | head -1)
-          git clone -q https://github.com/congzhangzh/rdp-release-kit.git kit
-          git -C kit -c advice.detachedHead=false checkout -q "$sha"
-
-      - name: Cache sources
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/rdp-release-kit/sources
-          key: sources-${{ hashFiles('kit/sources.lock') }}
-
-      - name: Build the client with this page
-        run: PAGE_SRC="$GITHUB_WORKSPACE/page" PAGE_REV="$GITHUB_SHA" kit/build-wasm.sh
-
-      - name: The splash's demo videos, pinned (media.json)
-        run: page/fetch-media.sh kit/dist/wasm/web
-
-      - name: xrdp for the login test
-        run: kit/build-xrdp.sh debian:13
-
-      # the test drivers use Node's WebSocket (Node 22+); the checks use uvx
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      # setup-uv publishes no vN alias any more: pinned by commit
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - name: Unit tests (vault, hosts, options, keyboard, the connection bridge)
+        run: node --test web/tests/*.test.cjs
 
-      - name: The page with the client, no server
-        run: node page/test-page.mjs kit/dist/wasm/web
+  site:
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish)
+    needs: [test]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
 
-      - name: Log in from the browser (xrdp in a container, over SSH)
-        run: kit/test/wasm-session.sh kit/dist/wasm/web page/rdp-gateway.sh
+      # the kit's pre-release for this commit: its tested client, checked
+      - name: The tested client from the release kit
+        run: |
+          tag=web-${GITHUB_SHA:0:12}
+          base=https://github.com/$KIT/releases/download/$tag
+          mkdir -p handoff site
+          if ! curl -fsSL -o handoff/freerdp-web-page.zip "$base/freerdp-web-page.zip"; then
+            echo "The kit has no tested client for $GITHUB_SHA ($tag): pin this commit in its sources.lock first." >&2
+            exit 1
+          fi
+          curl -fsSL -o handoff/freerdp-web-page.zip.sha256 "$base/freerdp-web-page.zip.sha256"
+          (cd handoff && sha256sum -c freerdp-web-page.zip.sha256)
+          unzip -q handoff/freerdp-web-page.zip -d site
+          grep -q "page: freerdp-web $GITHUB_SHA" site/MANIFEST || { echo "the client was built for another page:" >&2; head -3 site/MANIFEST >&2; exit 1; }
+          head -2 site/MANIFEST
+
+      - name: The splash's demo videos, pinned (media.json)
+        run: ./fetch-media.sh site
+
+      # the files going live, with the client: hosts, vault, settings, splash (no server)
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: The page with the client
+        run: node test-page.mjs site
 
       # .well-known/ holds the page's manifest (its version, the app's
       # identity); the action leaves out hidden directories unless asked
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: kit/dist/wasm/web
+          path: site
           include-hidden-files: true
 
-      - name: The xrdp packages, for the check of the published page
-        uses: actions/upload-artifact@v7
-        with:
-          name: xrdp-debian-13
-          path: kit/dist/xrdp/debian-13/
-
-      - name: Keep the tests' logs and screenshots
+      - name: Keep the test's screenshots and log
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test
-          path: |
-            kit/dist/test/
-            page/out/
+          name: test-page
+          path: out/
           if-no-files-found: ignore
 
   deploy:
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish)
-    needs: [build]
+    needs: [site]
     runs-on: ubuntu-24.04
     permissions:
       pages: write
@@ -105,7 +103,7 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
 
   # Logs in from the published page, as a user would (granting Chrome's local
-  # network permission), once this commit's page is being served
+  # network permission), with the kit's login test and the kit's xrdp packages
   check:
     needs: [deploy]
     runs-on: ubuntu-24.04
@@ -114,20 +112,23 @@ jobs:
         with:
           path: page
 
-      - name: The release kit, at the commit in kit.lock
+      - name: The kit's test, at the commit that built the client, and its xrdp packages
         run: |
-          sha=$(grep -v '^#' page/kit.lock | head -1)
-          git clone -q https://github.com/congzhangzh/rdp-release-kit.git kit
-          git -C kit -c advice.detachedHead=false checkout -q "$sha"
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: xrdp-debian-13
-          path: kit/dist/xrdp/debian-13
+          tag=web-${GITHUB_SHA:0:12}
+          base=https://github.com/$KIT/releases/download/$tag
+          kit=$(curl -fsSL "$base/KIT_COMMIT")
+          git clone -q "https://github.com/$KIT.git" kit
+          git -C kit -c advice.detachedHead=false checkout -q "$kit"
+          mkdir -p kit/dist/xrdp/debian-13
+          for name in $(curl -fsSL "https://api.github.com/repos/$KIT/releases/tags/$tag" | python3 -c 'import json,sys; print(" ".join(a["name"] for a in json.load(sys.stdin)["assets"] if a["name"].endswith(".deb")))'); do
+            curl -fsSL -o "kit/dist/xrdp/debian-13/$name" "$base/$name"
+          done
+          ls kit/dist/xrdp/debian-13
 
       - uses: actions/setup-node@v7
         with:
           node-version: 24
+      # setup-uv publishes no vN alias any more: pinned by commit
       - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
 
       # deploy-pages reports http://, the site redirects to https://

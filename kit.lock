@@ -1,4 +1,0 @@
-# The release kit (github.com/congzhangzh/rdp-release-kit) this page is built and
-# tested with: its pinned FreeRDP, the WebAssembly toolchain, the xrdp packages and
-# the browser login test. Bump it to build with a newer kit.
-49565f898f24193d4abd489cfe8a0fc54f57d973
