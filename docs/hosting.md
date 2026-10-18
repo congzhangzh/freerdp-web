@@ -28,10 +28,17 @@ this repository publishes. Nothing is compiled here.
 |---|---|
 | the kit, on each push | builds the WebAssembly client with the page commit pinned in its `sources.lock`, logs in from a browser to xrdp over SSH and websockify, and hands the tested client over as its pre-release `web-<commit>`, with the xrdp packages |
 | here, on each push or pull request | the page's unit tests (Node) |
-| here, on publication | downloads `web-<this commit>` (SHA-256 checked; its `MANIFEST` must name this commit), adds the demo videos ([`media.json`](../media.json), checked), runs `test-page.mjs` on exactly these files, deploys, then logs in from the published page with the kit's test and xrdp packages |
+| here, on publication | takes a tested client of the kit (below), lays this commit's page over it, adds the demo videos ([`media.json`](../media.json), checked), runs `test-page.mjs` on exactly these files, deploys, then logs in from the published page with that pre-release's kit test and xrdp packages |
 
-So publishing a commit takes two steps: pin it in the kit's `sources.lock` (the kit builds and
-tests it), then publish it here. A commit the kit has not built cannot be published.
+Which client:
+
+- **latest** (the default of a publication by hand): the kit's newest tested client, as
+  [`site.sh`](../site.sh) does locally. A page change needs no kit run: about five minutes from
+  *Run workflow* to the checked site. The `MANIFEST` names the client's pre-release and, on its
+  last line, this page commit.
+- **exact** (a `v*` tag, or chosen by hand): the client the kit built and tested with this very
+  commit (`web-<commit>`, SHA-256 checked; its `MANIFEST` must name the commit). Pin the commit in
+  the kit's `sources.lock` first; a commit the kit has not built cannot be published this way.
 
 ## Publishing is a decision, never a side effect
 

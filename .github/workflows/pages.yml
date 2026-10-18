@@ -5,8 +5,11 @@ name: pages
 # SSH and websockify) and hands it over as its pre-release web-<commit>; this
 # workflow builds nothing. A push or a pull request runs the page's own tests.
 # Publishing happens only on purpose, a v* tag or Run workflow with "publish":
-# the kit's tested client for this exact commit, with the demo videos, checked
-# with test-page.mjs, deployed, then a login from the published page.
+# a tested client of the kit, this commit's page and the demo videos, checked
+# with test-page.mjs, deployed, then a login from the published page. The
+# client: the kit's build of this exact commit (a v* tag, or "exact"), or the
+# kit's newest tested client with this commit's page laid over it ("latest",
+# the default by hand: a page change needs no kit run, as with site.sh).
 on:
   push:
     branches: [main]
@@ -15,9 +18,14 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Publish this commit's tested page on GitHub Pages
+        description: Publish this commit's page on GitHub Pages
         type: boolean
         default: false
+      client:
+        description: "The client: latest (the kit's newest tested one, fast) or exact (the kit's build of this commit)"
+        type: choice
+        options: [latest, exact]
+        default: latest
 
 permissions:
   contents: read
@@ -40,11 +48,19 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish)
     needs: [test]
     runs-on: ubuntu-24.04
+    outputs:
+      client: ${{ steps.client.outputs.tag }}
     steps:
       - uses: actions/checkout@v7
 
-      # the kit's pre-release for this commit: its tested client, checked
-      - name: The tested client from the release kit
+      # the kit's newest tested client, this commit's page over it, the videos (site.sh)
+      - name: The kit's newest tested client, with this commit's page
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') && inputs.client != 'exact' }}
+        run: SITE=site ./site.sh kit
+
+      # the kit's pre-release for this exact commit: its tested client, checked
+      - name: The kit's build of this exact commit
+        if: ${{ startsWith(github.ref, 'refs/tags/v') || inputs.client == 'exact' }}
         run: |
           tag=web-${GITHUB_SHA:0:12}
           base=https://github.com/$KIT/releases/download/$tag
@@ -57,10 +73,14 @@ jobs:
           (cd handoff && sha256sum -c freerdp-web-page.zip.sha256)
           unzip -q handoff/freerdp-web-page.zip -d site
           grep -q "page: freerdp-web $GITHUB_SHA" site/MANIFEST || { echo "the client was built for another page:" >&2; head -3 site/MANIFEST >&2; exit 1; }
-          head -2 site/MANIFEST
+          echo "$tag" > site/CLIENT
+          ./fetch-media.sh site
 
-      - name: The splash's demo videos, pinned (media.json)
-        run: ./fetch-media.sh site
+      - name: Which client
+        id: client
+        run: |
+          echo "tag=$(cat site/CLIENT)" >> "$GITHUB_OUTPUT"
+          sed -n '1,2p;/^page from/p' site/MANIFEST
 
       # the files going live, with the client: hosts, vault, settings, splash (no server)
       - uses: actions/setup-node@v7
@@ -105,7 +125,7 @@ jobs:
   # Logs in from the published page, as a user would (granting Chrome's local
   # network permission), with the kit's login test and the kit's xrdp packages
   check:
-    needs: [deploy]
+    needs: [site, deploy]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -113,8 +133,9 @@ jobs:
           path: page
 
       - name: The kit's test, at the commit that built the client, and its xrdp packages
+        env:
+          tag: ${{ needs.site.outputs.client }}
         run: |
-          tag=web-${GITHUB_SHA:0:12}
           base=https://github.com/$KIT/releases/download/$tag
           kit=$(curl -fsSL "$base/KIT_COMMIT")
           git clone -q "https://github.com/$KIT.git" kit

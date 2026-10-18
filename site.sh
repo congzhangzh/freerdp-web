@@ -43,6 +43,7 @@ print(next(r["tag_name"] for r in json.load(sys.stdin) if r["tag_name"].startswi
     rm -rf "${SITE:?}"; mkdir -p "$SITE"
     (cd "$SITE" && python3 -m zipfile -e "$dir/freerdp-web-page.zip" .)
     client="$tag ($(sed -n 's/^page: //p' "$SITE/MANIFEST"))"
+    echo "$tag" > "$SITE/CLIENT"   # which pre-release: the published site's check uses its kit and packages
     ;;
 *)
     [ -f "$FROM/sdl-freerdp.wasm" ] || { echo "no client in $FROM (sdl-freerdp.wasm)" >&2; exit 1; }
@@ -56,7 +57,8 @@ esac
 # this checkout's page over the client's
 cp -r "$HERE/web/." "$SITE/"
 rm -rf "$SITE/tests"
-rev=$(git -C "$HERE" describe --always --dirty 2> /dev/null || echo "?")
+rev=$(git -C "$HERE" rev-parse HEAD 2> /dev/null || echo "?")
+git -C "$HERE" diff --quiet HEAD 2> /dev/null || rev="$rev, with uncommitted changes"
 printf '\npage from site.sh: this checkout, %s\n' "$rev" >> "$SITE/MANIFEST"
 
 [ -n "${NO_MEDIA:-}" ] || "$HERE/fetch-media.sh" "$SITE" > /dev/null
