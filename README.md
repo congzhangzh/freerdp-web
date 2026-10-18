@@ -9,10 +9,22 @@ protected vault ([`web/VAULT.md`](web/VAULT.md)).
 A browser cannot open TCP connections, so the page talks to the RDP server
 through a WebSocket gateway, [websockify](https://github.com/novnc/websockify).
 
+## The page
+
+Open it, enter the gateway, user and password, and connect: the browser's password
+manager keeps the password. **Session settings** choose sound, clipboard, the video codec
+and a priority (save bandwidth, or reduce server load); **Advanced** holds Direct TCP for
+the installed app, the passkey vault and free-form FreeRDP options. The help pages
+(`safety.html`, `keyboard.html`, `install.html`) sit next to it.
+
+Why it looks and behaves this way: [docs/webui-design.md](docs/webui-design.md). Where it
+is published, and why only on purpose: [docs/hosting.md](docs/hosting.md).
+
 ## Safety
 
 This is a hobby project, not written by security professionals. Keeping
-your servers safe is up to you. What we recommend:
+your servers safe is up to you. The page's **Safety and tunnels** help
+([`web/safety.html`](web/safety.html)) has the details; in short:
 
 - **Never put RDP on the internet.** Let the RDP server listen on
   127.0.0.1 only (for xrdp: `port=tcp://.:3389` in `/etc/xrdp/xrdp.ini`)
@@ -76,4 +88,5 @@ WASM_DEPS=<dependency prefix> bash build-wasm-vault.sh <FreeRDP source dir>
 python3 serve.py 8180 dist
 ```
 
-`node --test web/tests/*.test.cjs` runs the vault's unit tests.
+`node --test web/tests/*.test.cjs` runs the unit tests (vault, connection bridge, session
+options, keyboard profiles).
