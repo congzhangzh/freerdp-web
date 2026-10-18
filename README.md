@@ -83,6 +83,23 @@ forward is enough: `ssh -N -L 127.0.0.1:6080:127.0.0.1:6080 user@server`.
 runs websockify on your computer (`pip install websockify`, or `uvx` from
 [uv](https://docs.astral.sh/uv/)).
 
+## Working on the page
+
+The page needs no build: `site.sh` lays this checkout's `web/` over a client someone already
+built, in a second or two.
+
+```sh
+./site.sh                                  # the release kit's newest tested client (cached)
+./site.sh kit:<page commit>                # the client the kit built for that page commit
+./site.sh ../rdp-release-kit/dist/wasm/web # a local build of the kit
+python3 serve.py 8180 dist/site            # then open http://localhost:8180
+node test-page.mjs dist/site               # or test it in Chrome
+```
+
+The kit's clients are its pre-releases `web-<page commit>`, each built and tested (a browser
+login to xrdp) before it is uploaded; `site.sh` checks their SHA-256 and keeps them in
+`~/.cache/freerdp-web`, with the splash's demo videos.
+
 ## Building
 
 `build-wasm-vault.sh` builds the WebAssembly client for the page:
