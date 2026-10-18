@@ -3,33 +3,48 @@
   "use strict";
   const $ = id => document.getElementById(id);
   const fields = ["host", "user", "pass", "extra", "direct", "vaultName"];
-  let vault, exists = false, busy = true, dirty = false, available = false;
+  let vault, exists = false, busy = true, dirty = false, available = false, enabled = false;
   const message = text => { $("vaultStatus").textContent = text; };
   function refresh(selected = $("vaultHosts").value) {
-    const unlocked = !!vault?.unlocked;
+    const unlocked = !!vault?.unlocked && enabled;
+    $("vaultPanel").hidden = !enabled;
     $("vaultHosts").replaceChildren(new Option("Manual connection", ""));
     if (unlocked) for (const h of vault.list()) $("vaultHosts").add(new Option(h.label, h.id));
     $("vaultHosts").value = selected;
     $("vaultHosts").disabled = busy || !unlocked;
     $("vaultCreate").hidden = exists;
     $("vaultUnlock").hidden = !exists || unlocked;
-    $("vaultCreate").disabled = busy || !available || exists;
-    $("vaultUnlock").disabled = busy || !available || !exists;
+    $("vaultCreate").disabled = busy || !available || !enabled || exists;
+    $("vaultUnlock").disabled = busy || !available || !enabled || !exists;
     for (const id of ["vaultLock", "vaultNew", "vaultSave", "vaultName"])
       $(id).disabled = busy || !unlocked;
     // Lock stays available during a pending prompt/encryption to cancel and clear memory.
     $("vaultLock").disabled = !available || (!busy && !unlocked);
     $("vaultDelete").disabled = busy || !unlocked || !$("vaultHosts").value;
   }
-  function clear() {
+  // blank: an empty form for a new host; otherwise the manual connection's remembered settings
+  function clear(blank) {
     for (const id of ["host", "user", "pass", "vaultName"]) $(id).value = "";
-    $("extra").value = "/gfx:AV1:i444";
+    $("extra").value = "";
     $("direct").checked = !!window.directSocketsAvailable;
     $("pass").placeholder = ""; dirty = false;
+    if (!blank) window.FreeRDPVaultUI.restoreManual?.();
     refresh("");
+    $("extra").dispatchEvent(new Event("change"));   // the page updates its preview
   }
   function lock() {
-    vault?.lock(); clear(); message("Vault locked. Passwords cleared from the page.");
+    const was = !!vault?.unlocked || !!$("vaultHosts").value;
+    vault?.lock(); clear();
+    if (was) message("Vault locked. Passwords cleared from the page.");
+  }
+  // Turning the vault off locks it and leaves the encrypted hosts in place; the form is back
+  // to manual input, with passwords from the browser's password manager.
+  function setEnabled(on) {
+    enabled = !!on;
+    // a locked vault with no host selected has nothing in the form: leave what the user typed
+    if (!enabled && (vault?.unlocked || $("vaultHosts").value)) lock();
+    else if (available) message(exists ? "Vault locked. Unlock to see saved hosts." : "Create a passkey vault to save passwords for several hosts.");
+    refresh();
   }
   async function run(action, success) {
     if (busy) return;
@@ -41,7 +56,7 @@
   $("vaultCreate").onclick = () => run(() => vault.create(), "Vault created. Save a host below.");
   $("vaultUnlock").onclick = () => run(() => vault.unlock(), "Vault unlocked. Select a saved host.");
   $("vaultLock").onclick = lock;
-  $("vaultNew").onclick = () => { clear(); message("Enter the new host and password, then Save host."); };
+  $("vaultNew").onclick = () => { clear(true); message("Enter the new host and password, then Save host."); };
   $("vaultHosts").onchange = () => {
     const id = $("vaultHosts").value;
     if (!id) { clear(); message("Manual connection. Password is not saved."); return; }
@@ -81,7 +96,10 @@
         extra:$("extra").value, direct:$("direct").checked};
       try { return consume(host); } finally { host.password = ""; $("pass").value = ""; }
     },
-    lock,
+    lock, setEnabled,
+    get enabled() { return enabled; },
+    exists: () => exists,
+    restoreManual: null,   // set by the page
   };
   window.addEventListener("pagehide", lock);
   (async () => {
@@ -91,6 +109,6 @@
       vault = new FreeRDPVault.Vault(); exists = await vault.exists(); available = true;
       message(exists ? "Vault locked. Unlock to see saved hosts." : "Create a passkey vault to save passwords for several hosts.");
     } catch (e) { message(e.message); }
-    finally { busy = false; refresh(); }
+    finally { busy = false; refresh(); window.dispatchEvent(new Event("freerdp-vault-ready")); }
   })();
 })();

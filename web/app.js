@@ -26,30 +26,52 @@ const log = (s) => {
   const m = /AV1 decoder: ([^,\n]+)/.exec(s);
   if (m) info.decoder = m[1].trim();
   if (/WebCodecs AV1 decode failed|using dav1d/.test(s)) info.decoder = "dav1d (fallback)";
-  if (/The connection failed|ERRCONNECT_|tcp-shim\]/.test(s)) document.querySelector("details").open = true;
+  if (/The connection failed|ERRCONNECT_|tcp-shim\]/.test(s)) $("logPanel").open = true;
 };
 const status = (s) => { $("status").textContent = s; };
 
-function loadSettings() {
-  let s = {};
-  try { s = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
-  const q = new URLSearchParams(location.search);   // URL overrides, for testing
-  // gateway (WebSocket) and direct (TCP) targets are different addresses: keep them apart
-  const direct = window.directSocketsAvailable;
-  $("host").value = q.get("v") || (direct ? s.directHost : s.host) || (direct ? "" : "127.0.0.1:6080");
+const readSettings = () => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { return {}; } };
+const writeSettings = (s) => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} };
+// The old default Extra options: the Video setting says the same now.
+const OLD_DEFAULT_EXTRA = "/gfx:AV1:i444";
+
+// the host field holds a gateway (WebSocket) or, with Direct TCP, the RDP server itself:
+// different addresses, remembered apart
+function showTarget(direct) {
+  const s = readSettings();
+  $("hostLabel").textContent = direct ? "RDP server" : "Gateway";
   $("host").placeholder = direct ? "rdp-server:3389" : "127.0.0.1:6080";
-  const dl = $("recentHosts");
-  for (const h of (direct ? s.directHostRecent : s.hostRecent) || []) dl.appendChild(new Option(h));
-  $("user").value = q.get("u") || s.user || "";
-  let extra = q.get("extra") ?? s.extra ?? "/gfx:AV1:i444";
-  try { FreeRDPVault.validateOptions(extra); }
+  $("host").value = (direct ? s.directHost : s.host) || (direct ? "" : "127.0.0.1:6080");
+  $("recentHosts").replaceChildren(...((direct ? s.directHostRecent : s.hostRecent) || []).map((h) => new Option(h)));
+}
+// the manual connection's remembered fields (also what the form returns to when the vault locks)
+function restoreManual() {
+  const s = readSettings();
+  $("direct").checked = !!window.directSocketsAvailable && (s.direct ?? true);
+  showTarget($("direct").checked);
+  $("user").value = s.user || "";
+  $("extra").value = s.extra || "";
+}
+function loadSettings() {
+  const s = readSettings();
+  if (!s.session) {   // settings from before the Session settings panel
+    s.session = { ...FreeRDPOptions.DEFAULTS };
+    if (typeof s.extra === "string" && s.extra.trim() === OLD_DEFAULT_EXTRA) { s.session.codec = "av1-444"; s.extra = ""; }
+    writeSettings(s);
+  }
+  const q = new URLSearchParams(location.search);   // URL overrides, for testing
+  restoreManual();
+  if (q.get("v")) $("host").value = q.get("v");
+  if (q.get("u")) $("user").value = q.get("u");
+  if (q.has("extra")) $("extra").value = q.get("extra");
+  try { FreeRDPVault.validateOptions($("extra").value); }
   catch (e) {
-    extra = "/gfx:AV1:i444"; q.delete("extra"); delete s.extra;
-    try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (ignored) {}
+    $("extra").value = ""; q.delete("extra"); delete s.extra; writeSettings(s);
     log("[page] ignored credential or secret-export options in saved settings or URL");
   }
-  $("extra").value = extra;
   $("fs").checked = q.has("fs") ? q.get("fs") === "1" : !!s.fullscreen;
+  showSession(s.session);
+  $("advancedPanel").open = !!s.advancedOpen;
   // Do not accept passwords in URLs: history, referrers and access logs retain them.
   q.delete("p");
   if (q.toString() !== new URLSearchParams(location.search).toString())
@@ -58,21 +80,121 @@ function loadSettings() {
 }
 function saveSettings() {
   FreeRDPVault.validateOptions($("extra").value);
-  let s = {};
-  try { s = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
+  const s = readSettings();
   const key = $("direct").checked ? "directHost" : "host";
   s[key] = $("host").value;
   const recentKey = key + "Recent";
   s[recentKey] = [s[key], ...(s[recentKey] || []).filter((h) => h !== s[key])].filter(Boolean).slice(0, 8);
   s.user = $("user").value; s.extra = $("extra").value; s.fullscreen = $("fs").checked;
-  try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {}
+  if (window.directSocketsAvailable) s.direct = $("direct").checked;
+  writeSettings(s);
 }
 
+// ---- Session settings: a few plain choices; options.js turns them into FreeRDP options
+const radio = (name) => document.querySelector(`input[name=${name}]:checked`)?.value;
+const setRadio = (name, value) => { const r = document.querySelector(`input[name=${name}][value="${value}"]`); if (r) r.checked = true; };
+function readSession() {
+  return FreeRDPOptions.normalize({ audio: $("optAudio").checked, clipboard: $("optClipboard").checked,
+    codec: radio("codec"), strategy: radio("strategy") });
+}
+function showSession(session) {
+  const s = FreeRDPOptions.normalize(session);
+  $("optAudio").checked = s.audio; $("optClipboard").checked = s.clipboard;
+  setRadio("codec", s.codec); setRadio("strategy", s.strategy);
+  setRadio("keys", FreeRDPKeyboard.get());
+  updateSessionText();
+}
+const CODEC_HINTS = {
+  auto: "The server picks from every codec the client offers (AV1 4:4:4 included).",
+  "av1-420": "AV1 with half-resolution colour: less data, slightly soft coloured text.",
+  "av1-444": "AV1 with full colour: sharp text in every colour, more data.",
+};
+const STRATEGY_HINTS = {
+  recommended: "The client and the server choose.",
+  bandwidth: "For slow links: the server sends less (no wallpaper or animations) and compresses more, which costs it more CPU.",
+  server: "For a busy server: it compresses less and sends more data instead.",
+};
+const KIND_NAMES = { video: "Video", audio: "Sound", clipboard: "Clipboard", network: "Priority", compression: "Priority" };
+function updateSessionText() {
+  const s = readSession(), extra = $("extra").value;
+  $("codecHint").textContent = CODEC_HINTS[s.codec];
+  $("strategyHint").textContent = STRATEGY_HINTS[s.strategy];
+  // Extra options of the same kind win: say which settings they override
+  const over = [...new Set(FreeRDPOptions.overridden(extra).map((k) => KIND_NAMES[k]))];
+  const changed = !FreeRDPOptions.isDefault(s);
+  $("customNote").hidden = !over.length && !changed;
+  $("customText").textContent = over.length ? `Extra options set ${over.join(", ")}: they win over the choice here. `
+    : "Changed from the recommended settings. ";
+  const label = (name, value) => document.querySelector(`input[name=${name}][value="${value}"]`).parentElement.textContent.trim();
+  $("sessionSummary").textContent = over.length ? "custom" : !changed ? "recommended" :
+    [s.codec !== "auto" && label("codec", s.codec), s.strategy !== "recommended" && label("strategy", s.strategy),
+     !s.audio && "no sound", !s.clipboard && "no clipboard"].filter(Boolean).join(", ");
+  $("preview").textContent = FreeRDPOptions.resolve(s, extra).join(" ");
+  updateSummary();
+}
+// the advanced choices in effect, shown under Connect even while Advanced is closed
+function updateSummary() {
+  const parts = [];
+  if ($("direct").checked) parts.push("Direct TCP (installed app), no gateway");
+  if (FreeRDPVaultUI.enabled) parts.push(FreeRDPVaultUI.selected ? `Saved host “${$("vaultHosts").selectedOptions?.[0]?.text}” from the vault` : "Passkey vault on");
+  if ($("extra").value.trim()) parts.push("Extra options: " + $("extra").value.trim());
+  $("summary").textContent = parts.join(" · ");
+}
+document.querySelectorAll("#sessionPanel input").forEach((el) => el.addEventListener("change", () => {
+  if (el.name === "keys") FreeRDPKeyboard.set(el.value);
+  else if (el.id !== "fs") { const s = readSettings(); s.session = readSession(); writeSettings(s); }
+  updateSessionText();
+}));
+$("restoreDefaults").onclick = () => {
+  const s = readSettings(); s.session = { ...FreeRDPOptions.DEFAULTS }; writeSettings(s);
+  showSession(s.session);
+  if (FreeRDPOptions.overridden($("extra").value).length) $("advancedPanel").open = true;   // what still overrides
+};
+$("extra").addEventListener("input", updateSessionText);
+$("extra").addEventListener("change", updateSessionText);
+$("advancedPanel").addEventListener("toggle", () => { const s = readSettings(); s.advancedOpen = $("advancedPanel").open; writeSettings(s); });
+window.addEventListener("storage", (e) => { if (e.key === FreeRDPKeyboard.KEY) setRadio("keys", FreeRDPKeyboard.get()); });
+
+// ---- the one-line SSH command of the safety notice follows the gateway's port
+function updateRoute() {
+  const m = /^(?:127\.0\.0\.1|localhost|\[::1\]):(\d{1,5})$/.exec($("host").value.trim());
+  const port = m ? m[1] : "6080";
+  $("hopGateway").textContent = $("direct").checked ? "none (direct TCP)" : $("host").value.trim() || "127.0.0.1:6080";
+  $("sshCmd").textContent = `ssh -t -L 127.0.0.1:${port}:127.0.0.1:${port} ${$("user").value.trim() || "user"}@server websockify 127.0.0.1:${port} 127.0.0.1:3389`;
+}
+$("host").addEventListener("input", updateRoute); $("user").addEventListener("input", updateRoute);
+$("copyCmd").onclick = () => navigator.clipboard.writeText($("sshCmd").textContent).then(
+  () => { $("copyCmd").textContent = "Copied"; setTimeout(() => { $("copyCmd").textContent = "Copy"; }, 1500); },
+  () => { getSelection().selectAllChildren($("sshCmd")); $("copyCmd").textContent = "Press Ctrl+C"; });
+
+// ---- Advanced: direct TCP and the passkey vault
+if (window.directSocketsAvailable) $("directHint").textContent = "This installed app can open TCP itself: enter the RDP server, usually host:3389.";
+else {
+  $("direct").disabled = true;
+  $("directHint").innerHTML = 'Only in the installed app (Isolated Web App). <a href="install.html">How to install it</a>.';
+}
+$("direct").addEventListener("change", () => {
+  if (!FreeRDPVaultUI.selected) showTarget($("direct").checked);
+  updateRoute(); updateSummary();
+});
+FreeRDPVaultUI.restoreManual = () => { restoreManual(); updateRoute(); };
+$("vaultEnable").addEventListener("change", () => {
+  const s = readSettings(); s.vault = $("vaultEnable").checked; writeSettings(s);
+  FreeRDPVaultUI.setEnabled(s.vault); updateSummary();
+});
+$("vaultHosts").addEventListener("change", () => { updateRoute(); updateSessionText(); });
+// off by default; on when the user turned it on, or (no choice yet) when a vault already exists
+window.addEventListener("freerdp-vault-ready", () => {
+  const on = readSettings().vault ?? FreeRDPVaultUI.exists();
+  $("vaultEnable").checked = on; FreeRDPVaultUI.setEnabled(on);
+  if (on && readSettings().vault === undefined) $("advancedPanel").open = true;   // show where it went
+  updateSummary();
+}, { once: true });
+
 const autoconnect = loadSettings();
+updateRoute();
 $("canvas").addEventListener("contextmenu", (e) => e.preventDefault());
 $("canvas").addEventListener("mousedown", () => $("canvas").focus());
-if (window.directSocketsAvailable) { $("direct").checked = true; $("hostLabel").firstChild.textContent = "RDP server (host:port)"; }
-else { $("direct").disabled = true; $("directLabel").title = "Direct TCP needs the page to run as an Isolated Web App"; }
 let runtimeReady = false, runtimeFailed = false, connectStarted = false;
 let resolveRuntime;
 const runtime = new Promise(resolve => { resolveRuntime = resolve; });
@@ -90,7 +212,7 @@ var Module = {
   },
   onExit(code) {
     status("exited: " + code); log("[page] exit code " + code); window.__freerdpExit = code;
-    if (code !== 0) document.querySelector("details").open = true;   // show the reason
+    if (code !== 0) $("logPanel").open = true;   // show the reason
     // exit code 0 also follows a lost connection: look at the log, not only at the code
     const lost = crash.lines.some((l) => /ERRCONNECT_|Network disconnect|\[tcp-shim\].*(Error|abort)/i.test(l));
     crashEnd(!crash.userEnded && (code !== 0 || lost), code !== 0 ? "exit code " + code : lost ? "connection lost" : "");
@@ -146,6 +268,27 @@ window.addEventListener("keyup", (e) => { if (e.code === "ShiftRight") rightShif
 window.addEventListener("keydown", (e) => {
   if (e.code === "ShiftRight") rightShift = true;
   if (e.key === "Enter" && rightShift && document.body.classList.contains("session")) toggleFullscreen();
+}, true);
+// The mstsc shortcut profile (keyboard.js), on top of FreeRDP's hotkeys. Only while the remote
+// desktop has focus; the page takes these keys, so the remote side does not see them. The
+// keyup of a taken key is dropped as well.
+const takenKeys = new Set();
+window.addEventListener("keyup", (e) => {
+  if (takenKeys.delete(e.code)) { e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
+window.addEventListener("keydown", (e) => {
+  if (!document.body.classList.contains("session") || e.target !== $("canvas")) return;
+  const act = FreeRDPKeyboard.action(FreeRDPKeyboard.get(), e);
+  if (!act) return;
+  e.preventDefault(); e.stopImmediatePropagation(); takenKeys.add(e.code);
+  if (act === "fullscreen") toggleFullscreen();
+  else if (act === "toolbar") showToolbar();
+  else if (act === "ctrl-alt-del") {
+    // Ctrl and Alt are already down on the remote side: add Delete. SDL reads the key's code.
+    for (const type of ["keydown", "keyup"])
+      $("canvas").dispatchEvent(new KeyboardEvent(type, { code: "Delete", key: "Delete", ctrlKey: true, altKey: true, bubbles: true }));
+    log("[page] Ctrl + Alt + End: sent Ctrl + Alt + Delete");
+  }
 }, true);
 
 // Clipboard (text and images). SDL3 has no browser clipboard driver, so the page bridges it:
@@ -203,7 +346,8 @@ async function writeOut() {
   try { await navigator.clipboard.write([new ClipboardItem(data)]); clip.pending = null; }
   catch (e) { clip.pending = o; }
 }
-const queueOut = (part) => {   // text and image of one copy arrive separately: write them together
+const queueOut = (part) => {
+  if (!clipboardOn) return;   // text and image of one copy arrive separately: write them together
   clip.out = Object.assign(clip.out || {}, part);
   clearTimeout(clip.outTimer); clip.outTimer = setTimeout(writeOut, 200);
 };
@@ -213,8 +357,9 @@ Module.freerdpClipboardWrite = (text) => queueOut({ text });
 Module.freerdpClipboardWriteImage = (bytes, isPng) =>
   (isPng ? Promise.resolve(new Blob([bytes], { type: "image/png" })) : dibToPng(bytes)).then((png) => queueOut({ png }),
     (e) => log("[page] clipboard image from server not decodable: " + e.message));
+let clipboardOn = true;   // Session settings: off means -clipboard, and the page bridge stays quiet
 async function syncClipboard() {
-  if (!document.body.classList.contains("session") || !document.hasFocus()) return;
+  if (!clipboardOn || !document.body.classList.contains("session") || !document.hasFocus()) return;
   if (clip.pending) { clip.out = clip.pending; clip.pending = null; await writeOut(); return; }
   let text = "", png = null;
   try {
@@ -246,7 +391,7 @@ setInterval(syncClipboard, 1500);
 const toolbar = $("toolbar");
 const backToCanvas = () => setTimeout(() => $("canvas").focus(), 0);
 $("tbFs").onclick = () => { toggleFullscreen(); backToCanvas(); };
-$("tbLog").onclick = () => { const d = document.querySelector("details"); d.open = !d.open; backToCanvas(); };
+$("tbLog").onclick = () => { const d = $("logPanel"); d.open = !d.open; backToCanvas(); };
 $("tbQuit").onclick = () => { crash.userEnded = true; if (crash.running) crashEnd(false, ""); location.reload(); };
 // 📌 keeps the toolbar visible in full screen (remembered across sessions)
 const setPinned = (on) => { document.body.classList.toggle("tbpinned", on); $("tbPin").classList.toggle("on", on);
@@ -323,13 +468,14 @@ document.addEventListener("fullscreenchange", () => {
 });
 // in full screen: reveal the toolbar when the mouse touches the top edge, hide it again after a while
 let tbTimer = 0;
+function showToolbar() {
+  document.body.classList.remove("tbhide");
+  clearTimeout(tbTimer);
+  tbTimer = setTimeout(() => { if (document.body.classList.contains("fs") && !toolbar.matches(":hover")) document.body.classList.add("tbhide"); }, 2500);
+}
 window.addEventListener("mousemove", (e) => {
   if (!document.body.classList.contains("fs")) return;
-  if (e.clientY <= 4 || toolbar.contains(e.target)) {
-    document.body.classList.remove("tbhide");
-    clearTimeout(tbTimer);
-    tbTimer = setTimeout(() => { if (document.body.classList.contains("fs") && !toolbar.matches(":hover")) document.body.classList.add("tbhide"); }, 2500);
-  }
+  if (e.clientY <= 4 || toolbar.contains(e.target)) showToolbar();
 }, true);
 // in a window: keep the toolbar at the top of the canvas
 const placeToolbar = () => document.documentElement.style.setProperty("--tbtop", Math.max(0, $("canvas").getBoundingClientRect().top) + "px");
@@ -374,7 +520,11 @@ async function connect() {
   checkSelection();
   FreeRDPVaultUI.use(host => {
     if (host.direct && !window.directSocketsAvailable) throw new Error("This saved host needs Direct TCP. Install and open the isolated app.");
-    const args = FreeRDPVault.connectionArgs(host, size);
+    const session = readSession();
+    const resolved = { ...host, extra: FreeRDPOptions.resolve(session, host.extra).join(" ") };
+    let args;
+    try { args = FreeRDPVault.connectionArgs(resolved, size); } finally { resolved.password = ""; }
+    clipboardOn = !args.some((a) => /^-clipboard$|^[/+]clipboard:(?:off|false)$/i.test(a));
     if (host.direct) {
       window.useDirectTcp(); log("[page] direct TCP via Direct Sockets (IWA), no gateway");
     } else {
@@ -391,7 +541,7 @@ async function connect() {
     $("go").disabled = true; status("connecting…");
     log("[page] sdl-freerdp " + args.map(a => a.startsWith("/p:") ? "/p:***" : a).join(" "));
     $("pass").value = "";
-    placeToolbar(); document.querySelector("details").open = false; $("canvas").focus();
+    placeToolbar(); $("logPanel").open = false; $("canvas").focus();
     crash.running = true; crash.userEnded = false; crashStore("running");
     crash.timer = setInterval(() => crashStore("running"), 5000);
     // callMain is one-shot. FreeRDP copies argv into its runtime settings; JS drops its copies.
@@ -417,13 +567,14 @@ async function connect() {
   $("lastlogText").textContent = `The last session ended unexpectedly (${why}, ${when}). Its log is saved in this browser.`;
   $("lastlog").hidden = false;
   const text = `FreeRDP Web: last session ended unexpectedly (${why}, ${when})\n` + saved.lines.join("\n");
-  const show = () => { logEl.textContent = text + "\n\n--- current page ---\n" + logEl.textContent; document.querySelector("details").open = true; };
+  const show = () => { logEl.textContent = text + "\n\n--- current page ---\n" + logEl.textContent; $("logPanel").open = true; };
   $("lastlogCopy").onclick = () => navigator.clipboard.writeText(text).then(
     () => { $("lastlogCopy").textContent = "Copied"; }, () => { show(); $("lastlogCopy").textContent = "Shown below"; });
   $("lastlogShow").onclick = show;
   $("lastlogDismiss").onclick = () => { try { localStorage.removeItem(CRASH_KEY); } catch (e) {} $("lastlog").hidden = true; };
 })();
-$("go").onclick = connect;
+// a submitted form is what tells the browser's password manager to offer saving the password
+$("connectForm").addEventListener("submit", (e) => { e.preventDefault(); connect(); });
 
 // Input diagnostics, OFF by default because keys typed into the remote side can be passwords.
 // Enable with ?debugkeys=1; even then only the physical key position is logged, never the

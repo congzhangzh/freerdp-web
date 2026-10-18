@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Safety and tunnels · FreeRDP Web</title>
+<link rel="stylesheet" href="ui.css">
+</head>
+<body>
+<main class="help">
+  <header class="top">
+    <a href="index.html"><b>FreeRDP Web</b></a>
+    <nav aria-label="Help">
+      <a href="safety.html" aria-current="page">Safety and tunnels</a>
+      <a href="keyboard.html">Keyboard</a>
+      <a href="install.html">Install as app</a>
+    </nav>
+  </header>
+  <h1>Safety and tunnels</h1>
+  <p class="lead">A browser cannot open TCP connections, so the page reaches the RDP server through a
+    WebSocket gateway, <a href="https://github.com/novnc/websockify" target="_blank" rel="noopener">websockify</a>.
+    SSH carries it to the server, so the RDP server never has to face the network.</p>
+
+  <p class="warn">This is a hobby project, not written by security professionals. Keeping your servers
+    safe is up to you.</p>
+
+  <h2>The rules</h2>
+  <ul>
+    <li><b>Never put RDP on the internet.</b> Let the RDP server listen on 127.0.0.1 only (for xrdp:
+      <code>port=tcp://.:3389</code> in <code>/etc/xrdp/xrdp.ini</code>) and reach it through SSH, which already
+      handles keys, authentication and encryption.</li>
+    <li><b>Keep the gateway on 127.0.0.1</b>, on both ends. <code>websockify 6080 localhost:3389</code> would offer
+      the bridge to the whole network; <code>websockify 127.0.0.1:6080 …</code> does not.</li>
+    <li><b>Run the gateway only for the session.</b> While it listens, any web page open in the same browser
+      could connect to it. The RDP server still asks for its own password, but the gateway checks nothing.</li>
+    <li><b>Never put a password in a command or a URL.</b> The page ignores passwords in its URL.</li>
+  </ul>
+
+  <h2>Three ports, three jobs</h2>
+  <table>
+    <tr><th>Port</th><th>What listens</th><th>Where</th></tr>
+    <tr><td>the page's</td><td>the web server that delivers this page (GitHub Pages, or your own)</td><td>anywhere</td></tr>
+    <tr><td>6080</td><td>the gateway, websockify: WebSocket in, TCP out. The page's <b>Gateway</b> field</td><td>127.0.0.1 on your computer, forwarded by SSH</td></tr>
+    <tr><td>3389</td><td>the RDP server, xrdp or GNOME Remote Desktop</td><td>127.0.0.1 on the server</td></tr>
+  </table>
+
+  <h2>Start the gateway: pick one</h2>
+  <p>Each runs in a terminal on your computer. Replace <code>user@server</code>; Ctrl-C in that terminal ends
+    the tunnel and the gateway. Then open the page and connect with the gateway <code>127.0.0.1:6080</code>.</p>
+
+  <h3>1. websockify installed on the server (recommended)</h3>
+  <p>Install it once with the server's package manager (Debian and Ubuntu: <code>apt install websockify</code>;
+    Fedora: <code>dnf install python3-websockify</code>). One line then starts the tunnel and the gateway:</p>
+  <div class="copyable"><pre>ssh -t -L 127.0.0.1:6080:127.0.0.1:6080 user@server websockify 127.0.0.1:6080 127.0.0.1:3389</pre><button class="small" data-copy>Copy</button></div>
+  <p><code>-t</code> gives websockify a terminal on the server, so it ends when the SSH connection ends; without it,
+    websockify keeps running there. From a script, where there is no terminal to give, use <code>-tt</code>.</p>
+
+  <h3>2. websockify through uvx, nothing to install</h3>
+  <p>If the server has <a href="https://docs.astral.sh/uv/" target="_blank" rel="noopener">uv</a>, uvx downloads
+    and caches websockify the first time:</p>
+  <div class="copyable"><pre>ssh -t -L 127.0.0.1:6080:127.0.0.1:6080 user@server uvx websockify 127.0.0.1:6080 127.0.0.1:3389</pre><button class="small" data-copy>Copy</button></div>
+
+  <h3>3. A gateway that already runs on the server</h3>
+  <p>If websockify already listens on the server's 127.0.0.1:6080 (a service you set up), only forward the port:</p>
+  <div class="copyable"><pre>ssh -N -L 127.0.0.1:6080:127.0.0.1:6080 user@server</pre><button class="small" data-copy>Copy</button></div>
+  <p>No websockify on the server at all? The repository's <code>rdp-gateway.sh --local user@server</code>
+    forwards the RDP port over SSH and runs websockify on your computer instead.</p>
+
+  <h2>When something goes wrong</h2>
+  <table>
+    <tr><th>You see</th><th>What it means</th></tr>
+    <tr><td><code>bind … Address already in use</code></td><td>Port 6080 is taken on your computer: an earlier tunnel
+      still runs. Find it with <code>ss -ltnp | grep 6080</code> (Windows: <code>netstat -ano | findstr 6080</code>),
+      or use another port on both sides and in the Gateway field.</td></tr>
+    <tr><td>Chrome asks to “access other apps and services on this device”</td><td>Allow it. That is how a page from
+      a web site reaches the gateway on 127.0.0.1 (Chrome's Local Network Access protection). Refused, the console
+      shows <code>ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS</code>.</td></tr>
+    <tr><td>The connection fails at once</td><td>Nothing listens on the gateway port, or the server's RDP port is not
+      3389. The page's Log (under the form) shows the stage that failed.</td></tr>
+    <tr><td>websockify keeps running after the session</td><td>The tunnel was started without <code>-t</code>, or the
+      network dropped before the server noticed. Log in and stop it (<code>pkill -f websockify</code>).</td></tr>
+  </table>
+
+  <h2>What SSH does not cover</h2>
+  <p>The client currently accepts any RDP server certificate (<code>/cert:ignore</code>). Inside an SSH tunnel to
+    your own server's 127.0.0.1 that is the server you meant, because SSH authenticated the host. With Direct TCP
+    or a gateway on another machine nothing checks the RDP server's identity yet.</p>
+
+  <p><a href="index.html">Back to FreeRDP Web</a></p>
+</main>
+<script src="help.js"></script>
+</body>
+</html>

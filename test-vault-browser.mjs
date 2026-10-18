@@ -22,6 +22,8 @@ try {
  await send('WebAuthn.addVirtualAuthenticator',{options:{protocol:'ctap2',ctap2Version:'ctap2_1',transport:'internal',hasResidentKey:true,hasUserVerification:true,hasPrf:true,isUserVerified:true,automaticPresenceSimulation:true}});
  await send('Page.navigate',{url:'http://localhost:8180/'});
  await until(()=>evaluate("document.getElementById('status')?.textContent === 'ready'"),'WASM ready',60000);
+ // the vault is off by default: turn it on as a user would (remembered across the reload below)
+ await evaluate("(()=>{const e=document.getElementById('vaultEnable');e.checked=true;e.dispatchEvent(new Event('change'));})()");
  await until(()=>evaluate("!document.getElementById('vaultCreate').disabled"),'vault ready');
  await button('vaultCreate');
  await until(()=>evaluate("document.getElementById('vaultStatus').textContent.includes('Vault created')"),'real WebAuthn PRF create');

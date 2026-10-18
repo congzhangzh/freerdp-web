@@ -1,0 +1,158 @@
+/* Shared by the client page and the help pages. */
+:root {
+  color-scheme: light dark;
+  --paper:#eef1f4; --panel:#fff; --ink:#18212b; --muted:#5a6773; --line:#c9d2db; --soft:#e3e8ed;
+  --signal:#2f6fde; --signal-ink:#fff; --caution:#9a6412; --caution-soft:#fbf3e4; --danger:#b3261e;
+  --mono:ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper:#121820; --panel:#1a222c; --ink:#e3e9ef; --muted:#97a4b1; --line:#2d3845; --soft:#232d39;
+          --signal:#7aa7ff; --signal-ink:#0d1726; --caution:#e2b25c; --caution-soft:#2a2418; --danger:#ff8a80; }
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--paper); color:var(--ink); font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+a { color:var(--signal); text-underline-offset:2px; }
+code, kbd, pre { font-family:var(--mono); font-size:13px; }
+kbd { padding:0 5px; border:1px solid var(--line); border-bottom-width:2px; border-radius:4px; background:var(--panel); }
+:focus-visible { outline:2px solid var(--signal); outline-offset:2px; }
+[hidden] { display:none !important; }
+
+/* controls */
+button, .button { font:inherit; font-size:14px; padding:7px 14px; border:1px solid var(--line); border-radius:6px;
+  background:var(--panel); color:var(--ink); cursor:pointer; text-decoration:none; }
+button:hover:not(:disabled) { border-color:var(--signal); }
+button:disabled { opacity:.5; cursor:default; }
+button.primary { background:var(--signal); border-color:var(--signal); color:var(--signal-ink); font-weight:600; }
+button.small { font-size:12px; padding:3px 9px; }
+input:not([type=checkbox]):not([type=radio]), select { font:inherit; width:100%; min-width:0; padding:7px 9px;
+  border:1px solid var(--line); border-radius:6px; background:var(--panel); color:var(--ink); }
+input[type=checkbox], input[type=radio] { accent-color:var(--signal); margin:0; }
+input:disabled, select:disabled { opacity:.55; }
+.muted { color:var(--muted); }
+
+/* ---- client page, before the session ---- */
+.shell { max-width:620px; margin:0 auto; padding:28px 16px 48px; }
+.top { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:6px 16px; margin-bottom:18px; }
+.top h1 { margin:0; font-size:22px; letter-spacing:-.2px; }
+.top nav { display:flex; flex-wrap:wrap; gap:4px 14px; font-size:13px; }
+.top nav a { color:var(--muted); text-decoration:none; }
+.top nav a:hover, .top nav a[aria-current=page] { color:var(--signal); }
+
+/* the route from this browser to the remote desktop, with the command that builds it */
+.route { margin:0 0 20px; padding:12px 14px; border:1px solid var(--line); border-left:4px solid var(--caution);
+  border-radius:6px; background:var(--caution-soft); font-size:13px; }
+.route p { margin:0 0 8px; }
+.hops { display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px; margin:0 0 10px; padding:0; list-style:none; }
+.hops li { display:flex; flex-direction:column; padding:4px 9px; border:1px solid var(--line); border-radius:5px; background:var(--panel); }
+.hops li b { font-weight:600; font-size:12px; }
+.hops li span { font-family:var(--mono); font-size:12px; color:var(--muted); }
+.hops .via { padding:0; border:0; background:none; color:var(--muted); font-size:12px; }
+.cmd { display:flex; gap:8px; align-items:stretch; }
+.cmd code { flex:1; min-width:0; padding:6px 9px; border:1px solid var(--line); border-radius:5px; background:var(--panel);
+  overflow-wrap:anywhere; user-select:all; }
+
+form.connect { padding:20px; border:1px solid var(--line); border-radius:8px; background:var(--panel); }
+.field { display:grid; grid-template-columns:8.5em 1fr; align-items:center; gap:4px 12px; margin:0 0 12px; font-size:14px; }
+.field > span { color:var(--muted); }
+.field small { grid-column:2; font-size:12px; color:var(--muted); }
+.actions { display:flex; align-items:center; gap:12px; margin-top:16px; }
+.actions .primary { min-width:9em; padding:9px 18px; font-size:15px; }
+#status { font-size:13px; color:var(--muted); }
+#summary { margin:12px 0 0; font-size:12px; color:var(--muted); }
+#summary:empty { display:none; }
+
+/* collapsible panels inside the connection form */
+.panel { margin-top:16px; border-top:1px solid var(--line); padding-top:12px; }
+.panel > summary { cursor:pointer; font-weight:600; font-size:14px; list-style-position:outside; }
+.panel > summary small { font-weight:400; color:var(--muted); margin-left:6px; }
+.panel[open] > summary { margin-bottom:12px; }
+.panel fieldset { margin:0 0 14px; padding:0; border:0; }
+.panel legend { padding:0; margin-bottom:6px; font-size:13px; color:var(--muted); }
+.checks { display:flex; flex-wrap:wrap; gap:8px 18px; font-size:14px; }
+.checks label, .choice label, label.check { display:inline-flex; align-items:center; gap:6px; }
+label.check { font-size:14px; }
+.choice { display:flex; flex-wrap:wrap; gap:0; border:1px solid var(--line); border-radius:6px; overflow:hidden; width:fit-content; max-width:100%; }
+.choice label { padding:6px 12px; font-size:13px; cursor:pointer; border-right:1px solid var(--line); }
+.choice label:last-child { border-right:0; }
+.choice input { position:absolute; opacity:0; pointer-events:none; }
+.choice label:has(input:checked) { background:var(--signal); color:var(--signal-ink); }
+.choice label:has(input:focus-visible) { outline:2px solid var(--signal); outline-offset:-2px; }
+.hint { margin:6px 0 0; font-size:12px; color:var(--muted); }
+.note { margin:0 0 14px; padding:8px 10px; font-size:12px; border-radius:5px; background:var(--soft); }
+.row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+#preview { display:block; margin-top:6px; padding:6px 9px; border-radius:5px; background:var(--soft); overflow-wrap:anywhere; font-size:12px; }
+#vaultPanel { margin:0 0 14px; padding:12px; border:1px solid var(--line); border-radius:6px; }
+#vaultControls { display:flex; flex-wrap:wrap; gap:8px; align-items:end; }
+#vaultControls label { display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--muted); }
+#vaultStatus { flex-basis:100%; font-size:12px; color:var(--muted); }
+
+/* notice about the saved log of a session that ended unexpectedly */
+#lastlog { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 16px; padding:8px 12px; font-size:13px;
+  border:1px solid var(--line); border-left:4px solid var(--danger); border-radius:6px; background:var(--panel); }
+#lastlog[hidden] { display:none; }
+#logPanel { margin-top:16px; font-size:13px; }
+#logPanel summary { cursor:pointer; color:var(--muted); }
+pre#log { max-height:40vh; overflow:auto; font-size:12px; background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:8px; }
+
+/* ---- during the session: only the remote desktop, the toolbar and the overlays ---- */
+/* the stylesheet sizes the canvas, so SDL treats its size as external and follows it:
+   with /dynamic-resolution the remote desktop then resizes with the window */
+canvas { display:none; width:100%; height:calc(100vh - var(--hdr, 0px) - 24px); background:#000; outline:none; }
+body.session { background:#000; }
+body.session .shell { max-width:none; padding:8px 12px 0; }
+body.session .top, body.session .route, body.session form.connect, body.session #lastlog { display:none; }
+body.session canvas { display:block; }
+body.fs .shell { padding:0; }
+/* full screen session: SDL sets inline sizes, hence !important */
+body.fs canvas { position:fixed; inset:0; width:100vw !important; height:100vh !important; }
+/* session toolbar: top centre of the remote screen; in full screen it hides and comes back
+   when the mouse reaches the top edge */
+#toolbar { position:fixed; top:var(--tbtop, 8px); left:50%; transform:translateX(-50%); z-index:10; display:none; gap:6px;
+  padding:5px 8px; border-radius:0 0 8px 8px; background:rgba(24,33,43,.88); box-shadow:0 2px 10px rgba(0,0,0,.3);
+  transition:opacity .2s, transform .2s; }
+body.session #toolbar { display:flex; }
+body.fs #toolbar { top:0; }
+body.fs.tbhide:not(.tbpinned) #toolbar { opacity:0; transform:translate(-50%, -100%); pointer-events:none; }
+#toolbar button { font-size:12px; padding:4px 10px; border:0; background:#34404d; color:#fff; }
+#toolbar button:hover { background:#2f6fde; }
+#toolbar #tbPin { opacity:.55; } #toolbar #tbPin.on { opacity:1; background:#2f6fde; }
+/* connection info overlay, toggled from the toolbar */
+#info { position:fixed; top:calc(var(--tbtop, 8px) + 44px); right:24px; z-index:10; min-width:260px; padding:8px 12px;
+  border-radius:6px; background:rgba(24,33,43,.9); color:#e3e9ef; font:12px/1.6 var(--mono); pointer-events:none; }
+body.fs #info { top:44px; }
+#info td:first-child { color:#97a4b1; padding-right:12px; }
+/* during a session the log is an overlay at the bottom (toggled with the toolbar's Log button) */
+body.session #logPanel { position:fixed; left:12px; right:12px; bottom:0; margin:0; z-index:9; background:var(--panel);
+  border:1px solid var(--line); border-bottom:0; border-radius:6px 6px 0 0; padding:4px 8px; opacity:.95; }
+body.session #logPanel pre { max-height:35vh; margin:4px 0; }
+body.session #logPanel:not([open]) { display:none; }
+
+/* ---- help pages ---- */
+.help { max-width:720px; margin:0 auto; padding:28px 16px 64px; }
+.help h1 { font-size:24px; margin:0 0 6px; }
+.help .lead { margin:0 0 24px; color:var(--muted); }
+.help h2 { font-size:17px; margin:30px 0 8px; }
+.help h3 { font-size:15px; margin:18px 0 6px; }
+.help li { margin:5px 0; }
+.help pre { margin:8px 0; padding:9px 11px; border:1px solid var(--line); border-radius:6px; background:var(--panel);
+  overflow-x:auto; white-space:pre; }
+.help .copyable { display:flex; gap:8px; align-items:start; }
+.help .copyable pre { flex:1; min-width:0; }
+.help .warn { padding:8px 12px; border-left:4px solid var(--caution); background:var(--caution-soft); border-radius:4px; }
+.help table { border-collapse:collapse; width:100%; font-size:14px; }
+.help td, .help th { text-align:left; padding:6px 8px 6px 0; border-bottom:1px solid var(--line); vertical-align:top; }
+.help th { font-weight:600; color:var(--muted); font-size:13px; }
+.help td code, .help li code { overflow-wrap:anywhere; }
+.help .ok { color:#2e7d32; } .help .bad { color:var(--caution); }
+dl.keys > div { display:grid; grid-template-columns:minmax(10em, 15em) 1fr; align-items:baseline; gap:4px 16px; padding:8px 0; border-bottom:1px solid var(--line); }
+dl.keys dt { font-family:var(--mono); font-size:13px; } dl.keys dd { margin:0; }
+
+@media (max-width:560px) {
+  .field { grid-template-columns:1fr; }
+  .field small { grid-column:1; }
+  form.connect { padding:16px; }
+  .cmd { flex-direction:column; }
+  dl.keys > div { grid-template-columns:1fr; }
+  .choice { width:100%; } .choice label { flex:1 1 auto; justify-content:center; }
+}
+@media (prefers-reduced-motion: reduce) { #toolbar { transition:none; } }

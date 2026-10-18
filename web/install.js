@@ -8,17 +8,17 @@ const version = (navigator.userAgent.match(/Chrome\/(\d+)/) || [])[1];
 
 const checks = [
   ["Browser", chromium ? `Chromium-based (version ${version ?? "?"})` : "Not Chromium: the app cannot be installed here, use the web version",
-    chromium ? "ok" : "warn"],
+    chromium ? "ok" : "bad"],
   ["Running as", isIwa ? "Installed app (Isolated Web App)" : "Normal web page", isIwa ? "ok" : ""],
   ["Direct TCP", typeof TCPSocket === "function" ? "Available" : (isIwa ? "Not available: check the app's permissions" : "Only inside the installed app"),
     typeof TCPSocket === "function" ? "ok" : ""],
   ["Threads", crossOriginIsolated ? "Available (cross-origin isolated)" : "Unavailable: the server must send COOP/COEP headers",
-    crossOriginIsolated ? "ok" : "warn"],
+    crossOriginIsolated ? "ok" : "bad"],
 ];
 const table = document.getElementById("checks");
 for (const [name, text, cls] of checks) {
   const tr = table.insertRow();
-  tr.insertCell().textContent = name; tr.cells[0].className = "s";
+  tr.insertCell().textContent = name; tr.cells[0].style.fontWeight = "600";
   tr.insertCell().textContent = text; if (cls) tr.cells[1].className = cls;
 }
 
@@ -28,7 +28,7 @@ document.getElementById("origin").textContent = origin;
 
 async function copy(text, button) {
   try { await navigator.clipboard.writeText(text); button.textContent = "Copied"; }
-  catch { button.textContent = "Select and copy manually"; }
+  catch { button.textContent = "Select and copy"; }
   setTimeout(() => { button.textContent = "Copy"; }, 1500);
 }
 document.querySelectorAll("button[data-copy]").forEach((b) => b.addEventListener("click", () => copy(b.dataset.copy, b)));
