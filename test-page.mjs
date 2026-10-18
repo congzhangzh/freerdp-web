@@ -94,6 +94,21 @@ await send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, dev
 await send("Page.navigate", { url: `${ORIGIN}/index.html` });
 let ready = false;
 for (let i = 0; i < 120 && !ready; i++) { await sleep(500); ready = await ev("document.getElementById('status')?.textContent === 'ready'"); }
+// the splash: with demo media (the Pages build adds demo/), on a first visit, closed by Skip
+// and not shown again; without media, never
+const hasDemo = existsSync(join(runtimeDir, "demo", "demo.json"));
+const splashShown = () => ev("!document.getElementById('splash').hidden");
+if (hasDemo) {
+  for (let i = 0; i < 20 && !await splashShown(); i++) await sleep(200);
+  check("the splash shows the demo on a first visit", await splashShown()
+    && await ev("document.querySelectorAll('#splashTabs [role=tab]').length") >= 2);
+  await screenshot("page-splash.png");
+  await ev("document.getElementById('splashSkip').click(), true");
+  check("Skip closes it, and the Demo link stays", !await splashShown() && await ev("!document.getElementById('demoOpen').hidden"));
+} else {
+  await sleep(500);
+  check("no splash without demo media", !await splashShown() && await ev("document.getElementById('demoOpen').hidden"));
+}
 check("the client starts", ready && await ev("crossOriginIsolated"),
   ready ? "" : `status "${await ev("document.getElementById('status').textContent")}", isolated ${await ev("crossOriginIsolated")}; ${logs.slice(-3).join(" | ")}`);
 check("the session settings start as recommended", await ev("document.getElementById('sessionSummary').textContent") === "recommended");

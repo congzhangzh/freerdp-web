@@ -9,15 +9,31 @@
 <title>FreeRDP Web</title>
 <link rel="manifest" href=".well-known/manifest.webmanifest">
 <link rel="stylesheet" href="ui.css">
+<script src="theme.js"></script>
 </head>
 <body>
+<!-- the first visit's demo videos (splash.js); only where the site has them -->
+<div id="splash" class="splash" role="dialog" aria-modal="true" aria-labelledby="splashTitle" hidden>
+  <div class="splash-box">
+    <div class="splash-head">
+      <h2 id="splashTitle">FreeRDP Web in a minute</h2>
+      <button id="splashSkip" type="button" class="small">Skip</button>
+    </div>
+    <div id="splashTabs" class="splash-tabs" role="tablist" aria-label="Demo"></div>
+    <video id="splashVideo" controls playsinline preload="none"></video>
+    <p id="splashCaption" class="hint"></p>
+    <div class="row"><button id="splashStart" type="button" class="primary">Start</button></div>
+  </div>
+</div>
 <div class="shell">
 <header class="top">
   <h1>FreeRDP Web</h1>
   <nav aria-label="Help">
+    <button id="demoOpen" type="button" class="link" hidden>Demo</button>
     <a href="safety.html">Safety and tunnels</a>
     <a href="keyboard.html">Keyboard</a>
     <a href="install.html">Install as app</a>
+    <label><span class="sr-only">Theme</span><select id="theme" aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
   </nav>
 </header>
 
@@ -192,6 +208,7 @@
 <script src="hosts.js"></script>
 <script src="hosts-ui.js"></script>
 <script src="app.js"></script>
+<script src="splash.js"></script>
 <script src="sdl-freerdp.js"></script>
 </body>
 </html>
