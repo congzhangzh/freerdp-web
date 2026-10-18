@@ -6,6 +6,13 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 0.4.5
+
+- One header for every page: the title "FreeRDP Web" (a link home, styled as the title, no
+  longer a blue link on the help pages), then ▶ Intro (on help pages `index.html#intro`, which
+  opens the splash), the help pages, Release notes and the theme, in one row: both page types
+  are 760 px wide now.
+
 ## 0.4.4
 
 - `web/release-notes.html`: release notes for users (what changed for them, plainly), linked

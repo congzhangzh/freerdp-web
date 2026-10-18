@@ -49,6 +49,9 @@
     $("demoOpen").hidden = false;
     let seen = false;
     try { seen = localStorage.getItem(KEY) === "seen"; } catch (e) {}
-    if (!seen && !new URLSearchParams(location.search).has("autoconnect")) open();
+    // index.html#intro (the help pages' ▶ Intro) opens it as well
+    const asked = location.hash === "#intro";
+    if (asked) history.replaceState(null, "", location.pathname + location.search);
+    if (asked || (!seen && !new URLSearchParams(location.search).has("autoconnect"))) open();
   }).catch(() => {});
 })();
