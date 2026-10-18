@@ -1,5 +1,4 @@
-// Settings live in localStorage; the password never does.
-const KEY = "freerdp-web-settings";
+// Hosts and settings live in localStorage (hosts.js); the password never does.
 const $ = (id) => document.getElementById(id);
 const logEl = $("log");
 const info = { started: 0, decoder: "–", transport: "–", server: "–" };
@@ -30,64 +29,55 @@ const log = (s) => {
 };
 const status = (s) => { $("status").textContent = s; };
 
-const readSettings = () => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { return {}; } };
-const writeSettings = (s) => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {} };
-// The old default Extra options: the Video setting says the same now.
-const OLD_DEFAULT_EXTRA = "/gfx:AV1:i444";
-
-// the host field holds a gateway (WebSocket) or, with Direct TCP, the RDP server itself:
-// different addresses, remembered apart
-function showTarget(direct) {
-  const s = readSettings();
+// ---- the selected host (hosts-ui.js) fills the form; the form's edits go back into it
+const HostsUI = window.FreeRDPHostsUI;
+// the address field holds a gateway (WebSocket) or, with Direct TCP, the RDP server itself:
+// different addresses, kept apart in the host
+function showTarget(h) {
+  const direct = $("direct").checked;
   $("hostLabel").textContent = direct ? "RDP server" : "Gateway";
   $("host").placeholder = direct ? "rdp-server:3389" : "127.0.0.1:6080";
-  $("host").value = (direct ? s.directHost : s.host) || (direct ? "" : "127.0.0.1:6080");
-  $("recentHosts").replaceChildren(...((direct ? s.directHostRecent : s.hostRecent) || []).map((h) => new Option(h)));
+  $("host").value = direct ? h.directHost : h.host;
 }
-// the manual connection's remembered fields (also what the form returns to when the vault locks)
-function restoreManual() {
-  const s = readSettings();
-  $("direct").checked = !!window.directSocketsAvailable && (s.direct ?? true);
-  showTarget($("direct").checked);
-  $("user").value = s.user || "";
-  $("extra").value = s.extra || "";
+function showHost(h) {
+  $("hostName").value = h.name;
+  $("direct").checked = !!window.directSocketsAvailable && h.direct;
+  showTarget(h);
+  $("user").value = h.user;
+  $("pass").value = "";
+  $("extra").value = h.extra;
+  $("fs").checked = h.fullscreen;
+  showSession(h.session);
+  updateRoute();
 }
+// what the form says, into the selected host (passwords never)
+function storeFields() {
+  const direct = $("direct").checked;
+  return HostsUI.update({ name: $("hostName").value.trim() || "Host", [direct ? "directHost" : "host"]: $("host").value.trim(),
+    direct, user: $("user").value, extra: $("extra").value, fullscreen: $("fs").checked, session: readSession() });
+}
+for (const id of ["hostName", "host", "user", "extra"]) $(id).addEventListener("input", storeFields);
+$("fs").addEventListener("change", storeFields);
+HostsUI.onSelect((h, vaultOnly) => { if (vaultOnly) updateSummary(); else showHost(h); });
+const uiPrefs = (() => { try { return JSON.parse(localStorage.getItem("freerdp-web-ui") || "{}"); } catch (e) { return {}; } })();
+const saveUiPrefs = () => { try { localStorage.setItem("freerdp-web-ui", JSON.stringify(uiPrefs)); } catch (e) {} };
 function loadSettings() {
-  const s = readSettings();
-  if (!s.session) {   // settings from before the Session settings panel
-    s.session = { ...FreeRDPOptions.DEFAULTS };
-    if (typeof s.extra === "string" && s.extra.trim() === OLD_DEFAULT_EXTRA) { s.session.codec = "av1-444"; s.extra = ""; }
-    writeSettings(s);
-  }
-  const q = new URLSearchParams(location.search);   // URL overrides, for testing
-  restoreManual();
+  showHost(HostsUI.current());
+  const q = new URLSearchParams(location.search);   // URL overrides, for testing: the form only
   if (q.get("v")) $("host").value = q.get("v");
   if (q.get("u")) $("user").value = q.get("u");
-  if (q.has("extra")) $("extra").value = q.get("extra");
-  try { FreeRDPVault.validateOptions($("extra").value); }
-  catch (e) {
-    $("extra").value = ""; q.delete("extra"); delete s.extra; writeSettings(s);
-    log("[page] ignored credential or secret-export options in saved settings or URL");
+  if (q.has("extra")) {
+    try { $("extra").value = FreeRDPVault.validateOptions(q.get("extra")); }
+    catch (e) { q.delete("extra"); log("[page] ignored credential or secret-export options in the URL"); }
   }
-  $("fs").checked = q.has("fs") ? q.get("fs") === "1" : !!s.fullscreen;
-  showSession(s.session);
-  $("advancedPanel").open = !!s.advancedOpen;
+  if (q.has("fs")) $("fs").checked = q.get("fs") === "1";
+  updateSessionText(); updateRoute();
+  $("advancedPanel").open = !!uiPrefs.advancedOpen;
   // Do not accept passwords in URLs: history, referrers and access logs retain them.
   q.delete("p");
   if (q.toString() !== new URLSearchParams(location.search).toString())
     history.replaceState(null, "", location.pathname + (q.size ? "?" + q : "") + location.hash);
   return q.get("autoconnect") === "1";
-}
-function saveSettings() {
-  FreeRDPVault.validateOptions($("extra").value);
-  const s = readSettings();
-  const key = $("direct").checked ? "directHost" : "host";
-  s[key] = $("host").value;
-  const recentKey = key + "Recent";
-  s[recentKey] = [s[key], ...(s[recentKey] || []).filter((h) => h !== s[key])].filter(Boolean).slice(0, 8);
-  s.user = $("user").value; s.extra = $("extra").value; s.fullscreen = $("fs").checked;
-  if (window.directSocketsAvailable) s.direct = $("direct").checked;
-  writeSettings(s);
 }
 
 // ---- Session settings: a few plain choices; options.js turns them into FreeRDP options
@@ -136,23 +126,24 @@ function updateSessionText() {
 function updateSummary() {
   const parts = [];
   if ($("direct").checked) parts.push("Direct TCP (installed app), no gateway");
-  if (FreeRDPVaultUI.enabled) parts.push(FreeRDPVaultUI.selected ? `Saved host “${$("vaultHosts").selectedOptions?.[0]?.text}” from the vault` : "Passkey vault on");
+  const h = HostsUI.current();
+  if (h.vault) parts.push(h.vaultSaved ? "Password from the passkey vault" : "Passkey vault on, no password saved yet");
   if ($("extra").value.trim()) parts.push("Extra options: " + $("extra").value.trim());
   $("summary").textContent = parts.join(" · ");
 }
 document.querySelectorAll("#sessionPanel input").forEach((el) => el.addEventListener("change", () => {
   if (el.name === "keys") FreeRDPKeyboard.set(el.value);
-  else if (el.id !== "fs") { const s = readSettings(); s.session = readSession(); writeSettings(s); }
+  else if (el.id !== "fs") HostsUI.update({ session: readSession() });
   updateSessionText();
 }));
 $("restoreDefaults").onclick = () => {
-  const s = readSettings(); s.session = { ...FreeRDPOptions.DEFAULTS }; writeSettings(s);
-  showSession(s.session);
+  HostsUI.update({ session: { ...FreeRDPOptions.DEFAULTS } });
+  showSession(FreeRDPOptions.DEFAULTS);
   if (FreeRDPOptions.overridden($("extra").value).length) $("advancedPanel").open = true;   // what still overrides
 };
 $("extra").addEventListener("input", updateSessionText);
 $("extra").addEventListener("change", updateSessionText);
-$("advancedPanel").addEventListener("toggle", () => { const s = readSettings(); s.advancedOpen = $("advancedPanel").open; writeSettings(s); });
+$("advancedPanel").addEventListener("toggle", () => { uiPrefs.advancedOpen = $("advancedPanel").open; saveUiPrefs(); });
 window.addEventListener("storage", (e) => { if (e.key === FreeRDPKeyboard.KEY) setRadio("keys", FreeRDPKeyboard.get()); });
 
 // ---- the one-line SSH command of the safety notice follows the gateway's port
@@ -176,22 +167,9 @@ else {
   $("directHint").replaceChildren("Only in the installed app (Isolated Web App). ", how, ".");
 }
 $("direct").addEventListener("change", () => {
-  if (!FreeRDPVaultUI.selected) showTarget($("direct").checked);
+  storeFields(); showTarget(HostsUI.current());
   updateRoute(); updateSummary();
 });
-FreeRDPVaultUI.restoreManual = () => { restoreManual(); updateRoute(); };
-$("vaultEnable").addEventListener("change", () => {
-  const s = readSettings(); s.vault = $("vaultEnable").checked; writeSettings(s);
-  FreeRDPVaultUI.setEnabled(s.vault); updateSummary();
-});
-$("vaultHosts").addEventListener("change", () => { updateRoute(); updateSessionText(); });
-// off by default; on when the user turned it on, or (no choice yet) when a vault already exists
-window.addEventListener("freerdp-vault-ready", () => {
-  const on = readSettings().vault ?? FreeRDPVaultUI.exists();
-  $("vaultEnable").checked = on; FreeRDPVaultUI.setEnabled(on);
-  if (on && readSettings().vault === undefined) $("advancedPanel").open = true;   // show where it went
-  updateSummary();
-}, { once: true });
 
 const autoconnect = loadSettings();
 updateRoute();
@@ -219,7 +197,7 @@ var Module = {
     const lost = crash.lines.some((l) => /ERRCONNECT_|Network disconnect|\[tcp-shim\].*(Error|abort)/i.test(l));
     crashEnd(!crash.userEnded && (code !== 0 || lost), code !== 0 ? "exit code " + code : lost ? "connection lost" : "");
   },
-  onAbort(what) { runtimeFailed = true; resolveRuntime(false); FreeRDPVaultUI.lock(); log("[page] aborted: " + what); crashEnd(true, "wasm abort: " + what); },
+  onAbort(what) { runtimeFailed = true; resolveRuntime(false); HostsUI.lock(); log("[page] aborted: " + what); crashEnd(true, "wasm abort: " + what); },
 };
 function crashEnd(unexpected, reason) {
   clearInterval(crash.timer); crash.running = false;
@@ -489,11 +467,12 @@ window.addEventListener("resize", syncHeader); syncHeader();
 
 async function connect() {
   if (connectStarted || runtimeFailed) return;
-  try { FreeRDPVaultUI.check(); } catch (e) { status(e.message); return; }
-  const selectedId = FreeRDPVaultUI.selected;
+  try { HostsUI.check(); } catch (e) { status(e.message); return; }
+  if (!storeFields()) { status("Fix the host's settings first."); return; }
+  const selectedId = HostsUI.selected;
   const checkSelection = () => {
-    if (FreeRDPVaultUI.selected !== selectedId) throw new Error("Selected host changed. Connect again to use the current selection.");
-    FreeRDPVaultUI.check();
+    if (HostsUI.selected !== selectedId) throw new Error("Selected host changed. Connect again to use the current selection.");
+    HostsUI.check();
   };
   connectStarted = true;
   let handedToWasm = false;
@@ -505,7 +484,8 @@ async function connect() {
     Module.freerdpAudioContext ??= new AudioContext({ latencyHint: "interactive" });
     Module.freerdpAudioContext.resume().catch(() => {});
   } catch (e) { log("[page] no Web Audio: " + e.message); }
-  if (!selectedId) saveSettings();
+  await HostsUI.prepare();   // the vault's passkey, if this host's password is there
+  checkSelection();
   if (!await runtime) throw new Error("WebAssembly runtime unavailable.");
   checkSelection();
   if ($("fs").checked) await enterFullscreen();
@@ -515,12 +495,15 @@ async function connect() {
   // switch to the session layout first (header hidden), let it settle, then measure: the first
   // picture then has exactly the canvas aspect ratio; /dynamic-resolution follows later resizes
   document.body.classList.add("session"); syncHeader();
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  // two frames, or 200 ms: a hidden tab, or one that lost focus to a passkey prompt, may get no
+  // frames for a while (the measurement below forces the layout either way)
+  await Promise.race([new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
+    new Promise((r) => setTimeout(r, 200))]);
   const r = $("canvas").getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
   const even = (v) => Math.max(2, Math.round(v * dpr / 2) * 2);
   const size = `${even(r.width)}x${even(r.height)}`;
   checkSelection();
-  FreeRDPVaultUI.use(host => {
+  HostsUI.use(host => {
     if (host.direct && !window.directSocketsAvailable) throw new Error("This saved host needs Direct TCP. Install and open the isolated app.");
     const session = readSession();
     const resolved = { ...host, extra: FreeRDPOptions.resolve(session, host.extra).join(" ") };
@@ -550,7 +533,7 @@ async function connect() {
     handedToWasm = true;
     try { Module.callMain(args); }
     catch (e) { if (e !== "unwind") log("[page] " + e); }
-    finally { args.fill(""); sessionPassword = ""; FreeRDPVaultUI.lock(); }
+    finally { args.fill(""); sessionPassword = ""; HostsUI.lock(); }
   });
   } catch (e) {
     status(e.message); document.body.classList.remove("session"); syncHeader();

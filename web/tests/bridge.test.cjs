@@ -6,9 +6,8 @@ const vm = require("node:vm");
 const {connectionArgs,validateOptions} = require("../vault.js");
 const FreeRDPOptions = require("../options.js");
 const FreeRDPKeyboard = require("../keyboard.js");
-function fixture({search="", extra="", direct=true, settings}={}) {
+function fixture({search="", extra="", direct=true}={}) {
   const elements=new Map(), storage=new Map(), calls=[], classes=new Set();
-  if(settings) storage.set("freerdp-web-settings",JSON.stringify(settings));
   const classList={add:k=>classes.add(k),remove:k=>classes.delete(k),contains:k=>classes.has(k),toggle:(k,on)=>on?classes.add(k):classes.delete(k)};
   const element=id=>{
     if(!elements.has(id)) elements.set(id,{value:"",checked:false,disabled:false,textContent:"",hidden:true,
@@ -34,8 +33,11 @@ function fixture({search="", extra="", direct=true, settings}={}) {
   context.window=context;
   const selected={host:"selected.local:3389",username:"selected-user",password:"bridge-secret",extra:extra||"/gfx:AV1:i444",direct};
   let locked=false;
-  context.FreeRDPVaultUI={selected:"saved-id",enabled:true,exists:()=>true,setEnabled(){},check(){validateOptions(selected.extra);},
-    use(callback){if(locked)throw new Error("Vault locked");return callback({...selected});},lock(){locked=true;context.FreeRDPVaultUI.selected="";element("pass").value="";}};
+  const current={id:"saved-id",name:"Saved",host:"",directHost:"",direct,user:"",extra:"",fullscreen:false,
+    session:{...FreeRDPOptions.DEFAULTS},vault:true,vaultSaved:true};
+  context.FreeRDPHostsUI={selected:"saved-id",current:()=>current,update:()=>true,onSelect(){},prepare:async()=>{},
+    check(){validateOptions(selected.extra);},
+    use(callback){if(locked)throw new Error("Vault locked");return callback({...selected});},lock(){locked=true;context.FreeRDPHostsUI.selected="";element("pass").value="";}};
   vm.createContext(context);vm.runInContext(readFileSync(join(__dirname,"../app.js"),"utf8"),context);
   context.Module.callMain=args=>{calls.push([...args]);context.Module.print("runtime /p:bridge-secret");context.Module.print("runtime mentions bridge-secret");};
   return {context,elements,storage,calls,selected,get locked(){return locked;}};
@@ -56,7 +58,7 @@ test("runtime abort releases waiting connection without exposing selected creden
   assert.equal(f.calls.length,0);assert.equal(f.locked,true);
 });
 test("lock before ready runtime cancels selected-host connection",async()=>{
-  const f=fixture(),pending=f.context.connect();f.context.FreeRDPVaultUI.lock();f.context.Module.onRuntimeInitialized();await pending;
+  const f=fixture(),pending=f.context.connect();f.context.FreeRDPHostsUI.lock();f.context.Module.onRuntimeInitialized();await pending;
   assert.equal(f.calls.length,0);assert.match(f.elements.get("status").textContent,/Selected host changed/);
 });
 test("password URL and credential-bearing extra URL options are removed, ignored and never persisted",()=>{
@@ -66,33 +68,28 @@ test("password URL and credential-bearing extra URL options are removed, ignored
   for(const value of f.storage.values()){assert.ok(!value.includes("url-secret"));assert.ok(!value.includes("extra-secret"));}
 });
 test("manual credential extra options are rejected before saveSettings",async()=>{
-  const f=fixture();f.context.FreeRDPVaultUI.selected="";f.elements.get("extra").value="/p:extra-secret";
-  f.context.FreeRDPVaultUI.check=()=>validateOptions(f.elements.get("extra").value);
+  const f=fixture();f.context.FreeRDPHostsUI.selected="";f.elements.get("extra").value="/p:extra-secret";
+  f.context.FreeRDPHostsUI.check=()=>validateOptions(f.elements.get("extra").value);
   await f.context.connect();assert.equal(f.calls.length,0);
   for(const value of f.storage.values())assert.ok(!value.includes("extra-secret"));
 });
 
 test("switching the selected host during runtime wait aborts without consuming the new host",async()=>{
   const f=fixture(),pending=f.context.connect();
-  f.context.FreeRDPVaultUI.selected="other-saved-id";f.selected.password="other-secret";
+  f.context.FreeRDPHostsUI.selected="other-saved-id";f.selected.password="other-secret";
   f.context.Module.onRuntimeInitialized();await pending;
   assert.equal(f.calls.length,0);assert.match(f.elements.get("status").textContent,/Selected host changed/);
 });
 test("clearing saved selection cannot fall back to a manual connection during runtime wait",async()=>{
-  const f=fixture(),pending=f.context.connect();f.context.FreeRDPVaultUI.selected="";
+  const f=fixture(),pending=f.context.connect();f.context.FreeRDPHostsUI.selected="";
   f.elements.get("host").value="manual.local:3389";f.elements.get("pass").value="manual-secret";
   f.context.Module.onRuntimeInitialized();await pending;assert.equal(f.calls.length,0);
 });
 
 // the codec, sound and clipboard choices of the session settings reach the client; extra options win
 async function connectWith(f){const pending=f.context.connect();f.context.Module.onRuntimeInitialized();await pending;return f.calls[0];}
-test("old default extra options become the AV1 4:4:4 video setting",async()=>{
-  const f=fixture({extra:"/bpp:16",settings:{extra:"/gfx:AV1:i444",user:"u"}});
-  assert.equal(f.elements.get("extra").value,"");
-  assert.equal(JSON.parse(f.storage.get("freerdp-web-settings")).session.codec,"av1-444");
-});
 test("session settings are generated for a saved host, its extra options win over the same kind",async()=>{
-  const f=fixture({extra:"/gfx:AV1:i420 /bpp:16",settings:{session:{audio:false,clipboard:false,codec:"av1-444",strategy:"bandwidth"}}});
+  const f=fixture({extra:"/gfx:AV1:i420 /bpp:16"});
   f.elements.get("optAudio").checked=false;f.elements.get("optClipboard").checked=false;
   f.context.document.querySelector=sel=>{const m=/name=(\w+)\]:checked/.exec(sel);return m?{value:{codec:"av1-444",strategy:"bandwidth"}[m[1]]}:{parentElement:{textContent:""}};};
   const args=await connectWith(f);

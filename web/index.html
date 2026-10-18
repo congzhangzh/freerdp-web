@@ -40,15 +40,30 @@
     the gateway. Other ways, and why: <a href="safety.html">Safety and tunnels</a>.</p>
 </section>
 
+<!-- the saved hosts: the form below shows and edits the selected one -->
+<section class="hosts" aria-label="Hosts">
+  <div class="host-list" id="hostList" role="radiogroup" aria-label="Saved hosts"></div>
+  <div class="host-actions">
+    <button id="hostNew" type="button" class="small">New host</button>
+    <button id="hostDuplicate" type="button" class="small">Duplicate</button>
+    <button id="hostDelete" type="button" class="small">Delete</button>
+    <button id="hostExport" type="button" class="small">Export…</button>
+    <button id="hostImport" type="button" class="small">Import…</button>
+    <input id="hostImportFile" type="file" accept="application/json,.json" hidden>
+  </div>
+  <p id="hostStatus" class="hint" role="status" aria-live="polite"></p>
+</section>
+
 <div id="lastlog" role="alert" hidden><span id="lastlogText"></span>
   <button id="lastlogCopy" class="small" type="button">Copy log</button> <button id="lastlogShow" class="small" type="button">Show</button>
   <button id="lastlogDismiss" class="small" type="button">Dismiss</button></div>
 
 <!-- a real form with name/autocomplete, so the browser's password manager offers to save and fill -->
 <form class="connect" id="connectForm" action="#" autocomplete="on">
+  <label class="field"><span>Name</span>
+    <input id="hostName" autocomplete="off" spellcheck="false" maxlength="60"></label>
   <label class="field"><span id="hostLabel">Gateway</span>
-    <input id="host" name="gateway" placeholder="127.0.0.1:6080" list="recentHosts" autocomplete="off" spellcheck="false">
-    <datalist id="recentHosts"></datalist></label>
+    <input id="host" name="gateway" placeholder="127.0.0.1:6080" autocomplete="off" spellcheck="false"></label>
   <label class="field"><span>User</span>
     <input id="user" name="username" autocomplete="username" spellcheck="false" autocapitalize="off"></label>
   <label class="field"><span>Password</span>
@@ -104,29 +119,26 @@
   </details>
 
   <details class="panel" id="advancedPanel">
-    <summary>Advanced <small>direct TCP, password vault, extra options</small></summary>
+    <summary>Advanced <small>direct TCP, passkey vault, extra options</small></summary>
     <fieldset>
       <legend>Connection</legend>
       <label id="directLabel" class="check"><input id="direct" type="checkbox"> Direct TCP to the RDP server, no gateway</label>
       <p class="hint" id="directHint"></p>
     </fieldset>
     <fieldset>
-      <legend>Passwords</legend>
-      <label class="check"><input id="vaultEnable" type="checkbox"> Keep passwords in a passkey vault</label>
-      <p class="hint">Off: your browser's password manager saves and fills the password. On: several hosts,
-        encrypted in this browser and unlocked with a passkey
+      <legend>Password</legend>
+      <label class="check"><input id="vaultKeep" type="checkbox"> Keep this host's password in the passkey vault</label>
+      <p class="hint">Off: your browser's password manager saves and fills it. On: it is encrypted in this browser
+        and unlocked with a passkey when you connect
         (<a href="https://github.com/congzhangzh/freerdp-web/blob/main/web/VAULT.md" target="_blank" rel="noopener">how it works</a>).</p>
       <div id="vaultPanel" hidden>
-        <div id="vaultControls" aria-label="Saved hosts">
-          <label>Saved host<select id="vaultHosts" disabled><option value="">Manual connection</option></select></label>
-          <button id="vaultCreate" type="button" disabled>Create vault</button>
-          <button id="vaultUnlock" type="button" disabled>Unlock with passkey</button>
-          <button id="vaultLock" type="button" disabled>Lock</button>
-          <button id="vaultNew" type="button" disabled>New host</button>
-          <label>Saved name<input id="vaultName" size="14" autocomplete="off" disabled></label>
-          <button id="vaultSave" type="button" disabled>Save host</button>
-          <button id="vaultDelete" type="button" disabled>Delete host</button>
-          <span id="vaultStatus" role="status" aria-live="polite">Checking local vault…</span>
+        <p id="vaultStatus" class="hint" role="status" aria-live="polite"></p>
+        <div class="row">
+          <button id="vaultCreate" type="button" class="small">Create vault</button>
+          <button id="vaultUnlock" type="button" class="small">Unlock with passkey</button>
+          <button id="vaultSave" type="button" class="small">Save the password</button>
+          <button id="vaultForget" type="button" class="small">Forget the saved password</button>
+          <button id="vaultLock" type="button" class="small">Lock</button>
         </div>
       </div>
     </fieldset>
@@ -138,6 +150,28 @@
     </fieldset>
   </details>
 </form>
+
+<!-- export and import of the hosts (outside the form: forms do not nest) -->
+<dialog id="exportDialog" aria-labelledby="exportTitle">
+  <form method="dialog" class="dialog">
+    <h2 id="exportTitle">Export hosts</h2>
+    <p class="hint">Every host and its settings, as a file to import in another browser.</p>
+    <label class="check"><input id="exportPasswords" type="checkbox"> Include the passwords kept in the passkey vault</label>
+    <p class="hint">The browser's password manager does not show its passwords to web pages; it can export them itself.</p>
+    <label class="check"><input id="exportEncrypt" type="checkbox"> Encrypt the file with a passphrase</label>
+    <input id="exportPassphrase" type="password" placeholder="Passphrase, 8 characters or more" autocomplete="new-password" hidden>
+    <p id="exportWarn" class="note" hidden>Without encryption, anyone who gets the file can read these passwords.</p>
+    <div class="row"><button value="cancel" class="small">Cancel</button><button value="ok" class="primary">Export</button></div>
+  </form>
+</dialog>
+<dialog id="importDialog" aria-labelledby="importTitle">
+  <form method="dialog" class="dialog">
+    <h2 id="importTitle">Import hosts</h2>
+    <p id="importInfo" class="hint"></p>
+    <input id="importPassphrase" type="password" placeholder="Passphrase" autocomplete="off">
+    <div class="row"><button value="cancel" class="small">Cancel</button><button value="ok" class="primary">Import</button></div>
+  </form>
+</dialog>
 
 <div id="toolbar" role="toolbar" aria-label="Session">
   <button id="tbPin" aria-label="Pin toolbar">📌</button>
@@ -155,7 +189,8 @@
 <script src="vault.js"></script>
 <script src="options.js"></script>
 <script src="keyboard.js"></script>
-<script src="vault-ui.js"></script>
+<script src="hosts.js"></script>
+<script src="hosts-ui.js"></script>
 <script src="app.js"></script>
 <script src="sdl-freerdp.js"></script>
 </body>

@@ -6,9 +6,9 @@
 //   node test-page.mjs <dir with sdl-freerdp.js and sdl-freerdp.wasm> [out dir]
 //
 // e.g. the release kit's local build: node test-page.mjs ../rdp-release-kit/dist/wasm/web
-// Checks: the client starts; the session settings reach the client's command line, with the
-// password masked in the log; the passkey vault switch; the mstsc shortcuts; no sideways
-// scrolling at phone width. Screenshots go to the out dir (default out/). CHROME=<binary>
+// Checks: the client starts; the hosts (new, select, export encrypted, import); the session
+// settings reach the client's command line, with the password masked in the log; the passkey
+// vault switch; the mstsc shortcuts; no sideways scrolling at phone width. Screenshots go to the out dir (default out/). CHROME=<binary>
 // picks another Chrome or Chromium.
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -98,19 +98,92 @@ check("the client starts", ready && await ev("crossOriginIsolated"),
   ready ? "" : `status "${await ev("document.getElementById('status').textContent")}", isolated ${await ev("crossOriginIsolated")}; ${logs.slice(-3).join(" | ")}`);
 check("the session settings start as recommended", await ev("document.getElementById('sessionSummary').textContent") === "recommended");
 
-// the vault is off by default; turning it on shows it, off hides it and keeps what was typed
+// the hosts: one at first; a new one gets its own settings; the form follows the selection
+const hosts = () => ev("[...document.querySelectorAll('#hostList .host')].map(b => b.querySelector('b').textContent + (b.getAttribute('aria-checked') === 'true' ? '*' : ''))");
+check("one host at first, selected", JSON.stringify(await hosts()) === JSON.stringify(["My server*"]));
+const type = (id, value) => ev(`(() => { const e = document.getElementById('${id}'); e.value = ${JSON.stringify(value)};
+  e.dispatchEvent(new Event('input', { bubbles: true })); return true; })()`);
+await type("user", "synthetic-user");
+await ev("document.getElementById('hostNew').click(), true");
+await type("hostName", "Lab"); await type("host", "127.0.0.1:13390"); await type("user", "lab-user");
+check("New host: a second host, selected, named as typed", JSON.stringify(await hosts()) === JSON.stringify(["My server", "Lab*"]));
+await ev("document.querySelector('#hostList .host').click(), true");
+check("selecting a host shows its own settings", await ev("document.getElementById('user').value") === "synthetic-user"
+  && await ev("document.getElementById('host').value") === "127.0.0.1:6080");
+
+// the passkey vault is a per-host choice, off by default
 const vaultShown = () => ev("!document.getElementById('vaultPanel').hidden");
-await ev("document.getElementById('user').value = 'synthetic-user', true");
 check("the vault is off by default", !await vaultShown());
-await ev("document.getElementById('vaultEnable').click(), true"); await sleep(300);
-check("turning the vault on shows it", await vaultShown());
-await ev("document.getElementById('vaultEnable').click(), true"); await sleep(300);
+await ev("document.getElementById('vaultKeep').click(), true"); await sleep(200);
+check("keeping this host's password in the vault shows the vault", await vaultShown());
+await ev("document.getElementById('vaultKeep').click(), true"); await sleep(200);
 check("turning it off hides it and keeps the user", !await vaultShown() && await ev("document.getElementById('user').value") === "synthetic-user");
+
+// export, encrypted with a passphrase, then import the file
+await send("Browser.setDownloadBehavior", { behavior: "allow", downloadPath: out });
+const exported = join(out, "freerdp-web-hosts.encrypted.json");
+rmSync(exported, { force: true });
+await ev(`(() => { document.getElementById('hostExport').click(); document.getElementById('exportEncrypt').click();
+  document.getElementById('exportPassphrase').value = 'synthetic passphrase';
+  document.querySelector('#exportDialog button[value=ok]').click(); return true; })()`);
+for (let i = 0; i < 40 && !existsSync(exported); i++) await sleep(250);
+const file = existsSync(exported) ? readFileSync(exported, "utf8") : "";
+check("export, encrypted: a file without readable hosts", file.includes('"encrypted"') && !file.includes("127.0.0.1") && !file.includes("lab-user"));
+const doc = await send("DOM.getDocument", {});
+const input = await send("DOM.querySelector", { nodeId: doc.root.nodeId, selector: "#hostImportFile" });
+await send("DOM.setFileInputFiles", { nodeId: input.nodeId, files: [exported] });
+for (let i = 0; i < 40 && !await ev("document.getElementById('importDialog').open"); i++) await sleep(100);
+await ev(`(() => { document.getElementById('importPassphrase').value = 'synthetic passphrase';
+  document.querySelector('#importDialog button[value=ok]').click(); return true; })()`);
+for (let i = 0; i < 80 && (await hosts()).length < 4; i++) await sleep(250);   // PBKDF2 takes a moment
+check("import with the passphrase adds the hosts, renamed", JSON.stringify((await hosts()).map((h) => h.replace("*", "")))
+  === JSON.stringify(["My server", "Lab", "My server 2", "Lab 2"]));
+await screenshot("page-hosts.png");
+await ev("document.querySelector('#hostList .host').click(), true");
+
+// the passkey vault, with a virtual passkey (PRF): a host's password saved encrypted, the
+// IndexedDB record without it, and after a reload Connect unlocks the vault and gives the
+// client exactly that password (read from the client's argv by this test, synthetic)
+await send("WebAuthn.enable", { enableUI: false });
+await send("WebAuthn.addVirtualAuthenticator", { options: { protocol: "ctap2", ctap2Version: "ctap2_1", transport: "internal",
+  hasResidentKey: true, hasUserVerification: true, hasPrf: true, isUserVerified: true, automaticPresenceSimulation: true } });
+const vaultText = () => ev("document.getElementById('vaultStatus').textContent");
+const waitFor = async (expr, ms = 15000) => { for (let t = 0; t < ms && !await ev(expr); t += 200) await sleep(200); return ev(expr); };
+await ev("document.querySelectorAll('#hostList .host')[1].click(), true");   // "Lab"
+await ev("document.getElementById('vaultKeep').click(), true");
+await waitFor("!document.getElementById('vaultCreate').hidden");
+await ev("document.getElementById('vaultCreate').click(), true");
+await waitFor("!document.getElementById('vaultSave').hidden && !document.getElementById('vaultSave').disabled");
+await ev("document.getElementById('pass').value = 'vault-synthetic-pw', true");
+await ev("document.getElementById('vaultSave').click(), true");
+check("vault: a host's password saved with a passkey", await waitFor("document.getElementById('vaultStatus').textContent.startsWith('Saved in the vault')"), await vaultText());
+const record = await ev(`new Promise((done) => { const r = indexedDB.open('freerdp-credential-vault', 1);
+  r.onsuccess = () => { const g = r.result.transaction('vault').objectStore('vault').get('default'); g.onsuccess = () => done(JSON.stringify(g.result)); }; })`);
+check("vault: IndexedDB holds no password, user or address", !/vault-synthetic-pw|lab-user|13390/.test(record) && record.includes("ciphertext"));
+await send("Page.reload");
+for (let i = 0; i < 120 && !await ev("document.getElementById('status')?.textContent === 'ready'"); i++) await sleep(500);
+await ev("document.querySelectorAll('#hostList .host')[1].click(), true");
+check("vault: after a reload the host says its password is saved", (await vaultText()).startsWith("Saved. Connect asks"));
+await ev("window.__argv = null; window.__callMain = Module.callMain; Module.callMain = (a) => { window.__argv = a.slice(); return window.__callMain(a); }; true");
+await ev("document.getElementById('go').click(), true");
+// a person moves the mouse: with the virtual passkey, the headless page's tasks wait for input
+await sleep(1000);
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 20, y: 20 });
+await waitFor("window.__argv !== null");
+check("vault: Connect unlocks it and the client gets the saved password",
+  await ev("window.__argv?.includes('/p:vault-synthetic-pw') && window.__argv.includes('/u:lab-user')"),
+  await ev("window.__argv ? '' : 'status: ' + document.getElementById('status').textContent"));
+await ev("window.__argv = null; true");
+await send("Page.reload");   // callMain runs once per page: a fresh page for the checks below
+for (let i = 0; i < 120 && !await ev("document.getElementById('status')?.textContent === 'ready'"); i++) await sleep(500);
+await ev("document.querySelector('#hostList .host').click(), true");
+logs.length = 0;
 
 // session settings as a user clicks them; the mstsc shortcuts; a gateway port with no server
 await ev(`(() => { for (const s of ['input[name=codec][value="av1-420"]', 'input[name=strategy][value="bandwidth"]',
   '#optClipboard', 'input[name=keys][value="mstsc"]', '#sessionPanel > summary']) document.querySelector(s).click();
-  document.getElementById('host').value = '127.0.0.1:1'; document.getElementById('pass').value = 'synthetic-password';
+  document.getElementById('host').value = '127.0.0.1:1'; document.getElementById('user').value = 'synthetic-user';
+  document.getElementById('pass').value = 'synthetic-password';
   return true; })()`);
 const expected = "/gfx:AV1:i420 /sound -clipboard /network:broadband-low +compression /compression-level:2";
 check("the settings preview", await ev("document.getElementById('preview').textContent") === expected);
