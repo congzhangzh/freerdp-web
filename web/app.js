@@ -171,7 +171,9 @@ $("copyCmd").onclick = () => navigator.clipboard.writeText($("sshCmd").textConte
 if (window.directSocketsAvailable) $("directHint").textContent = "This installed app can open TCP itself: enter the RDP server, usually host:3389.";
 else {
   $("direct").disabled = true;
-  $("directHint").innerHTML = 'Only in the installed app (Isolated Web App). <a href="install.html">How to install it</a>.';
+  // DOM calls, not innerHTML: the installed app enforces Trusted Types and would refuse a string
+  const how = Object.assign(document.createElement("a"), { href: "install.html", textContent: "How to install it" });
+  $("directHint").replaceChildren("Only in the installed app (Isolated Web App). ", how, ".");
 }
 $("direct").addEventListener("change", () => {
   if (!FreeRDPVaultUI.selected) showTarget($("direct").checked);
