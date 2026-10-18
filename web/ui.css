@@ -101,7 +101,9 @@ canvas { display:none; width:100%; height:calc(100vh - var(--hdr, 0px) - 24px); 
 body.session { background:#000; }
 body.session .shell { max-width:none; padding:8px 12px 0; }
 body.session .top, body.session .route, body.session form.connect, body.session #lastlog { display:none; }
-body.session canvas { display:block; }
+/* SDL (or the runtime) writes an inline 800 x 600 CSS size on the canvas; the page owns its size,
+   in a window as in full screen, so the remote desktop fills the window (hence !important) */
+body.session canvas { display:block; width:100% !important; height:calc(100vh - var(--hdr, 0px) - 24px) !important; }
 body.fs .shell { padding:0; }
 /* full screen session: SDL sets inline sizes, hence !important */
 body.fs canvas { position:fixed; inset:0; width:100vw !important; height:100vh !important; }

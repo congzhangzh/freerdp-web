@@ -26,6 +26,9 @@ The page is ready to use without reading anything first.
 - **Help pages**: Safety and tunnels, Keyboard, and a restyled Install as app.
 - Saved settings move over: Extra options that held only the old default `/gfx:AV1:i444`
   become the Video setting AV1 4:4:4.
+- **The remote desktop fills the window.** In a window (not full screen) it was drawn at
+  800 × 600 and scaled, because the client writes that size on the canvas; 0.1.x had this
+  too. The page now owns the canvas size in both modes.
 - `test-page.mjs` tests the page with a built client and no server.
 
 ## 0.1.x
