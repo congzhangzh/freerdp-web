@@ -88,5 +88,16 @@ WASM_DEPS=<dependency prefix> bash build-wasm-vault.sh <FreeRDP source dir>
 python3 serve.py 8180 dist
 ```
 
-`node --test web/tests/*.test.cjs` runs the unit tests (vault, connection bridge, session
-options, keyboard profiles).
+## Testing
+
+| Test | Needs | Command |
+|---|---|---|
+| Unit tests: vault, connection bridge, session options, keyboard | Node 20+ | `node --test web/tests/*.test.cjs` |
+| The page with the real client, no server | Node 22+, Chrome, a built client (`sdl-freerdp.js` and `.wasm`) | `node test-page.mjs <client dir>` |
+| A full login: xrdp in a throwaway container, reached over SSH and websockify | Docker or Podman; the [release kit](https://github.com/congzhangzh/rdp-release-kit) with its Debian 13 xrdp packages built | `PAGE_SRC=<this checkout> ./build-wasm.sh`, then `test/wasm-session.sh dist/wasm/web <this checkout>/rdp-gateway.sh` in the kit |
+
+`test-page.mjs` starts nothing that listens: Chrome answers the page's requests itself
+(DevTools Fetch interception) with the headers the client's threads need, and the
+connection goes to a port where nothing listens. Its screenshots and log go to `out/`.
+The client directory can be the release kit's `dist/wasm/web` or an unpacked
+`freerdp-web-*.zip` from its releases. Changes: [CHANGELOG.md](CHANGELOG.md).

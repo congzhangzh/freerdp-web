@@ -91,12 +91,11 @@ session panel and `keyboard.html`.
 |---|---|---|
 | Option mapping, overrides, keyboard actions | `node --test web/tests/*.test.cjs` | 23 tests pass |
 | Connection bridge with session settings, migration | `web/tests/bridge.test.cjs` | pass |
-| Real WASM runtime receives the generated options | headless Chrome, page served by DevTools `Fetch` interception with COOP/COEP | runtime ready; FreeRDP parsed `/gfx:AV1:i420 /sound -clipboard /network:broadband-low +compression /compression-level:2` and reached the connect stage |
-| Layout | screenshots at 1280 px and 390 px, light and dark | no horizontal scroll |
+| The page with the real client, settings, vault switch, mstsc keys, phone width | `node test-page.mjs <client dir>` | 16 checks pass |
+| A full login | the release kit's `test/wasm-session.sh`: xrdp in a throwaway container, SSH, websockify | Xorg session and xterm started, screenshot shows the desktop |
 
 Not verified yet:
 
-- A full session with the new page (needs a user-started gateway and server).
 - Whether *Save bandwidth* and *Reduce server load* measurably change bytes and server CPU
   with xrdp; measure both under the same workload before claiming a gain.
 - The mstsc Ctrl + Alt + End → Ctrl + Alt + Delete path against a real server.
