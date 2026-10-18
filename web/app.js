@@ -258,7 +258,7 @@ $("tbPin").onclick = () => { setPinned(!document.body.classList.contains("tbpinn
 $("tbInfo").onclick = () => { $("info").hidden = !$("info").hidden; updateInfo(); backToCanvas(); };
 let last = { t: performance.now(), rx: 0, tx: 0, frames: 0, ms: 0 };
 let version = "?";
-fetch("/.well-known/manifest.webmanifest").then((r) => r.json()).then((m) => { version = m.version; }).catch(() => {});
+fetch(".well-known/manifest.webmanifest").then((r) => r.json()).then((m) => { version = m.version; }).catch(() => {});
 function updateInfo() {
   if ($("info").hidden) return;
   const now = performance.now(), dt = (now - last.t) / 1000 || 1;
@@ -443,5 +443,5 @@ if (debugKeys) {
     log(`[input] mousedown button=${e.button} at ${e.clientX},${e.clientY} target=${e.target.tagName}${e.target.id ? "#" + e.target.id : ""}`);
   }, true);
 }
-fetch("/.well-known/manifest.webmanifest").then((r) => r.json()).then((m) => log(`[page] FreeRDP Web ${m.version}`)).catch(() => {});
+fetch(".well-known/manifest.webmanifest").then((r) => r.json()).then((m) => log(`[page] FreeRDP Web ${m.version}`)).catch(() => {});
 if (!crossOriginIsolated) log("[page] warning: not cross-origin isolated, threads will not work (serve with COOP/COEP)");

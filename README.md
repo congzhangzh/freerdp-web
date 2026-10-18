@@ -44,6 +44,12 @@ line matter:
 - `-t` gives websockify a terminal, so it ends when you disconnect;
   without it, websockify keeps running on the server.
 
+When the page comes from a web site (for example GitHub Pages), Chrome asks
+whether the site may access other apps and services on this device. Allow
+it: that is how the page reaches the gateway on 127.0.0.1 (Chrome's Local
+Network Access protection; it blocks the connection otherwise, with
+`ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS` in the browser console).
+
 [`rdp-gateway.sh`](rdp-gateway.sh) runs the same line:
 
 ```sh
