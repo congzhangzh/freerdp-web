@@ -6,6 +6,12 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 0.4.1
+
+- **The gateway's default port is 3390**, next to RDP's 3389 (was 6080): the safety notice's
+  SSH line, a new host, the help pages and `rdp-gateway.sh`. Hosts you saved keep their
+  address.
+
 ## 0.4.0
 
 - **A splash on the first visit**: two one-minute demos, xrdp + Xfce and gnome-remote-desktop

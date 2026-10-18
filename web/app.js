@@ -36,7 +36,7 @@ const HostsUI = window.FreeRDPHostsUI;
 function showTarget(h) {
   const direct = $("direct").checked;
   $("hostLabel").textContent = direct ? "RDP server" : "Gateway";
-  $("host").placeholder = direct ? "rdp-server:3389" : "127.0.0.1:6080";
+  $("host").placeholder = direct ? "rdp-server:3389" : "127.0.0.1:3390";
   $("host").value = direct ? h.directHost : h.host;
 }
 function showHost(h) {
@@ -149,8 +149,8 @@ window.addEventListener("storage", (e) => { if (e.key === FreeRDPKeyboard.KEY) s
 // ---- the one-line SSH command of the safety notice follows the gateway's port
 function updateRoute() {
   const m = /^(?:127\.0\.0\.1|localhost|\[::1\]):(\d{1,5})$/.exec($("host").value.trim());
-  const port = m ? m[1] : "6080";
-  $("hopGateway").textContent = $("direct").checked ? "none (direct TCP)" : $("host").value.trim() || "127.0.0.1:6080";
+  const port = m ? m[1] : "3390";
+  $("hopGateway").textContent = $("direct").checked ? "none (direct TCP)" : $("host").value.trim() || "127.0.0.1:3390";
   $("sshCmd").textContent = `ssh -t -L 127.0.0.1:${port}:127.0.0.1:${port} ${$("user").value.trim() || "user"}@server websockify 127.0.0.1:${port} 127.0.0.1:3389`;
 }
 $("host").addEventListener("input", updateRoute); $("user").addEventListener("input", updateRoute);

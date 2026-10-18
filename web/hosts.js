@@ -16,7 +16,7 @@
   const str = (v, d = "") => (typeof v === "string" ? v : d);
 
   function blank(name = "My server") {
-    return { id: crypto.randomUUID(), name, host: "127.0.0.1:6080", directHost: "", direct: false, user: "",
+    return { id: crypto.randomUUID(), name, host: "127.0.0.1:3390", directHost: "", direct: false, user: "",
       session: { ...Options.DEFAULTS }, extra: "", fullscreen: false, vault: false, vaultSaved: false };
   }
   // a host from storage or a file: known fields only, of the right types; no password

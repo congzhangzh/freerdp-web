@@ -49,15 +49,15 @@ your computer needs nothing but ssh, which Windows 10/11, macOS and Linux
 include:
 
 ```sh
-ssh -t -L 127.0.0.1:6080:127.0.0.1:6080 user@server websockify 127.0.0.1:6080 127.0.0.1:3389
+ssh -t -L 127.0.0.1:3390:127.0.0.1:3390 user@server websockify 127.0.0.1:3390 127.0.0.1:3389
 ```
 
-Then open the page and connect with the gateway `127.0.0.1:6080` (the
+Then open the page and connect with the gateway `127.0.0.1:3390` (the
 default). Ctrl-C in the ssh window ends the gateway. Two details in that
 line matter:
 
-- `websockify 127.0.0.1:6080 …` listens on the server's loopback only;
-  `websockify 6080 localhost:3389` would offer the bridge to the network.
+- `websockify 127.0.0.1:3390 …` listens on the server's loopback only;
+  `websockify 3390 localhost:3389` would offer the bridge to the network.
 - `-t` gives websockify a terminal, so it ends when you disconnect;
   without it, websockify keeps running on the server.
 
@@ -74,8 +74,8 @@ Network Access protection; it blocks the connection otherwise, with
 ./rdp-gateway.sh user@server 3390       # another RDP port
 ```
 
-If websockify already runs on the server (on its 127.0.0.1:6080), a plain
-forward is enough: `ssh -N -L 127.0.0.1:6080:127.0.0.1:6080 user@server`.
+If websockify already runs on the server (on its 127.0.0.1:3390), a plain
+forward is enough: `ssh -N -L 127.0.0.1:3390:127.0.0.1:3390 user@server`.
 
 ### Without websockify on the server
 

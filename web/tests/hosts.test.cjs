@@ -47,7 +47,7 @@ test("passwords only when given; encrypted with a passphrase, refused without it
   await assert.rejects(H.importText(sealed), H.NeedPassphrase);
   await assert.rejects(H.importText(sealed, "wrong"), /Wrong passphrase/);
   const back = await H.importText(sealed, "correct horse");
-  assert.equal(back[0].password, "pw-1"); assert.equal(back[0].host.host, "127.0.0.1:6080");
+  assert.equal(back[0].password, "pw-1"); assert.equal(back[0].host.host, "127.0.0.1:3390");
 });
 test("files that are not ours are refused", async () => {
   await assert.rejects(H.importText("not json"), /not JSON/);

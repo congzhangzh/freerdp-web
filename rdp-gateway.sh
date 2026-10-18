@@ -5,14 +5,14 @@
 #
 # runs, in one ssh command:
 #
-#   ssh -t -L 127.0.0.1:6080:127.0.0.1:6080 user@server \
-#       websockify 127.0.0.1:6080 127.0.0.1:3389
+#   ssh -t -L 127.0.0.1:3390:127.0.0.1:3390 user@server \
+#       websockify 127.0.0.1:3390 127.0.0.1:3389
 #
 # so websockify runs on the server, next to the RDP server, and this side
 # needs nothing but ssh (built into Windows 10/11, macOS and Linux; the
 # line above also works by hand there). The page connects to
-# 127.0.0.1:6080, its default gateway. Two details matter:
-#   - websockify listens on the server's 127.0.0.1 only; "websockify 6080
+# 127.0.0.1:3390, its default gateway. Two details matter:
+#   - websockify listens on the server's 127.0.0.1 only; "websockify 3390
 #     localhost:3389" would offer the bridge to the whole network
 #   - -t gives it a terminal, so it ends with the connection (without it,
 #     websockify keeps running on the server after you disconnect)
@@ -25,10 +25,10 @@
 #   ./rdp-gateway.sh --local user@server [RDP port]
 #
 # Stop the gateway (Ctrl-C) when the session is over: while it runs, any
-# web page open in this browser could connect to 127.0.0.1:6080 too. The
+# web page open in this browser could connect to 127.0.0.1:3390 too. The
 # RDP server still asks for its credentials, but the gateway checks nothing.
 #
-# Environment: WS_PORT (the page's gateway port, default 6080),
+# Environment: WS_PORT (the page's gateway port, default 3390),
 # SERVER_WS_PORT (websockify's port on the server, default WS_PORT; e.g.
 # WS_PORT=13390 SERVER_WS_PORT=3390), TUN_PORT (--local: local end of the
 # SSH forward, default WS_PORT + 1), SSH_OPTS (more ssh options, e.g.
@@ -42,7 +42,7 @@ if [ "${1:-}" = --local ]; then
 fi
 TARGET=${1:?usage: $0 [--local] user@server [RDP port]}
 RDP_PORT=${2:-3389}
-WS_PORT=${WS_PORT:-6080}
+WS_PORT=${WS_PORT:-3390}
 SERVER_WS_PORT=${SERVER_WS_PORT:-$WS_PORT}
 TUN_PORT=${TUN_PORT:-$((WS_PORT + 1))}
 SSH_OPTS=${SSH_OPTS:-}

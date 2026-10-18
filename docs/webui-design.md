@@ -17,7 +17,7 @@ reading anything. Expert controls exist, but out of the way.
 | Element | Decision |
 |---|---|
 | Form | Gateway, User, Password, **Connect**. A real `<form>` with `autocomplete="username"` / `"current-password"`, so the browser's password manager offers to save and fill the password. The page itself never stores a password. |
-| Safety notice | Always at the top: the route *this browser → gateway 127.0.0.1:6080 → SSH → RDP 127.0.0.1:3389* and the one-line SSH command that builds it, with a Copy button. The command follows the gateway port and the user name typed in the form. |
+| Safety notice | Always at the top: the route *this browser → gateway 127.0.0.1:3390 → SSH → RDP 127.0.0.1:3389* and the one-line SSH command that builds it, with a Copy button. The command follows the gateway port and the user name typed in the form. |
 | Before the session | No black canvas: only the form. The canvas appears when the session starts. |
 | Help | Three pages, linked from the top of every page: **Safety and tunnels** (`safety.html`), **Keyboard** (`keyboard.html`), **Install as app** (`install.html`). Help is reachable by click and keyboard, never only through a tooltip. |
 | Look | One left-aligned column, system font, light and dark from the system setting. No web fonts: an Isolated Web App cannot load them. |

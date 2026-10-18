@@ -124,7 +124,7 @@ await type("hostName", "Lab"); await type("host", "127.0.0.1:13390"); await type
 check("New host: a second host, selected, named as typed", JSON.stringify(await hosts()) === JSON.stringify(["My server", "Lab*"]));
 await ev("document.querySelector('#hostList .host').click(), true");
 check("selecting a host shows its own settings", await ev("document.getElementById('user').value") === "synthetic-user"
-  && await ev("document.getElementById('host').value") === "127.0.0.1:6080");
+  && await ev("document.getElementById('host').value") === "127.0.0.1:3390");
 
 // the passkey vault is a per-host choice, off by default
 const vaultShown = () => ev("!document.getElementById('vaultPanel').hidden");
