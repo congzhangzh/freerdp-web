@@ -2,6 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- threads need cross-origin isolation (COOP/COEP); on hosts that cannot send those headers,
+     such as GitHub Pages, this service worker adds them (it does nothing where the server does) -->
+<script src="coi-serviceworker.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FreeRDP Web</title>
 <link rel="manifest" href="/.well-known/manifest.webmanifest">
