@@ -22,6 +22,31 @@ reading anything. Expert controls exist, but out of the way.
 | Help | Three pages, linked from the top of every page: **Safety and tunnels** (`safety.html`), **Keyboard** (`keyboard.html`), **Install as app** (`install.html`). Help is reachable by click and keyboard, never only through a tooltip. |
 | Look | One left-aligned column, system font, light and dark from the system setting. No web fonts: an Isolated Web App cannot load them. |
 
+## Hosts
+
+Decided on 2026-10-18 (0.3.0). A bar under the safety notice lists the saved hosts; the form
+and both panels below show and edit the **selected** host, and every edit is saved into it
+as it is typed. **New host** starts from the defaults, **Duplicate** from the selected one
+(without its saved password), **Delete** asks for a second click. A first visit has one host,
+"My server", so the simple case still reads as three fields and Connect; settings from 0.2
+become that host.
+
+A host is a name, an address (a gateway, or with Direct TCP the RDP server: both kept), a
+user, its session settings, its advanced options and full screen. **Never a password**:
+
+- By default the browser's password manager keeps it (the form has `username` /
+  `current-password` fields). It keys passwords by user name, so hosts with the same user
+  share one.
+- **Keep this host's password in the passkey vault** (Advanced) keeps it encrypted instead,
+  per host, unlocked with a passkey when Connect needs it ([VAULT.md](../web/VAULT.md)).
+  The vault's format is unchanged; hosts of the old vault list become hosts of the bar.
+
+**Export…** writes all hosts to a file, with the vault's passwords only when that box is
+ticked, encrypted with a passphrase when that box is ticked (PBKDF2-SHA-256, AES-256-GCM).
+**Import…** adds a file's hosts under free names. The browser's own passwords cannot be
+exported by a page; the dialog says so. The keyboard profile stays a preference of the
+browser, not of a host.
+
 ## Session settings
 
 A collapsed panel under the form; its summary line says `recommended`, or what differs.
@@ -89,9 +114,9 @@ session panel and `keyboard.html`.
 
 | What | How | Result |
 |---|---|---|
-| Option mapping, overrides, keyboard actions | `node --test web/tests/*.test.cjs` | 23 tests pass |
+| Option mapping, overrides, keyboard actions, hosts (storage, migration, export, import) | `node --test web/tests/*.test.cjs` | 30 tests pass |
 | Connection bridge with session settings, migration | `web/tests/bridge.test.cjs` | pass |
-| The page with the real client, settings, vault switch, mstsc keys, phone width | `node test-page.mjs <client dir>` | 16 checks pass |
+| The page with the real client: hosts, export and import, the vault with a virtual passkey, settings, mstsc keys, phone width | `node test-page.mjs <client dir>` | 25 checks pass |
 | A full login | the release kit's `test/wasm-session.sh`: xrdp in a throwaway container, SSH, websockify | Xorg session and xterm started, screenshot shows the desktop |
 
 Not verified yet:
@@ -100,7 +125,6 @@ Not verified yet:
   with xrdp; measure both under the same workload before claiming a gain.
 - The mstsc Ctrl + Alt + End → Ctrl + Alt + Delete path against a real server.
 - Browser password saving across browsers and password-manager extensions.
-- `test-vault-browser.mjs` (updated to turn the vault on first) has not been rerun.
 
 The client still connects with `/cert:ignore`; the Safety page explains what SSH does and
 does not cover. Checking the RDP server's certificate is future work.

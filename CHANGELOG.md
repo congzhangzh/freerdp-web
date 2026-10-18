@@ -6,6 +6,17 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 0.3.0
+
+- **Hosts.** A bar under the safety notice lists your hosts; the form, Session settings
+  and Advanced edit the selected one. New host, Duplicate, Delete. Your 0.2 settings become
+  the first host.
+- **The passkey vault is per host:** Advanced → *Keep this host's password in the passkey
+  vault*. Connect unlocks it when needed. Hosts of the old vault list join the bar.
+- **Export and import** the hosts as a file, with the vault's passwords if you tick it,
+  encrypted with a passphrase if you tick it.
+- Connect no longer waits for a frame that a hidden tab never draws.
+
 ## 0.2.0
 
 The page is ready to use without reading anything first.

@@ -12,7 +12,9 @@ through a WebSocket gateway, [websockify](https://github.com/novnc/websockify).
 ## The page
 
 Open it, enter the gateway, user and password, and connect: the browser's password
-manager keeps the password. **Session settings** choose sound, clipboard, the video codec
+manager keeps the password. The bar above the form keeps your hosts, each with its own
+settings, and exports or imports them as a file (passwords only if you ask, encrypted with
+a passphrase if you ask). **Session settings** choose sound, clipboard, the video codec
 and a priority (save bandwidth, or reduce server load); **Advanced** holds Direct TCP for
 the installed app, the passkey vault and free-form FreeRDP options. The help pages
 (`safety.html`, `keyboard.html`, `install.html`) sit next to it.
