@@ -28,9 +28,11 @@
 # web page open in this browser could connect to 127.0.0.1:6080 too. The
 # RDP server still asks for its credentials, but the gateway checks nothing.
 #
-# Environment: WS_PORT (the page's gateway port, default 6080), TUN_PORT
-# (--local: local end of the SSH forward, default WS_PORT + 1), SSH_OPTS
-# (more ssh options, e.g. "-p 2222 -i ~/.ssh/id_ed25519").
+# Environment: WS_PORT (the page's gateway port, default 6080),
+# SERVER_WS_PORT (websockify's port on the server, default WS_PORT; e.g.
+# WS_PORT=13390 SERVER_WS_PORT=3390), TUN_PORT (--local: local end of the
+# SSH forward, default WS_PORT + 1), SSH_OPTS (more ssh options, e.g.
+# "-p 2222 -i ~/.ssh/id_ed25519").
 set -eu
 
 LOCAL=no
@@ -41,17 +43,18 @@ fi
 TARGET=${1:?usage: $0 [--local] user@server [RDP port]}
 RDP_PORT=${2:-3389}
 WS_PORT=${WS_PORT:-6080}
+SERVER_WS_PORT=${SERVER_WS_PORT:-$WS_PORT}
 TUN_PORT=${TUN_PORT:-$((WS_PORT + 1))}
 SSH_OPTS=${SSH_OPTS:-}
 
 if [ "$LOCAL" = no ]; then
-    echo "gateway for the page: 127.0.0.1:$WS_PORT (websockify on $TARGET; Ctrl-C to stop)"
+    echo "gateway for the page: 127.0.0.1:$WS_PORT (websockify on $TARGET:$SERVER_WS_PORT; Ctrl-C to stop)"
     # -tt: the remote websockify gets a terminal, so it gets SIGHUP and ends
     # with the connection, and Ctrl-C reaches it
     # shellcheck disable=SC2086 # SSH_OPTS holds several words on purpose
     exec ssh -tt -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 $SSH_OPTS \
-        -L "127.0.0.1:$WS_PORT:127.0.0.1:$WS_PORT" "$TARGET" \
-        "exec websockify 127.0.0.1:$WS_PORT 127.0.0.1:$RDP_PORT"
+        -L "127.0.0.1:$WS_PORT:127.0.0.1:$SERVER_WS_PORT" "$TARGET" \
+        "exec websockify 127.0.0.1:$SERVER_WS_PORT 127.0.0.1:$RDP_PORT"
 fi
 
 if command -v websockify > /dev/null; then
