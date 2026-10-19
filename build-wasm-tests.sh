@@ -1,8 +1,10 @@
 #!/bin/bash
 # Build FreeRDP codec/primitives unit tests with Emscripten (Node target) and run
 # them, to tell wasm-specific decoder bugs from bad input streams.
-# Reuses the deps prefix from build-wasm.sh. Usage: ./build-wasm-tests.sh [TestName...]
+# Reuses the deps prefix from build-wasm.sh. The FreeRDP checkout comes from FREERDP_SRC:
+#   FREERDP_SRC=<FreeRDP source dir> ./build-wasm-tests.sh [TestName...]
 set -euo pipefail
+[ -n "${FREERDP_SRC:-}" ] || { echo "usage: FREERDP_SRC=<FreeRDP source dir> $0 [TestName...]" >&2; exit 2; }
 SRC=$(realpath "$FREERDP_SRC")
 HERE=$(cd "$(dirname "$0")" && pwd)
 GITDIR=$(git -C "$SRC" rev-parse --path-format=absolute --git-common-dir)

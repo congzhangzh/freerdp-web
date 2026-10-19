@@ -1,11 +1,14 @@
 #!/bin/bash
 # Build the FreeRDP SDL3 client for the browser (Emscripten, pthreads) inside the
 # emscripten/emsdk container. Spike for an upstream contribution, see the ledger §5.5.
-# Source: FreeRDP worktree (default $FREERDP_SRC, branch wasm-sdl-client).
+# Source: a FreeRDP checkout of the wasm-sdl-client branch, the first argument or FREERDP_SRC:
+#   ./build-wasm.sh <FreeRDP source dir>     (SAN=1 for the UBSan variant)
 # Deps (built once, cached in ./cache): zlib, OpenSSL, json-c, SDL3, SDL3_ttf.
 # Logs: ./out/build-<stage>.log
 set -euo pipefail
-SRC=$(realpath "${1:-$FREERDP_SRC}")
+SRC=${1:-${FREERDP_SRC:-}}
+[ -n "$SRC" ] || { echo "usage: $0 <FreeRDP source dir>   (or FREERDP_SRC=<dir>)" >&2; exit 2; }
+SRC=$(realpath "$SRC")
 HERE=$(cd "$(dirname "$0")" && pwd)
 GITDIR=$(git -C "$SRC" rev-parse --path-format=absolute --git-common-dir)
 mkdir -p "$HERE/out" "$HERE/cache"
@@ -100,7 +103,7 @@ emcmake cmake -G "Unix Makefiles" -S $SRC -B $B -DCMAKE_BUILD_TYPE=Release \
   > /w/out/build-freerdp.log 2>&1 || { tail -40 /w/out/build-freerdp.log; exit 1; }
 cmake --build $B --parallel -- -k >> /w/out/build-freerdp.log 2>&1 || {
   echo "freerdp build failed; distinct errors:"
-  grep -E 'error:' /w/out/build-freerdp.log | sed -E 's/^.*\/FreeRDP\///' | sort | uniq -c | sort -rn | head -40
+  grep -E 'error:' /w/out/build-freerdp.log | sed "s|^.*$SRC/||" | sort | uniq -c | sort -rn | head -40
   exit 1; }
 mkdir -p $DIST && cp $B/client/SDL/SDL3/sdl-freerdp.js $B/client/SDL/SDL3/sdl-freerdp.wasm $DIST/ && cp -r /w/web/. $DIST/ && ls -la $DIST
 IN
