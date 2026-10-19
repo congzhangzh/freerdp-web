@@ -505,14 +505,14 @@ async function connect() {
     new Promise((r) => setTimeout(r, 200))]);
   const r = $("canvas").getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
   const even = (v) => Math.max(2, Math.round(v * dpr / 2) * 2);
-  const size = `${even(r.width)}x${even(r.height)}`;
+  const size = `${even(r.width)}x${even(r.height)}`, scale = Math.round(dpr * 100);
   checkSelection();
   HostsUI.use(host => {
     if (host.direct && !window.directSocketsAvailable) throw new Error("This saved host needs Direct TCP. Install and open the isolated app.");
     const session = readSession();
     const resolved = { ...host, extra: FreeRDPOptions.resolve(session, host.extra).join(" ") };
     let args;
-    try { args = FreeRDPVault.connectionArgs(resolved, size); } finally { resolved.password = ""; }
+    try { args = FreeRDPVault.connectionArgs(resolved, size, scale); } finally { resolved.password = ""; }
     clipboardOn = !args.some((a) => /^-clipboard$|^[/+]clipboard:(?:off|false)$/i.test(a));
     if (host.direct) {
       window.useDirectTcp(); log("[page] direct TCP via Direct Sockets (IWA), no gateway");

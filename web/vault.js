@@ -178,11 +178,16 @@
       finally { host.password = ""; }
     }
   }
-  function connectionArgs(host, size) {
+  // scale: the screen's scale in percent (devicePixelRatio × 100). Above 100 it goes to the server at
+  // connect (/scale-desktop), not only with the first display layout, so a scale-aware server
+  // starts at the right size; FreeRDP then keeps that scale for the session's later layouts
+  function connectionArgs(host, size, scale = 100) {
     const value = validateHost(host);
     const args = ["/v:" + value.host, "/u:" + value.username, "/p:" + value.password,
       "/cert:ignore", "/size:" + size, "/dynamic-resolution", ...value.extra.split(/\s+/).filter(Boolean)];
     if (!args.some(a => /^[/+-](sound|audio-mode)/.test(a))) args.push("/sound");
+    const percent = Math.min(500, Math.round(scale));
+    if (percent > 100 && !args.some(a => /^[/+-]scale(?:-desktop)?(?::|$)/i.test(a))) args.push("/scale-desktop:" + percent);
     return args;
   }
   const api = {Vault, vaultStore, connectionArgs, validateOptions};

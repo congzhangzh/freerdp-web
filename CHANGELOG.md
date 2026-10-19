@@ -6,6 +6,21 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 0.4.7
+
+- **The screen's scale goes to the server when connecting.** The page already asks for the
+  desktop in device pixels (`/size` = the canvas × `devicePixelRatio`) but sent no scale, so
+  the connection's core data said 100 %; only FreeRDP SDL's first display layout carried the
+  real one (200 on a Retina screen). A scale-aware server, such as gnome-remote-desktop with a
+  headless or virtual monitor (its `org.gnome.preferred-scale`) or Windows, could start the
+  session at 100 % and switch to 200 % moments later. Above 100 % the page now adds
+  `/scale-desktop:<devicePixelRatio × 100>`, at most 500. FreeRDP then keeps that scale for the
+  session's later layouts too (`FREERDP_MONITOR_OVERRIDE_DESKTOP_SCALE`): zooming the browser
+  during a session changes the size, not the scale. At 100 % nothing changes, and a
+  `/scale-desktop` or `/scale` in Extra options wins. Checked with the kit's client against
+  xrdp in headless Chrome: ratio 2 passes `/scale-desktop:200` and the session starts at
+  2946 × 1916; ratio 1 passes no scale.
+
 ## 0.4.6
 
 - **Full screen during a session keeps the whole remote desktop** (seen on macOS). SDL 3.2

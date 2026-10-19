@@ -97,3 +97,10 @@ test("selected host builds exact WASM argv including its password; extra options
     assert.throws(()=>connectionArgs({...host(),extra},"800x600"));
   assert.throws(()=>vault.use(a,async()=>{}),/synchronous/);
 });
+test("the screen's scale goes to the server at connect above 100 %, clamped to 500; Extra options win", () => {
+  const scale=(s,extra="")=>connectionArgs({...host(),extra},"3024x1964",s).filter(a=>/^\/scale/.test(a));
+  assert.deepEqual(scale(undefined),[]); assert.deepEqual(scale(100),[]); assert.deepEqual(scale(90),[]);
+  assert.deepEqual(scale(200),["/scale-desktop:200"]); assert.deepEqual(scale(149.6),["/scale-desktop:150"]);
+  assert.deepEqual(scale(600),["/scale-desktop:500"]);
+  assert.deepEqual(scale(200,"/scale-desktop:125"),["/scale-desktop:125"]); assert.deepEqual(scale(200,"/scale:140"),["/scale:140"]);
+});
