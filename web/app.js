@@ -236,9 +236,20 @@ function toggleFullscreen() {
   if (document.fullscreenElement) { navigator.keyboard?.unlock?.(); realExitFullscreen(); }
   else enterFullscreen();
 }
-document.addEventListener("fullscreenchange", () => {
+// The page's full screen is not SDL's: SDL 3.2 marks its window full screen on this event and
+// from then on ignores resizes, so when the window grows after the event (macOS animates into
+// full screen) the remote desktop keeps the old size. Stop the event at the window, before
+// SDL's listener on the document; the page handles it here (onFullscreenChange, below).
+for (const type of ["fullscreenchange", "webkitfullscreenchange"])
+  window.addEventListener(type, (e) => { e.stopImmediatePropagation(); if (type === "fullscreenchange") onFullscreenChange(); }, true);
+function onFullscreenChange() {
   if (!document.fullscreenElement) { document.body.classList.remove("fs"); log("[page] left full screen"); }
-});
+  $("tbFs").textContent = document.fullscreenElement ? "Window" : "Full screen";
+  document.body.classList.toggle("tbhide", !!document.fullscreenElement);
+  // The browser fires "resize" before or after "fullscreenchange" (macOS: after), so measure
+  // again once the new layout is in place; SDL's handler reads the current sizes, not the event.
+  requestAnimationFrame(() => { placeToolbar(); window.dispatchEvent(new Event("resize")); });
+}
 // FreeRDP's own hotkeys stay active (Right Shift + Enter full screen, + D disconnect, ...).
 // Browsers only allow full screen *during* a key or click event, but FreeRDP handles the hotkey
 // later in its main loop, so Emscripten would defer SDL's request to the user's next input. The
@@ -439,14 +450,6 @@ function updateInfo() {
   last = { t: now, rx: net.rx, tx: net.tx, frames: av1.frames, ms: av1.decodeMs, codecs: last.codecsNext };
 }
 setInterval(updateInfo, 1000);
-document.addEventListener("fullscreenchange", () => {
-  $("tbFs").textContent = document.fullscreenElement ? "Window" : "Full screen";
-  document.body.classList.toggle("tbhide", !!document.fullscreenElement);
-  // The browser fires "resize" before "fullscreenchange", i.e. while the old CSS still applies,
-  // so SDL measured the canvas too early. Tell it again once the new layout is in place; SDL's
-  // handler reads the current sizes, not the event, so a synthetic event is enough.
-  requestAnimationFrame(() => { placeToolbar(); window.dispatchEvent(new Event("resize")); });
-});
 // in full screen: reveal the toolbar when the mouse touches the top edge, hide it again after a while
 let tbTimer = 0;
 function showToolbar() {

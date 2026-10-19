@@ -6,6 +6,19 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 0.4.6
+
+- **Full screen during a session keeps the whole remote desktop** (seen on macOS). SDL 3.2
+  treats the page's `fullscreenchange` as its own full screen and then ignores window resizes
+  (`Emscripten_HandleResize` returns early for a full-screen window). Where the window grows
+  after that event, as with macOS's full-screen animation, the canvas and the remote desktop
+  kept the old size: the picture was shifted and cut off. The page now stops the event at the
+  `window` (capture phase), before SDL's listener on the `document`, so SDL follows the canvas
+  size in every order of events. Checked in headless Chrome at device pixel ratio 1 and 2:
+  windowed then full screen, and a window that grows after full screen, both follow the
+  screen (3024 × 1964 at ratio 2 on a 1512 × 982 viewport). Upstream SDL `main` resizes
+  full-screen windows too, so this is no longer needed once the kit's SDL has that.
+
 ## 0.4.5
 
 - One header for every page: the title "FreeRDP Web" (a link home, styled as the title, no
