@@ -4,8 +4,9 @@ import { connectTestSession } from "./test-connect.mjs";
 // screen's size only ~0.8 s later. Which size and scale does the server end up with, at once and
 // after a Window / Full screen round trip? The display layouts FreeRDP sends are in its log
 // (the disp channel at DEBUG); the X screen size comes from the CI xrdp session (test-keymap.py).
-// GNOME=<gateway> GNOME_PASS=<password> runs it against gnome-remote-desktop instead (user
-// tester in the release kit's GNOME container, its websockify at <gateway>); the size and the
+// GNOME=<gateway> GNOME_PASS=<password> GNOME_CT=<container> runs it against gnome-remote-desktop
+// instead (user tester in a container built like the release kit's GNOME server, reached through
+// a websockify at <gateway>); the size and the
 // scale then come from Mutter's DisplayConfig.
 import { spawn, execFileSync } from "node:child_process";
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
@@ -26,7 +27,8 @@ const send = (method, params = {}) => new Promise((r) => { const i = ++id; p.set
 const ev = async (expression) => (await send("Runtime.evaluate", { expression, returnByValue: true, userGesture: true })).result.value;
 const metrics = (width, height) => send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 2, mobile: false });
 if (!process.env.GNOME) execFileSync("docker", ["cp", new URL("test-keymap.py", import.meta.url).pathname, "grd-wasm-xrdp-ci:/tmp/keymap.py"]);
-const GNOME = process.env.GNOME, GNOME_CT = process.env.GNOME_CT || "kit-gnome-probe";
+const GNOME = process.env.GNOME, GNOME_CT = process.env.GNOME_CT;
+if (GNOME && !GNOME_CT) throw new Error("GNOME_CT=<the GNOME container's name> is needed with GNOME");
 const gnomeScreen = () => {
   const bus = execFileSync("docker", ["exec", "-u", "tester", GNOME_CT, "sh", "-c", "for p in /proc/[0-9]*; do grep -q gnome-shell $p/cmdline 2>/dev/null && tr '\\0' '\\n' < $p/environ 2>/dev/null | grep ^DBUS_SESSION_BUS_ADDRESS= ; done | head -1"]).toString().trim();
   const out = execFileSync("docker", ["exec", "-u", "tester", "-e", bus, GNOME_CT, "gdbus", "call", "--session", "-d", "org.gnome.Mutter.DisplayConfig",
@@ -71,4 +73,5 @@ console.log(logs.find((l) => /sdl-freerdp /.test(l))?.replace(/^.*sdl-freerdp /,
 await report("connected:");
 await ev("tbFs.click(), 1"); await sleep(4000); await report("Window:");
 await ev("tbFs.click(), 1"); await sleep(4000); await report("Full screen again:");
+if (process.env.LOG) console.log("LOG\n" + logs.join("\n"));
 ws.close(); chrome.kill();
