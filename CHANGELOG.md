@@ -6,6 +6,19 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 0.4.13
+
+- **The app icon and the tab icon load on the published site.** The manifest named its icon
+  `/icon-256.png`, from the root of the server. That works in the installed app (its bundle is
+  the root) and 404s on the project site, `https://congzhangzh.github.io/icon-256.png`
+  instead of `…/freerdp-web/icon-256.png`. A manifest's URLs resolve against the manifest
+  itself, which lives in `.well-known/`, so the icon is now `../icon-256.png`: that is
+  `…/freerdp-web/icon-256.png` on the site and `isolated-app://<id>/icon-256.png` in the
+  app. The pages had no icon link either, so browsers asked for `/favicon.ico`, another 404;
+  every page now links `icon-256.png`. Checked by loading the page from a subpath (`/site/`
+  on the local server): no 404 is left, and `test-page.mjs` passes. `id` and `start_url`
+  stay root-relative, as the installed app needs.
+
 ## 0.4.12
 
 - **"Save the password?" after connecting, as on a phone.** After a connection with a typed
