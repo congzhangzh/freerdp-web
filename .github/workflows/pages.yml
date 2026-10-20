@@ -8,9 +8,11 @@ name: pages
 # Publishing happens only on purpose, a v* tag or Run workflow with "publish":
 # a tested client of the kit, this commit's page and the demo videos, checked
 # with test-page.mjs, deployed, then a login from the published page. The
-# client: the kit's build of this exact commit (a v* tag, or "exact"), or the
-# kit's newest tested client with this commit's page laid over it ("latest",
-# the default by hand: a page change needs no kit run, as with site.sh).
+# client: the kit's newest tested client with this commit's page laid over it
+# ("latest", for a v* tag and by default by hand: a page release never waits for
+# a kit run, as with site.sh), or, chosen by hand, the kit's build of this exact
+# commit ("exact"). The Pages are this repository's own; the kit pins this
+# repository's releases (v* tags with a GitHub Release), not the other way round.
 on:
   push:
     branches: [main]
@@ -23,7 +25,7 @@ on:
         type: boolean
         default: false
       client:
-        description: "The client: latest (the kit's newest tested one, fast) or exact (the kit's build of this commit)"
+        description: "The client: latest (the kit's newest tested one, fast; what a v* tag uses) or exact (the kit's build of this commit)"
         type: choice
         options: [latest, exact]
         default: latest
@@ -58,14 +60,14 @@ jobs:
 
       # the kit's newest tested client, this commit's page over it, the videos (site.sh)
       - name: The kit's newest tested client, with this commit's page
-        if: ${{ !startsWith(github.ref, 'refs/tags/v') && inputs.client != 'exact' }}
+        if: ${{ inputs.client != 'exact' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: SITE=site ./site.sh kit
 
       # the kit's pre-release for this exact commit: its tested client, checked
       - name: The kit's build of this exact commit
-        if: ${{ startsWith(github.ref, 'refs/tags/v') || inputs.client == 'exact' }}
+        if: ${{ inputs.client == 'exact' }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |

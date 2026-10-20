@@ -1,6 +1,7 @@
 # Hosting
 
-Decided on 2026-10-18. See [Web UI design](webui-design.md) for the page itself.
+Decided on 2026-10-18; releases and the kit's pin changed on 2026-10-20 (below). See
+[Web UI design](webui-design.md) for the page itself.
 
 ## Where the page lives
 
@@ -27,21 +28,40 @@ this repository publishes. Nothing is compiled here.
 
 | Where | What |
 |---|---|
-| the kit, on each push | builds the WebAssembly client with the page commit pinned in its `sources.lock`, logs in from a browser to xrdp over SSH and websockify, and hands the tested client over as its pre-release `web-<commit>-<kit commit>`, with the xrdp packages; published once, never replaced |
+| the kit, on each push | builds the WebAssembly client with the freerdp-web release pinned in its `sources.lock` (a version and its commit), logs in from a browser to xrdp over SSH and websockify, and hands the tested client over as its pre-release `web-<commit>-<kit commit>`, with the xrdp packages; published once, never replaced |
 | here, on each push or pull request | the page's unit tests (Node) |
 | here, on publication | takes a tested client of the kit (below), lays this commit's page over it, adds the demo videos ([`media.json`](../media.json), checked), runs `test-page.mjs` on exactly these files, deploys, then logs in from the published page with that pre-release's kit test and xrdp packages |
 
 Which client:
 
-- **latest** (the default of a publication by hand): the kit's newest tested client, as
-  [`site.sh`](../site.sh) does locally. A page change needs no kit run: about five minutes from
-  *Run workflow* to the checked site. The `MANIFEST` names the client's pre-release and, on its
-  last line, this page commit.
-- **exact** (a `v*` tag, or chosen by hand): the client the kit built and tested with this very
+- **latest** (a `v*` tag, and the default of a publication by hand): the kit's newest tested
+  client, as [`site.sh`](../site.sh) does locally. A page release needs no kit run: about five
+  minutes from the tag to the checked site. The `MANIFEST` names the client's pre-release and,
+  on its last line, this page commit.
+- **exact** (chosen by hand only): the client the kit built and tested with this very
   commit: the kit's newest build of it, `web-<commit>-<kit commit>` (or, from before the kit froze
   its pre-releases, `web-<commit>`), found by [`kit-release.sh`](../kit-release.sh),
   SHA-256 checked; its `MANIFEST` must name the commit. Pin the commit in the kit's `sources.lock`
   first; a commit the kit has not built cannot be published this way.
+
+## Releases, and what the kit pins
+
+The Pages belong to this repository, which publishes them itself. The release kit does not
+choose page commits; it pins **freerdp-web releases**, so the page can move fast and the kit
+follows on its own schedule:
+
+1. A release is a version in `web/.well-known/manifest.webmanifest`, an annotated tag `vX.Y.Z`
+   on the commit that carries it, and a GitHub Release with its notes from
+   [`CHANGELOG.md`](../CHANGELOG.md). The tag also publishes the site (above), with the kit's
+   newest tested client.
+2. The kit's `sources.lock` names the release as version plus commit; its CI
+   (`build/check-release-pins.sh`) fails unless the tag `vX.Y.Z` exists and points to exactly
+   that commit. Its upstream check watches this repository's `v*` tags and opens an update
+   issue for a new one.
+3. The kit builds and tests its client with that release and hands it over as a pre-release
+   (`web-<commit>-<kit commit>`), which later publications take as their "latest" client.
+
+Not every version needs a release: tag the ones the kit should carry.
 
 ## Publishing is a decision, never a side effect
 

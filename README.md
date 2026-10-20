@@ -13,6 +13,8 @@ through a WebSocket gateway, [websockify](https://github.com/novnc/websockify).
 
 It runs at **https://congzhangzh.github.io/freerdp-web/**, published from this repository
 only on purpose (a `v*` tag, or *Run workflow* with **publish**): [docs/hosting.md](docs/hosting.md).
+The site is this repository's own; the [release kit](https://github.com/congzhangzh/rdp-release-kit)
+pins this repository's releases (`v*` tags with a GitHub Release) for the client it builds.
 
 Open it, enter the gateway, user and password, and connect: the browser's password
 manager keeps the password. The bar above the form keeps your hosts, each with its own
