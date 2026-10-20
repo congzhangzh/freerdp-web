@@ -23,6 +23,11 @@ const click = async (sel) => { const r = JSON.parse(await ev(`JSON.stringify(doc
   const x = r.x + r.width / 2, y = r.y + r.height / 2;
   await send("Input.dispatchMouseEvent", { type: "mouseMoved", x, y });
   for (const type of ["mousePressed", "mouseReleased"]) await send("Input.dispatchMouseEvent", { type, x, y, button: "left", clickCount: 1 }); };
+const results = {};
+const check = (name, ok) => { results[name] = !!ok; console.log(ok ? "PASS" : "FAIL", name); };
+// nothing (the save offer, the capture notice) may cover the toolbar's buttons
+const reachable = async () => ev(`[...toolbar.querySelectorAll("button")].every((b) => { const r = b.getBoundingClientRect();
+  return toolbar.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); })`);
 const state = async (label) => console.log(label, await ev("JSON.stringify({fs: !!document.fullscreenElement, cls: document.body.className, canvas: [canvas.width, canvas.height], btn: tbFs.textContent, tbOpacity: getComputedStyle(toolbar).opacity})"));
 await send("Runtime.enable"); await send("Page.enable");
 await send("Page.navigate", { url: (process.env.PAGE || "http://127.0.0.1:8080/index.html") + "?v=127.0.0.1:6081&u=test&extra=/gfx&fs=0" });
@@ -41,11 +46,17 @@ console.log("grip shown while hidden:", await ev("getComputedStyle(tbGrip).displ
 await move(400, 400); await sleep(1000); await state("mouse moved away (hidden):");
 console.log("grip shown while hidden:", await ev("getComputedStyle(tbGrip).display"));
 await move(400, 1); await sleep(500);
+check("the toolbar's buttons are not covered (full screen)", await reachable());
 await click("#tbFs"); await sleep(6000); await state("after Window click:");
+check("Window leaves full screen", !(await ev("!!document.fullscreenElement")));
+check("the toolbar's buttons are not covered (window)", await reachable());
 // pinned toolbar must stay visible in full screen; SDL-style canvas requests must be ignored
-await click("#tbPin"); await click("#tbFs"); await sleep(4000); await state("pinned + full screen:");
+await click("#tbPin"); await sleep(300); await state("after the pin click:");
+await click("#tbFs"); await sleep(4000); await state("pinned + full screen:");
+check("the pin keeps the toolbar in full screen", (await ev("document.body.classList.contains('tbpinned') && getComputedStyle(toolbar).opacity === '1' && !!document.fullscreenElement")));
 await click("#tbFs"); await sleep(1500);
 console.log("canvas.requestFullscreen():", await ev("canvas.requestFullscreen().then(() => 'resolved, fullscreen=' + !!document.fullscreenElement)", true));
 await click("#tbPin");
 console.log(logs.filter((l) => /\[page\]/.test(l)).join("\n"));
 ws.close(); chrome.kill();
+process.exit(Object.values(results).every(Boolean) ? 0 : 1);

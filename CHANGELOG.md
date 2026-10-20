@@ -18,7 +18,10 @@ the FreeRDP commit and this page's commit.
   password waits for the answer in the page's memory only, at most two minutes (the session's
   own copy is in the client anyway). A different password for a host with a saved one is
   offered as an update; a password from the vault gets no offer. Never for this host is
-  stored with the host (`vaultNever`) and cleared when its vault option is switched on again.
+  stored with the host (`vaultNever`) and cleared when its vault option is switched on again. The offer, like the capture notice, sits below the session toolbar, in full screen too.
+  A first version put both at the top of the full screen, where the offer covered the toolbar's
+  buttons for up to 30 s. `test-toolbar.mjs` found it (the Window and 📌 clicks landed on the
+  offer) and now checks that nothing covers the toolbar's buttons.
 - **Creating the vault takes one passkey prompt instead of two** where the passkey evaluates
   the PRF while it is created (WebAuthn `prf.eval` in `create()`). Before, `create()` only
   enabled the PRF, and a second `get()` read the value. The early value is used only when
