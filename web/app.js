@@ -25,7 +25,39 @@ const log = (s) => {
   const m = /AV1 decoder: ([^,\n]+)/.exec(s);
   if (m) info.decoder = m[1].trim();
   if (/WebCodecs AV1 decode failed|using dav1d/.test(s)) info.decoder = "dav1d (fallback)";
-  if (/The connection failed|ERRCONNECT_|tcp-shim\]/.test(s)) $("logPanel").open = true;
+  if (/The connection failed|ERRCONNECT_|tcp-shim\]/.test(s)) { $("logPanel").open = true; saveOffer.failed = true; }
+  // the client is past the connection sequence (and, with NLA, the password was accepted)
+  if (!saveOffer.due && /\[gdi_init_ex\]: Remote framebuffer format/.test(s)) { saveOffer.due = true; setTimeout(offerSave, 2000); }
+};
+// "Save the password?" after connecting with a typed one (hosts-ui.js keeps it until answered)
+const saveOffer = { due: false, failed: false, timer: 0 };
+function offerSave() {
+  const o = !saveOffer.failed && crash.running && HostsUI.saveOffer();
+  if (!o) return;
+  $("saveText").textContent = (o.update ? `Update the saved password of “${o.name}”?` : `Save the password of “${o.name}”?`) +
+    " Next time your passkey unlocks it (Touch ID, Windows Hello…)." + (document.pointerLockElement ? " Ctrl + Alt frees the mouse." : "");
+  for (const id of ["saveYes", "saveLater", "saveNever"]) $(id).disabled = false;
+  $("saveYes").textContent = o.update ? "Update with passkey" : "Save with passkey";
+  $("saveBar").hidden = false;
+  clearTimeout(saveOffer.timer); saveOffer.timer = setTimeout(() => answerSave(false), 30000);
+}
+function closeSaveBar(after = 0) {
+  clearTimeout(saveOffer.timer);
+  saveOffer.timer = setTimeout(() => { $("saveBar").hidden = true; }, after);
+}
+function answerSave(never) { HostsUI.declineSave(never); closeSaveBar(); $("canvas").focus(); }
+$("saveLater").onclick = () => answerSave(false);
+$("saveNever").onclick = () => answerSave(true);
+$("saveYes").onclick = async () => {
+  clearTimeout(saveOffer.timer);
+  for (const id of ["saveYes", "saveLater", "saveNever"]) $(id).disabled = true;
+  $("saveText").textContent = "Waiting for the passkey…";
+  try { await HostsUI.acceptSave(); $("saveText").textContent = "Saved in the passkey vault."; closeSaveBar(2500); }
+  catch (e) {
+    $("saveText").textContent = e.name === "AbortError" || e.name === "NotAllowedError" ? "Not saved: the passkey prompt was cancelled." : "Not saved: " + e.message;
+    closeSaveBar(6000);
+  }
+  $("canvas").focus();
 };
 const status = (s) => { $("status").textContent = s; };
 

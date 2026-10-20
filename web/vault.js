@@ -105,16 +105,24 @@
       return this.#operation(async (check, signal) => {
         if (await this.store("get")) throw new Error("A vault already exists. Unlock it to save more hosts.");
         check();
+        const salt = random(32);
         const credential = await this.credentials.create({signal, publicKey:{challenge:random(32),
           rp:{name:"FreeRDP Local Vault"}, user:{id:random(32), name:"freerdp-local-vault", displayName:"FreeRDP Local Vault"},
           pubKeyCredParams:[{type:"public-key", alg:-7}, {type:"public-key", alg:-257}],
           authenticatorSelection:{residentKey:"required", userVerification:"required"},
-          attestation:"none", timeout:60000, extensions:{prf:{}}}});
+          attestation:"none", timeout:60000, extensions:{prf:{eval:{first:salt}}}}});
         check();
-        if (!credential?.getClientExtensionResults().prf?.enabled)
+        const created = credential?.getClientExtensionResults().prf;
+        if (!created?.enabled && !created?.results)
           throw new Error("Passkey did not enable PRF. No vault was saved; remove the unused passkey in system settings if needed.");
-        const credentialId = encode(credential.rawId), salt = random(32);
-        const prf = await evaluate(this.credentials, credentialId, salt, signal);
+        const credentialId = encode(credential.rawId);
+        // Authenticators that evaluate the PRF while creating the passkey save the second prompt
+        // (one Touch ID instead of two); the value is the one a later unlock gets for this salt.
+        // Taken only when the creation itself verified the user, as evaluate() requires.
+        const early = created.results?.first, authData = credential.response?.getAuthenticatorData?.();
+        const verified = authData && authData.byteLength >= 37 && (new Uint8Array(authData)[32] & 4);
+        const prf = early?.byteLength === 32 && verified ? new Uint8Array(early)
+          : await evaluate(this.credentials, credentialId, salt, signal);
         const raw = random(32); let plaintext;
         try {
           check(); const kek = await wrappingKey(prf, salt);

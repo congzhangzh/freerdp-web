@@ -172,6 +172,14 @@ body.fs.tbhide:not(.tbpinned):not(.captured) #tbGrip { display:block; }
 #captureToast { position:fixed; top:calc(var(--tbtop, 8px) + 52px); left:50%; transform:translateX(-50%); z-index:12; padding:8px 14px; border-radius:6px;
   background:rgba(24,33,43,.92); color:#e3e9ef; font-size:13px; pointer-events:none; }
 body.fs #captureToast { top:16px; }
+/* after connecting: offer to keep the typed password in the passkey vault */
+#saveBar { position:fixed; top:calc(var(--tbtop, 8px) + 52px); left:50%; transform:translateX(-50%); z-index:12;
+  display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; max-width:min(640px, calc(100vw - 32px)); padding:10px 14px;
+  border-radius:8px; background:rgba(24,33,43,.95); color:#e3e9ef; font-size:13px; box-shadow:0 4px 16px rgba(0,0,0,.35); }
+#saveBar[hidden] { display:none; }
+body.fs #saveBar { top:16px; }
+#saveBar .row { display:flex; gap:6px; }
+#saveBar button:not(.primary) { background:#34404d; color:#fff; border-color:#4a5866; }
 #captureToast kbd { background:#34404d; color:#fff; border-color:#4a5866; }
 #toolbar #tbPin { opacity:.55; } #toolbar #tbPin.on { opacity:1; background:#2f6fde; }
 /* connection info overlay, toggled from the toolbar */

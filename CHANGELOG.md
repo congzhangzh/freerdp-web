@@ -6,6 +6,31 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 0.4.12
+
+- **"Save the password?" after connecting, as on a phone.** After a connection with a typed
+  password the page offers to keep it in the passkey vault: *Save with passkey*, *Not now*,
+  or *Never for this host*. It appears 2 s after the client logs `gdi_init_ex … Remote
+  framebuffer format`, the end of the connection sequence (with NLA, the server has accepted
+  the password by then), unless the connection failed. Safari also asks on submit, without
+  knowing whether the sign-in worked. Save takes one passkey prompt. The first time, that
+  prompt also creates the vault, and the host's vault option is switched on. The typed
+  password waits for the answer in the page's memory only, at most two minutes (the session's
+  own copy is in the client anyway). A different password for a host with a saved one is
+  offered as an update; a password from the vault gets no offer. Never for this host is
+  stored with the host (`vaultNever`) and cleared when its vault option is switched on again.
+- **Creating the vault takes one passkey prompt instead of two** where the passkey evaluates
+  the PRF while it is created (WebAuthn `prf.eval` in `create()`). Before, `create()` only
+  enabled the PRF, and a second `get()` read the value. The early value is used only when
+  the creation's authenticator data has the user-verified flag; otherwise the second prompt
+  runs as before. The new `test-vault-save.mjs` checks against xrdp with Chrome's virtual
+  authenticator: a typed password is offered; Save creates the vault with one ceremony
+  (`credentialAdded`, no assertion); after a reload, Connect with an empty password unlocks
+  it with one ceremony and xrdp's log records the login; a different typed password is
+  offered as an update; Never for this host stops the offer. The unit tests check that the
+  value from creation unlocks the same vault later, and that it is ignored without user
+  verification.
+
 ## 0.4.11
 
 - **Remote scale: Automatic, 100, 125, 150 or 200 %** (Session settings). Automatic is the

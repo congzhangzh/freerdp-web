@@ -8,9 +8,27 @@ installed app (Isolated Web App) still needs checking with a real authenticator.
 
 ## Using it
 
+The quick way, as on a phone: **connect with the password typed in the form**. Once the client
+is past the connection sequence (with NLA, the server has accepted the password), the page asks
+*Save the password of "host"?*:
+
+- **Save with passkey** keeps it in the vault with one passkey prompt (Touch ID, Windows
+  Hello, a security key…). The first time, that prompt also creates the vault: a passkey that
+  evaluates the PRF while it is created needs no second prompt. The host's vault option is
+  switched on.
+- **Not now** (or no answer within 30 s) forgets the offer; the password was only held in the
+  page's memory for it, at most two minutes.
+- **Never for this host** stops asking for that host; switching its vault option on again in
+  **Advanced** asks again.
+
+A host whose saved password differs from the one typed gets *Update the saved password?*
+instead. A connection that used the saved password gets no offer.
+
+The same by hand:
+
 1. Select the host, open **Advanced** and tick **Keep this host's password in the passkey
    vault**.
-2. The first time, choose **Create vault** and complete the passkey prompts.
+2. The first time, choose **Create vault** and complete the passkey prompt.
 3. Type the password in the form and choose **Save the password**. The field is cleared;
    it now reads *Kept in the vault: leave empty*.
 4. **Connect** asks for the passkey (once per page) and hands that password to the client.
@@ -53,7 +71,7 @@ The vault protects stored credentials, not a compromised origin: JavaScript exec
 
 `node --test web/tests/*.test.cjs` (Node 20 or newer) runs the vault's crypto and state tests with real Web Crypto and a simulated authenticator (encrypted metadata, multiple entries, updates and deletion, wrong keys, tampering, fail-closed PRF checks, lock cancellation, concurrent writes), and the host list's tests (no password in storage, migration, export and import, encrypted with a passphrase or not).
 
-`node test-page.mjs <client dir>` runs the page with the built client in Chrome, with a virtual CTAP2 authenticator with PRF (`WebAuthn.addVirtualAuthenticator`; the page still calls `navigator.credentials.create/get`). It saves a host's password, checks that the IndexedDB record holds no password, user or address, reloads, and checks that Connect unlocks the vault and gives the client exactly that password. Only synthetic credentials are used. This verifies the browser and application integration, not a physical authenticator, a biometric prompt, a system passkey provider or the installed app's origin; those remain manual checks. The client still connects with `/cert:ignore`, so none of this establishes the RDP server's identity.
+`node test-page.mjs <client dir>` runs the page with the built client in Chrome, with a virtual CTAP2 authenticator with PRF (`WebAuthn.addVirtualAuthenticator`; the page still calls `navigator.credentials.create/get`). It saves a host's password, checks that the IndexedDB record holds no password, user or address, reloads, and checks that Connect unlocks the vault and gives the client exactly that password. Only synthetic credentials are used. `test-vault-save.mjs` runs the offer against the CI xrdp session with the same virtual authenticator: a typed password is offered, Save creates the vault with a single passkey ceremony, a reload then connects with the saved password (one ceremony, and xrdp's log records the login), a different typed password is offered as an update, and Never for this host stops the offer. This verifies the browser and application integration, not a physical authenticator, a biometric prompt, a system passkey provider or the installed app's origin; those remain manual checks. The client still connects with `/cert:ignore`, so none of this establishes the RDP server's identity.
 
 ## Rebuild and reproduce locally
 

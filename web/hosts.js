@@ -20,7 +20,7 @@
 
   function blank(name = "My server") {
     return { id: crypto.randomUUID(), name, host: DEFAULT_GATEWAY, directHost: "", direct: false, user: "",
-      session: { ...Options.DEFAULTS }, extra: "", fullscreen: false, vault: false, vaultSaved: false };
+      session: { ...Options.DEFAULTS }, extra: "", fullscreen: false, vault: false, vaultSaved: false, vaultNever: false };
   }
   // a host from storage or a file: known fields only, of the right types; no password
   function clean(h) {
@@ -30,7 +30,7 @@
     return { id: str(h.id) || crypto.randomUUID(), name: str(h.name).trim() || str(h.host) || "Host",
       host: str(h.host), directHost: str(h.directHost), direct: h.direct === true, user: str(h.user),
       session: Options.normalize(h.session), extra, fullscreen: h.fullscreen === true,
-      vault: h.vault === true, vaultSaved: h.vaultSaved === true };
+      vault: h.vault === true, vaultSaved: h.vaultSaved === true, vaultNever: h.vaultNever === true };
   }
   // settings from before the host list become its first host
   function migrate(old) {

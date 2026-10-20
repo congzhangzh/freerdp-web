@@ -214,6 +214,11 @@
 <div id="info" hidden><table id="infoTable"></table></div>
 <canvas id="canvas" tabindex="-1"></canvas>
 <img id="vcursor" alt="" hidden>
+<div id="saveBar" role="dialog" aria-labelledby="saveText" hidden>
+  <span id="saveText"></span>
+  <span class="row"><button id="saveYes" class="small primary">Save with passkey</button>
+    <button id="saveLater" class="small">Not now</button><button id="saveNever" class="small">Never for this host</button></span>
+</div>
 <div id="captureToast" role="status" hidden>Mouse and keyboard captured · <kbd>Ctrl</kbd> + <kbd>Alt</kbd> releases them</div>
 <details id="logPanel"><summary>Log</summary><pre id="log"></pre></details>
 </div>

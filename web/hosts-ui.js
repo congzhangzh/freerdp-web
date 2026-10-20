@@ -110,7 +110,9 @@
   }
   function lock() { vault?.lock(); $("pass").value = ""; renderVault(); }
   $("vaultKeep").onchange = () => {
-    current().vault = $("vaultKeep").checked; store(); render();
+    current().vault = $("vaultKeep").checked;
+    if (current().vault) current().vaultNever = false;   // asked for again after "Never for this host"
+    store(); render();
     selectListener(current(), true);
   };
   $("vaultCreate").onclick = () => run(async () => { await vault.create(); exists = true; say("Vault created. Save this host's password in it."); });
@@ -213,6 +215,17 @@
     });
   }
 
+  // ---- after a connection with a typed password: offer to keep it in the passkey vault, the way
+  // a phone offers to save a password after a sign-in. The password waits here, in memory only,
+  // until the offer is answered or two minutes pass (the session's own copy lives in the client).
+  let offer = null;
+  function dropOffer() { if (offer) clearTimeout(offer.timer); offer = null; }
+  function keepOffer(h, password) {
+    dropOffer();
+    if (available && password && !h.vaultNever) offer = { id: h.id, password, timer: setTimeout(dropOffer, 120000) };
+  }
+  const offeredHost = () => offer && state.hosts.find((h) => h.id === offer.id);
+
   // ---- for the page
   window.FreeRDPHostsUI = {
     current,
@@ -244,7 +257,29 @@
       const base = { host: t, username: h.user, extra: h.extra, direct: h.direct };
       if (this.needsVault()) return vault.use(h.id, (e) => consume({ ...base, password: e.password }));
       const host = { ...base, password: $("pass").value };
+      keepOffer(h, host.password);
       try { return consume(host); } finally { host.password = ""; $("pass").value = ""; }
+    },
+    // the host whose typed password may be kept, or null: { name, update } (update: replaces one)
+    saveOffer() { const h = offeredHost(); return h ? { name: h.name, update: h.vaultSaved } : null; },
+    // keep it: one passkey prompt (creating the vault on first use), then locked again
+    async acceptSave() {
+      const h = offeredHost();
+      if (!h) throw new Error("Nothing to save any more.");
+      if (busy) throw new Error("Wait for the vault operation to finish.");
+      busy = true;
+      try {
+        if (!exists) { await vault.create(); exists = true; }
+        else if (!vault.unlocked) await unlockAndAdopt();
+        await vault.save({ id: h.id, label: h.name, host: target(h) || "unset", username: h.user,
+          password: offer.password, extra: h.extra, direct: h.direct });
+        h.vault = true; h.vaultSaved = true; h.vaultNever = false; store();
+      } finally { dropOffer(); busy = false; lock(); render(); }
+    },
+    declineSave(never) {
+      const h = offeredHost();
+      if (h && never) { h.vaultNever = true; store(); }
+      dropOffer();
     },
     lock,
   };

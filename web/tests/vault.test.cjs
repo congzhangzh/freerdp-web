@@ -3,17 +3,21 @@ const assert = require("node:assert/strict");
 const {webcrypto} = require("node:crypto");
 globalThis.crypto ??= webcrypto;
 const {Vault, connectionArgs} = require("../vault.js");
-function authenticator({enabled=true, output=true, uv=true, secret=42, wrongId=false, get}={}) {
+function authenticator({enabled=true, output=true, uv=true, secret=42, wrongId=false, get, early=false, gets}={}) {
   const id = new Uint8Array([1,2,3]), authData = new Uint8Array(37); authData[32] = uv ? 5 : 1;
   return {
     async create(options) {
       assert.equal(options.publicKey.authenticatorSelection.userVerification, "required");
       assert.equal(options.publicKey.authenticatorSelection.residentKey, "required");
+      assert.equal(options.publicKey.extensions.prf.eval.first.length,32);
+      if (early) return {rawId:id, response:{getAuthenticatorData:() => authData.buffer},
+        getClientExtensionResults:() => ({prf:{enabled, results:{first:new Uint8Array(32).fill(secret).buffer}}})};
       return {rawId:id, getClientExtensionResults:() => ({prf:{enabled}})};
     },
     async get(options) {
       assert.equal(options.publicKey.userVerification, "required");
       assert.equal(options.publicKey.extensions.prf.eval.first.length,32);
+      if (gets) gets.count++;
       if (get) await get(options);
       return {rawId:wrongId ? new Uint8Array([4]) : id, response:{authenticatorData:authData},
         getClientExtensionResults:() => output ? {prf:{results:{first:new Uint8Array(32).fill(secret)}}} : {}};
@@ -103,4 +107,15 @@ test("the screen's scale goes to the server at connect above 100 %, clamped to 5
   assert.deepEqual(scale(200),["/scale-desktop:200"]); assert.deepEqual(scale(149.6),["/scale-desktop:150"]);
   assert.deepEqual(scale(600),["/scale-desktop:500"]);
   assert.deepEqual(scale(200,"/scale-desktop:125"),["/scale-desktop:125"]); assert.deepEqual(scale(200,"/scale:140"),["/scale:140"]);
+});
+test("a passkey that evaluates the PRF while it is created needs one prompt, and unlocks the same vault", async () => {
+  const gets={count:0}, store=memoryStore(), vault=new Vault(store,authenticator({early:true,gets}));
+  await vault.create(); assert.equal(gets.count,0);
+  const id=await vault.save(host()); vault.lock();
+  await vault.unlock(); assert.equal(gets.count,1);
+  vault.use(id,h=>assert.equal(h.password,"synthetic-secret-one"));
+});
+test("a PRF value from creation without user verification is not used: a second prompt runs", async () => {
+  const gets={count:0}, vault=new Vault(memoryStore(),authenticator({early:true,uv:false,gets}));
+  await assert.rejects(vault.create(), /User verification/); assert.equal(gets.count,1);
 });
