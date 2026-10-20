@@ -4,6 +4,7 @@
 #
 #   ./site.sh                     the client of the release kit's newest pre-release (web-*)
 #   ./site.sh kit:<page commit>   the client the kit built and tested for that page commit
+#                                 (its newest build of it: kit-release.sh)
 #   ./site.sh <dir>               a local client, e.g. ../rdp-release-kit/dist/wasm/web
 #
 # The site goes to dist/site/ (SITE=<dir> for another place): the client (sdl-freerdp.js,
@@ -22,14 +23,11 @@ FROM=${1:-kit}
 
 case $FROM in
 kit | kit:*)
+    # the kit never replaces a pre-release's files, so one download per tag is enough
     if [ "$FROM" = kit ]; then
-        # the newest web-* pre-release: releases come newest first
-        tag=$(curl -fsSL "https://api.github.com/repos/$KIT/releases?per_page=50" | python3 -c '
-import json, sys
-print(next(r["tag_name"] for r in json.load(sys.stdin) if r["tag_name"].startswith("web-")))')
+        tag=$("$HERE/kit-release.sh")
     else
-        commit=${FROM#kit:}
-        tag=web-$(printf %.12s "$commit")
+        tag=$("$HERE/kit-release.sh" "${FROM#kit:}")
     fi
     dir=$CACHE/kit/$tag
     mkdir -p "$dir"

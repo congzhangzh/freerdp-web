@@ -27,7 +27,7 @@ this repository publishes. Nothing is compiled here.
 
 | Where | What |
 |---|---|
-| the kit, on each push | builds the WebAssembly client with the page commit pinned in its `sources.lock`, logs in from a browser to xrdp over SSH and websockify, and hands the tested client over as its pre-release `web-<commit>`, with the xrdp packages |
+| the kit, on each push | builds the WebAssembly client with the page commit pinned in its `sources.lock`, logs in from a browser to xrdp over SSH and websockify, and hands the tested client over as its pre-release `web-<commit>-<kit commit>`, with the xrdp packages; published once, never replaced |
 | here, on each push or pull request | the page's unit tests (Node) |
 | here, on publication | takes a tested client of the kit (below), lays this commit's page over it, adds the demo videos ([`media.json`](../media.json), checked), runs `test-page.mjs` on exactly these files, deploys, then logs in from the published page with that pre-release's kit test and xrdp packages |
 
@@ -38,8 +38,10 @@ Which client:
   *Run workflow* to the checked site. The `MANIFEST` names the client's pre-release and, on its
   last line, this page commit.
 - **exact** (a `v*` tag, or chosen by hand): the client the kit built and tested with this very
-  commit (`web-<commit>`, SHA-256 checked; its `MANIFEST` must name the commit). Pin the commit in
-  the kit's `sources.lock` first; a commit the kit has not built cannot be published this way.
+  commit: the kit's newest build of it, `web-<commit>-<kit commit>` (or, from before the kit froze
+  its pre-releases, `web-<commit>`), found by [`kit-release.sh`](../kit-release.sh),
+  SHA-256 checked; its `MANIFEST` must name the commit. Pin the commit in the kit's `sources.lock`
+  first; a commit the kit has not built cannot be published this way.
 
 ## Publishing is a decision, never a side effect
 

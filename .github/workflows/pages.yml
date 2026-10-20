@@ -2,8 +2,9 @@ name: pages
 
 # This repository's GitHub Pages. The release kit (rdp-release-kit) builds the
 # WebAssembly client with this page, tests it (a browser login to xrdp over
-# SSH and websockify) and hands it over as its pre-release web-<commit>; this
-# workflow builds nothing. A push or a pull request runs the page's own tests.
+# SSH and websockify) and hands it over as its pre-release
+# web-<commit>-<kit commit>, published once and never replaced (kit-release.sh
+# finds it); this workflow builds nothing. A push or a pull request runs the page's own tests.
 # Publishing happens only on purpose, a v* tag or Run workflow with "publish":
 # a tested client of the kit, this commit's page and the demo videos, checked
 # with test-page.mjs, deployed, then a login from the published page. The
@@ -43,6 +44,8 @@ jobs:
           node-version: 24
       - name: Unit tests (vault, hosts, options, keyboard, the connection bridge)
         run: node --test web/tests/*.test.cjs
+      - name: Which kit pre-release holds the client (kit-release.sh)
+        run: ./test-kit-release.sh
 
   site:
     if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish)
@@ -56,19 +59,21 @@ jobs:
       # the kit's newest tested client, this commit's page over it, the videos (site.sh)
       - name: The kit's newest tested client, with this commit's page
         if: ${{ !startsWith(github.ref, 'refs/tags/v') && inputs.client != 'exact' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: SITE=site ./site.sh kit
 
       # the kit's pre-release for this exact commit: its tested client, checked
       - name: The kit's build of this exact commit
         if: ${{ startsWith(github.ref, 'refs/tags/v') || inputs.client == 'exact' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          tag=web-${GITHUB_SHA:0:12}
+          # the kit's newest build of this commit: web-<commit>-<kit commit>
+          tag=$(./kit-release.sh "$GITHUB_SHA")
           base=https://github.com/$KIT/releases/download/$tag
           mkdir -p handoff site
-          if ! curl -fsSL -o handoff/freerdp-web-page.zip "$base/freerdp-web-page.zip"; then
-            echo "The kit has no tested client for $GITHUB_SHA ($tag): pin this commit in its sources.lock first." >&2
-            exit 1
-          fi
+          curl -fsSL -o handoff/freerdp-web-page.zip "$base/freerdp-web-page.zip"
           curl -fsSL -o handoff/freerdp-web-page.zip.sha256 "$base/freerdp-web-page.zip.sha256"
           (cd handoff && sha256sum -c freerdp-web-page.zip.sha256)
           unzip -q handoff/freerdp-web-page.zip -d site
