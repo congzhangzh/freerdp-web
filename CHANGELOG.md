@@ -6,6 +6,27 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 0.4.11
+
+- **Remote scale: Automatic, 100, 125, 150 or 200 %** (Session settings). Automatic is the
+  0.4.7 behaviour: the screen's scale goes with the connection and with every later display
+  layout. A number is sent instead, as `/scale-desktop:<n>`, at connect and with every layout,
+  so a resize or full screen never changes it. A `/scale` or `/scale-desktop` in Extra options
+  still wins. Whether the server follows is its own business. gnome-remote-desktop hands the
+  client's scale to Mutter only from GNOME 50 on (`org.gnome.preferred-scale` on the virtual
+  monitor's PipeWire stream, GRD commit 6ae3a98). GNOME 48 ignores it: against the release
+  kit's GNOME container (GRD 48.1) the client sent DesktopScaleFactor=200 in every layout and
+  Mutter's DisplayConfig kept scale 1.0. Checked with the new `test-fs-connect.mjs` at device
+  pixel ratio 2: Automatic sends 200 in every layout, and 100 % sends `/scale-desktop:100` and
+  100 in every layout, through Full screen → Window → Full screen.
+- **"Full screen" at Connect starts the session at the screen's size.** macOS animates into
+  full screen, and the window keeps growing for most of a second after the request. The page
+  measured the canvas two frames in, so the session started smaller (2560 × 1520 where the
+  screen is 2880 × 1800) and was resized right after. The page now waits until the window
+  size has held still for 150 ms (at most 1.5 s) before measuring. `test-fs-connect.mjs`
+  grows the window in 40 ms steps after the request: `/size` was 2560x1520 before and is
+  2880x1800 now.
+
 ## 0.4.10
 
 - **Capture: the mouse and the keyboard stay with the remote desktop until Ctrl + Alt.** In

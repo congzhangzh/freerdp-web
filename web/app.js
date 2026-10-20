@@ -85,12 +85,12 @@ const radio = (name) => document.querySelector(`input[name=${name}]:checked`)?.v
 const setRadio = (name, value) => { const r = document.querySelector(`input[name=${name}][value="${value}"]`); if (r) r.checked = true; };
 function readSession() {
   return FreeRDPOptions.normalize({ audio: $("optAudio").checked, clipboard: $("optClipboard").checked,
-    codec: radio("codec"), strategy: radio("strategy") });
+    codec: radio("codec"), strategy: radio("strategy"), scale: radio("scale") });
 }
 function showSession(session) {
   const s = FreeRDPOptions.normalize(session);
   $("optAudio").checked = s.audio; $("optClipboard").checked = s.clipboard;
-  setRadio("codec", s.codec); setRadio("strategy", s.strategy);
+  setRadio("codec", s.codec); setRadio("strategy", s.strategy); setRadio("scale", s.scale);
   setRadio("keys", FreeRDPKeyboard.get());
   updateSessionText();
 }
@@ -104,11 +104,18 @@ const STRATEGY_HINTS = {
   bandwidth: "For slow links: the server sends less (no wallpaper or animations) and compresses more, which costs it more CPU.",
   server: "For a busy server: it compresses less and sends more data instead.",
 };
-const KIND_NAMES = { video: "Video", audio: "Sound", clipboard: "Clipboard", network: "Priority", compression: "Priority" };
+const KIND_NAMES = { video: "Video", audio: "Sound", clipboard: "Clipboard", network: "Priority", compression: "Priority", scale: "Remote scale" };
+// what Automatic sends: the screen's scale, above 100 % (vault.js connectionArgs)
+function scaleHint(scale) {
+  const screen = Math.min(500, Math.round((window.devicePixelRatio || 1) * 100));
+  return (scale === "auto" ? `Automatic: your screen's scale, now ${screen} %. ` : `Always ${scale} %, also after a resize or full screen. `) +
+    "Windows follows it; GNOME from gnome-remote-desktop 50 on (older versions keep their own setting).";
+}
 function updateSessionText() {
   const s = readSession(), extra = $("extra").value;
   $("codecHint").textContent = CODEC_HINTS[s.codec];
   $("strategyHint").textContent = STRATEGY_HINTS[s.strategy];
+  $("scaleHint").textContent = scaleHint(s.scale);
   // Extra options of the same kind win: say which settings they override
   const over = [...new Set(FreeRDPOptions.overridden(extra).map((k) => KIND_NAMES[k]))];
   const changed = !FreeRDPOptions.isDefault(s);
@@ -118,6 +125,7 @@ function updateSessionText() {
   const label = (name, value) => document.querySelector(`input[name=${name}][value="${value}"]`).parentElement.textContent.trim();
   $("sessionSummary").textContent = over.length ? "custom" : !changed ? "recommended" :
     [s.codec !== "auto" && label("codec", s.codec), s.strategy !== "recommended" && label("strategy", s.strategy),
+     s.scale !== "auto" && "scale " + label("scale", s.scale),
      !s.audio && "no sound", !s.clipboard && "no clipboard"].filter(Boolean).join(", ");
   $("preview").textContent = FreeRDPOptions.resolve(s, extra).join(" ");
   updateSummary();
@@ -683,6 +691,17 @@ async function connect() {
   // frames for a while (the measurement below forces the layout either way)
   await Promise.race([new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
     new Promise((r) => setTimeout(r, 200))]);
+  // macOS animates into full screen: the window grows for most of a second after the request.
+  // Measured then, the session started a little smaller than the screen ("2560 x 1520" on a
+  // 2880 x 1800 one) and was resized right after. Wait until the size holds still for 150 ms
+  // (at most 1.5 s).
+  if (document.fullscreenElement) {
+    const size = () => innerWidth + "x" + innerHeight;
+    for (let last = size(), still = 0, t = 0; still < 150 && t < 1500; t += 50) {
+      await new Promise((r) => setTimeout(r, 50));
+      if (size() === last) still += 50; else { last = size(); still = 0; }
+    }
+  }
   const r = $("canvas").getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
   const even = (v) => Math.max(2, Math.round(v * dpr / 2) * 2);
   const size = `${even(r.width)}x${even(r.height)}`, scale = Math.round(dpr * 100);

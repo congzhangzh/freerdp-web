@@ -17,6 +17,14 @@ test("the two priorities are opposite and never mixed", () => {
   assert.ok(sv.includes("/network:lan") && sv.includes("-compression"));
   assert.ok(!sv.some((a) => /broadband|compression-level|\+compression/.test(a)));
 });
+test("remote scale: automatic adds nothing, a number is sent as /scale-desktop, extra options win", () => {
+  assert.ok(!O.resolve({scale: "auto"}, "").some((a) => /scale/.test(a)));
+  assert.ok(O.resolve({scale: "100"}, "").includes("/scale-desktop:100"));
+  assert.ok(O.resolve({scale: 150}, "").includes("/scale-desktop:150"));
+  assert.ok(!O.resolve({scale: "300"}, "").some((a) => /scale/.test(a)));   // not offered: automatic
+  assert.deepEqual(O.resolve({scale: "200"}, "/scale:140").filter((a) => /scale/.test(a)), ["/scale:140"]);
+  assert.ok(!O.isDefault({scale: "100"}));
+});
 test("off switches", () => {
   const a = O.resolve({audio: false, clipboard: false}, "");
   assert.ok(a.includes("/audio-mode:2") && a.includes("-clipboard") && !a.includes("/sound"));
