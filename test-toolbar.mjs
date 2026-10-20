@@ -25,12 +25,22 @@ const click = async (sel) => { const r = JSON.parse(await ev(`JSON.stringify(doc
   for (const type of ["mousePressed", "mouseReleased"]) await send("Input.dispatchMouseEvent", { type, x, y, button: "left", clickCount: 1 }); };
 const state = async (label) => console.log(label, await ev("JSON.stringify({fs: !!document.fullscreenElement, cls: document.body.className, canvas: [canvas.width, canvas.height], btn: tbFs.textContent, tbOpacity: getComputedStyle(toolbar).opacity})"));
 await send("Runtime.enable"); await send("Page.enable");
-await send("Page.navigate", { url: "http://127.0.0.1:8080/index.html?v=127.0.0.1:6081&u=test&extra=/gfx&fs=0" });
+await send("Page.navigate", { url: (process.env.PAGE || "http://127.0.0.1:8080/index.html") + "?v=127.0.0.1:6081&u=test&extra=/gfx&fs=0" });
 await connectTestSession(send).catch(e => { chrome.kill(); throw e; });
 await sleep(15000); await state("connected:");
 await click("#tbFs"); await sleep(6000); await state("after Full screen click:");
 writeFileSync(join(out, "tb-fs.png"), Buffer.from((await send("Page.captureScreenshot", { format: "png" })).data, "base64"));
-await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 400, y: 1 }); await sleep(500); await state("mouse at top edge:");
+const move = (x, y) => send("Input.dispatchMouseEvent", { type: "mouseMoved", x, y });
+// the corners of the top edge are the remote desktop's: no toolbar there
+await move(795, 1); await sleep(700); await state("mouse in the top right corner (hidden):");
+await move(5, 1); await sleep(700); await state("mouse in the top left corner (hidden):");
+// above the toolbar it comes back after a short rest, and hides once the mouse moves away
+await move(400, 1); await sleep(100); await state("mouse above the toolbar, 100 ms (still hidden):");
+await sleep(400); await state("mouse above the toolbar, 500 ms (shown):");
+console.log("grip shown while hidden:", await ev("getComputedStyle(tbGrip).display"));
+await move(400, 400); await sleep(1000); await state("mouse moved away (hidden):");
+console.log("grip shown while hidden:", await ev("getComputedStyle(tbGrip).display"));
+await move(400, 1); await sleep(500);
 await click("#tbFs"); await sleep(6000); await state("after Window click:");
 // pinned toolbar must stay visible in full screen; SDL-style canvas requests must be ignored
 await click("#tbPin"); await click("#tbFs"); await sleep(4000); await state("pinned + full screen:");

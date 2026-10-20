@@ -6,6 +6,19 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 0.4.8
+
+- **The full-screen toolbar comes back only where it is, after a short rest.** Until now any
+  mouse move to the top 4 pixels showed it, also in the corners, where the remote desktop has
+  a maximized window's close button and its menus; every quick move there pulled the toolbar
+  down over them. Now the mouse has to rest 300 ms at the top edge right above the toolbar (its
+  width plus 40 px on each side), and the toolbar hides 600 ms after the mouse moves more than
+  60 px away from it, instead of on a fixed 2.5 s timer (Ctrl + Alt + Home, which shows it from
+  the keyboard, keeps that timer). A small grip at the top centre marks the spot while it is
+  hidden; clicks go through the grip to the remote side. Checked with `test-toolbar.mjs`
+  against xrdp: both corners leave it hidden, 100 ms above it too, 500 ms shows it, moving
+  away hides it again.
+
 ## 0.4.7
 
 - **The screen's scale goes to the server when connecting.** The page already asks for the

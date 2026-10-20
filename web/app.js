@@ -450,16 +450,35 @@ function updateInfo() {
   last = { t: now, rx: net.rx, tx: net.tx, frames: av1.frames, ms: av1.decodeMs, codecs: last.codecsNext };
 }
 setInterval(updateInfo, 1000);
-// in full screen: reveal the toolbar when the mouse touches the top edge, hide it again after a while
-let tbTimer = 0;
-function showToolbar() {
+// In full screen the toolbar hides. It comes back when the mouse rests TB_DWELL ms at the top
+// edge right above it (a grip marks the spot), not anywhere along the edge: the corners belong
+// to the remote desktop (a maximized window's close button, menus). It hides again once the
+// mouse moves away from it; shown from the keyboard (Ctrl + Alt + Home), after 2.5 s.
+const TB_ZONE = 40, TB_DWELL = 300, TB_AWAY = 60;
+let tbTimer = 0, tbAway = 0, tbDwell = 0, pointer = null;
+const nearToolbar = (x, y) => { const r = toolbar.getBoundingClientRect();
+  return x >= r.left - TB_AWAY && x <= r.right + TB_AWAY && y <= r.bottom + TB_AWAY; };
+function hideToolbar() {
+  clearTimeout(tbTimer); clearTimeout(tbAway); tbTimer = tbAway = 0;
+  if (!document.body.classList.contains("fs") || (pointer && nearToolbar(pointer.x, pointer.y))) return;
+  document.body.classList.add("tbhide");
+}
+function showToolbar(timeout = 2500) {
   document.body.classList.remove("tbhide");
-  clearTimeout(tbTimer);
-  tbTimer = setTimeout(() => { if (document.body.classList.contains("fs") && !toolbar.matches(":hover")) document.body.classList.add("tbhide"); }, 2500);
+  clearTimeout(tbTimer); tbTimer = timeout ? setTimeout(hideToolbar, timeout) : 0;
 }
 window.addEventListener("mousemove", (e) => {
-  if (!document.body.classList.contains("fs")) return;
-  if (e.clientY <= 4 || toolbar.contains(e.target)) showToolbar();
+  if (!document.body.classList.contains("fs") || document.pointerLockElement) return;
+  pointer = { x: e.clientX, y: e.clientY };
+  if (!document.body.classList.contains("tbhide")) {
+    if (nearToolbar(e.clientX, e.clientY)) { clearTimeout(tbTimer); clearTimeout(tbAway); tbTimer = tbAway = 0; }
+    else if (!tbAway) tbAway = setTimeout(hideToolbar, 600);
+    return;
+  }
+  const r = toolbar.getBoundingClientRect();
+  if (e.clientY <= 4 && Math.abs(e.clientX - (r.left + r.right) / 2) <= r.width / 2 + TB_ZONE) {
+    if (!tbDwell) tbDwell = setTimeout(() => { tbDwell = 0; showToolbar(0); }, TB_DWELL);
+  } else { clearTimeout(tbDwell); tbDwell = 0; }
 }, true);
 // in a window: keep the toolbar at the top of the canvas
 const placeToolbar = () => document.documentElement.style.setProperty("--tbtop", Math.max(0, $("canvas").getBoundingClientRect().top) + "px");

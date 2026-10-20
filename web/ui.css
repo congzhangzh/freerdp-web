@@ -153,13 +153,17 @@ body.fs .shell { padding:0; }
 /* full screen session: SDL sets inline sizes, hence !important */
 body.fs canvas { position:fixed; inset:0; width:100vw !important; height:100vh !important; }
 /* session toolbar: top centre of the remote screen; in full screen it hides and comes back
-   when the mouse reaches the top edge */
+   when the mouse rests at the top edge right above it (app.js) */
 #toolbar { position:fixed; top:var(--tbtop, 8px); left:50%; transform:translateX(-50%); z-index:10; display:none; gap:6px;
   padding:5px 8px; border-radius:0 0 8px 8px; background:rgba(24,33,43,.88); box-shadow:0 2px 10px rgba(0,0,0,.3);
   transition:opacity .2s, transform .2s; }
 body.session #toolbar { display:flex; }
 body.fs #toolbar { top:0; }
 body.fs.tbhide:not(.tbpinned) #toolbar { opacity:0; transform:translate(-50%, -100%); pointer-events:none; }
+/* the grip marks where the hidden toolbar comes back; clicks go through it to the remote side */
+#tbGrip { display:none; position:fixed; top:0; left:50%; z-index:10; width:56px; height:4px; margin-left:-28px;
+  border-radius:0 0 4px 4px; background:rgba(255,255,255,.4); box-shadow:0 0 0 1px rgba(0,0,0,.25); pointer-events:none; }
+body.fs.tbhide:not(.tbpinned):not(.captured) #tbGrip { display:block; }
 #toolbar button { font-size:12px; padding:4px 10px; border:0; background:#34404d; color:#fff; }
 #toolbar button:hover { background:#2f6fde; }
 #toolbar #tbPin { opacity:.55; } #toolbar #tbPin.on { opacity:1; background:#2f6fde; }
