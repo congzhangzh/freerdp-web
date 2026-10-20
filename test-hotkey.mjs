@@ -25,7 +25,7 @@ const hotkey = async () => {
   await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Shift", code: "ShiftRight", windowsVirtualKeyCode: 16 });
 };
 await send("Runtime.enable");
-await send("Page.navigate", { url: "http://127.0.0.1:8080/index.html?v=127.0.0.1:6081&u=test&extra=/gfx&fs=0" });
+await send("Page.navigate", { url: (process.env.PAGE || "http://127.0.0.1:8080/index.html") + "?v=127.0.0.1:6081&u=test&extra=/gfx&fs=0" });
 await connectTestSession(send).catch(e => { chrome.kill(); throw e; });
 await sleep(15000); await state("connected:      ");
 await hotkey(); await sleep(5000); await state("after hotkey 1: ");

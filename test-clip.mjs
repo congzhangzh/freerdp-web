@@ -23,7 +23,7 @@ const pg = conn(t.webSocketDebuggerUrl); await pg.ready;
 await pg.send("Runtime.enable"); await pg.send("Page.enable");
 await pg.send("Emulation.setFocusEmulationEnabled", { enabled: true });
 const ev = async (expression) => (await pg.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true, userGesture: true })).result?.value;
-await pg.send("Page.navigate", { url: "http://127.0.0.1:8080/index.html?v=127.0.0.1:6081&u=test&extra=/gfx&fs=0" });
+await pg.send("Page.navigate", { url: (process.env.PAGE || "http://127.0.0.1:8080/index.html") + "?v=127.0.0.1:6081&u=test&extra=/gfx&fs=0" });
 await connectTestSession(pg.send).catch(e => { chrome.kill(); throw e; });
 await sleep(15000);
 const xclip = (args, input) => execFileSync("docker", ["exec", "-i", "grd-wasm-xrdp-ci", "sh", "-c",

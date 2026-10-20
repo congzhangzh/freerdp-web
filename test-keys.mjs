@@ -46,7 +46,7 @@ const typeChar = async (ch) => {
 const typeLine = async (s) => { for (const ch of s) await typeChar(ch); await press("Enter", "Enter", 13, "\r"); };
 
 await send("Runtime.enable");
-await send("Page.navigate", { url: "http://127.0.0.1:8080/index.html?v=127.0.0.1:6081&u=test&extra=/gfx&fs=0" });
+await send("Page.navigate", { url: (process.env.PAGE || "http://127.0.0.1:8080/index.html") + "?v=127.0.0.1:6081&u=test&extra=/gfx&fs=0" });
 await connectTestSession(send).catch(e => { chrome.kill(); throw e; });
 await sleep(15000);
 for (const type of ["mousePressed", "mouseReleased"]) await send("Input.dispatchMouseEvent", { type, x: 300, y: 300, button: "left", clickCount: 1 });

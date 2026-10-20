@@ -283,6 +283,58 @@ window.addEventListener("keydown", (e) => {
   }
 }, true);
 
+// Cmd (Meta, the remote side's Super / Windows key). macOS keeps Cmd + Tab and Cmd + Space for
+// itself even with Keyboard Lock: the page sees Cmd's keydown and then only a blur. Sent at once,
+// the remote side got Super down, and SDL's release of every key on blur made that a Super tap,
+// which opens GNOME's Activities or the Windows Start menu. So Cmd is held back until a key or a
+// click needs it; tapped alone, it still goes as a tap. macOS also sends no keyup for a key
+// released while Cmd is down (Cmd + C): when Cmd goes up, the keys pressed with it that are still
+// down are released here, or the remote side would keep them pressed and repeat them.
+// SDL reads the key's code, so a KeyboardEvent dispatched on the canvas reaches the remote side.
+const meta = { pending: null, sent: false, withMeta: new Map() };
+let synthetic = false;
+function synthKey(type, init) {
+  synthetic = true;
+  try { $("canvas").dispatchEvent(new KeyboardEvent(type, { bubbles: true, cancelable: true, ...init })); }
+  finally { synthetic = false; }
+}
+const isMeta = (code) => code === "MetaLeft" || code === "MetaRight";
+const isModifier = (code) => /^(Shift|Control|Alt|Meta)(Left|Right)$|^CapsLock$|^AltGraph$/.test(code);
+function flushMeta() {
+  if (!meta.pending) return;
+  const { key, code } = meta.pending;
+  meta.pending = null; meta.sent = true;
+  synthKey("keydown", { key, code, metaKey: true, location: code === "MetaRight" ? 2 : 1 });
+}
+function resetMeta() { meta.pending = null; meta.sent = false; meta.withMeta.clear(); }
+window.addEventListener("keydown", (e) => {
+  if (synthetic || e.target !== $("canvas") || !document.body.classList.contains("session")) return;
+  if (isMeta(e.code)) {
+    if (meta.sent) return;   // already on the remote side (a repeat)
+    if (!e.repeat) meta.pending = { key: e.key, code: e.code };
+    e.preventDefault(); e.stopImmediatePropagation();
+  } else if (!isModifier(e.code)) {
+    flushMeta();
+    if (meta.sent) meta.withMeta.set(e.code, e.key);
+  }
+}, true);
+window.addEventListener("keyup", (e) => {
+  if (synthetic) return;
+  if (!isMeta(e.code)) { meta.withMeta.delete(e.code); return; }
+  const toCanvas = e.target === $("canvas") && document.body.classList.contains("session");
+  if (meta.pending && toCanvas) flushMeta();   // tapped alone: down now, the real keyup follows
+  else if (!meta.sent) {                       // a Cmd the remote side never got (back from Cmd + Tab)
+    meta.pending = null;
+    if (toCanvas) { e.preventDefault(); e.stopImmediatePropagation(); }
+    return;
+  }
+  for (const [code, key] of meta.withMeta) synthKey("keyup", { code, key });
+  meta.withMeta.clear(); meta.sent = false;
+}, true);
+window.addEventListener("blur", resetMeta, true);   // SDL releases what the remote side holds
+window.addEventListener("mousedown", (e) => { if (e.target === $("canvas")) flushMeta(); }, true);   // Cmd + click
+window.addEventListener("wheel", (e) => { if (e.target === $("canvas")) flushMeta(); }, true);
+
 // Clipboard (text and images). SDL3 has no browser clipboard driver, so the page bridges it:
 //  - remote -> local: FreeRDP hands over text (freerdpClipboardWrite) and CF_DIB images
 //    (freerdpClipboardWriteImage). A DIB is a BMP file without its 14 byte file header: add the

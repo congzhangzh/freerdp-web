@@ -27,7 +27,7 @@ const typeText = async (s) => { for (const ch of s) await key(ch, /[a-z]/i.test(
 const shot = async (name) => writeFileSync(join(out, name), Buffer.from((await send("Page.captureScreenshot", { format: "png" })).data, "base64"));
 
 await send("Runtime.enable"); await send("Page.enable");
-await send("Page.navigate", { url: "http://127.0.0.1:8080/index.html?v=127.0.0.1:6081&u=test&extra=/gfx&fs=0" });
+await send("Page.navigate", { url: (process.env.PAGE || "http://127.0.0.1:8080/index.html") + "?v=127.0.0.1:6081&u=test&extra=/gfx&fs=0" });
 await connectTestSession(send).catch(e => { chrome.kill(); throw e; });
 await sleep(16000);
 console.log("canvas before:", await ev("JSON.stringify([canvas.width, canvas.height, canvas.getBoundingClientRect().width|0, canvas.getBoundingClientRect().height|0])"));

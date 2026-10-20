@@ -6,6 +6,23 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 0.4.9
+
+- **Cmd + Tab on a Mac no longer leaves the remote side with a pressed Super key or opens
+  its Activities / Start menu; Cmd + letter no longer leaves the letter pressed.** macOS keeps
+  Cmd + Tab and Cmd + Space for itself even with Keyboard Lock, so the page saw Cmd's keydown
+  and then only a blur. The remote side had already got Super down; SDL releases every key on
+  blur (`SDL_ResetKeyboard` in `Emscripten_HandleFocus`), which made it a Super tap: GNOME's
+  Activities overview, the Windows Start menu. Now the page holds Cmd back until a key, a click
+  or the wheel needs it (Cmd + C still arrives as Super + C) and sends a lone Cmd tap as a tap.
+  macOS also sends no keyup for a key released while Cmd is down, so the remote side kept the
+  letter of Cmd + C pressed and repeated it; when Cmd goes up, the page now releases the keys
+  pressed with it. The new `test-meta.mjs` reads the remote X server's pressed keys
+  (XQueryKeymap, `test-keymap.py`) in the CI xrdp session: before, Super_L was held while Cmd
+  was down and `c` stayed held after Cmd + C; now nothing is held after any of the three
+  cases (Cmd then blur, Cmd + C without C's keyup, Cmd tapped), and `test-keys.mjs` still
+  types its whole line exactly. The test scripts take the page's URL from `PAGE`.
+
 ## 0.4.8
 
 - **The full-screen toolbar comes back only where it is, after a short rest.** Until now any

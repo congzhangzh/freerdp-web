@@ -18,7 +18,7 @@ ws.addEventListener("message", (e) => { const m = JSON.parse(e.data); if (m.id &
 const send = (method, params = {}) => new Promise((r) => { const i = ++id; p.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
 const state = async (label) => console.log(label, (await send("Runtime.evaluate", { returnByValue: true, expression:
   "(() => { const c = canvas, r = c.getBoundingClientRect(); return JSON.stringify({ viewport: [innerWidth, innerHeight], cssBox: [r.width|0, r.height|0], backing: [c.width, c.height], cssAspect: (r.width/r.height).toFixed(3), backingAspect: (c.width/c.height).toFixed(3) }); })()" })).result.value);
-await send("Page.navigate", { url: "http://127.0.0.1:8080/index.html?v=127.0.0.1:6081&u=test&extra=/gfx&fs=0" });
+await send("Page.navigate", { url: (process.env.PAGE || "http://127.0.0.1:8080/index.html") + "?v=127.0.0.1:6081&u=test&extra=/gfx&fs=0" });
 await connectTestSession(send).catch(e => { chrome.kill(); throw e; });
 await sleep(15000); await state("start:      ");
 for (const [w, h] of [[900, 600], [600, 700], [500, 400]]) {
