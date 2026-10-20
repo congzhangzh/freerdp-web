@@ -19,7 +19,7 @@ function fixture({search="", extra="", direct=true}={}) {
   element("pass");
   const context={console:{log(){}},URLSearchParams,URL,performance,Promise,TextEncoder,TextDecoder,
     setInterval:()=>1,clearInterval(){},setTimeout:()=>1,clearTimeout(){},
-    requestAnimationFrame:fn=>queueMicrotask(fn), HTMLCanvasElement:function(){},Element:function(){},
+    requestAnimationFrame:fn=>queueMicrotask(fn), MutationObserver:class{observe(){}}, HTMLCanvasElement:function(){},Element:function(){},
     location:{search,pathname:"/",hash:""},history:{replaceState(a,b,url){context.cleanURL=url;}},
     navigator:{keyboard:{}},crossOriginIsolated:true,Option:function(){},
     localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},

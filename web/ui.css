@@ -166,6 +166,13 @@ body.fs.tbhide:not(.tbpinned) #toolbar { opacity:0; transform:translate(-50%, -1
 body.fs.tbhide:not(.tbpinned):not(.captured) #tbGrip { display:block; }
 #toolbar button { font-size:12px; padding:4px 10px; border:0; background:#34404d; color:#fff; }
 #toolbar button:hover { background:#2f6fde; }
+#toolbar #tbCapture.on { background:#2f6fde; }
+/* the remote pointer while the mouse is captured (app.js draws it; the browser hides its own) */
+#vcursor { position:fixed; left:0; top:0; z-index:11; pointer-events:none; image-rendering:pixelated; }
+#captureToast { position:fixed; top:calc(var(--tbtop, 8px) + 52px); left:50%; transform:translateX(-50%); z-index:12; padding:8px 14px; border-radius:6px;
+  background:rgba(24,33,43,.92); color:#e3e9ef; font-size:13px; pointer-events:none; }
+body.fs #captureToast { top:16px; }
+#captureToast kbd { background:#34404d; color:#fff; border-color:#4a5866; }
 #toolbar #tbPin { opacity:.55; } #toolbar #tbPin.on { opacity:1; background:#2f6fde; }
 /* connection info overlay, toggled from the toolbar */
 #info { position:fixed; top:calc(var(--tbtop, 8px) + 44px); right:24px; z-index:10; min-width:260px; padding:8px 12px;

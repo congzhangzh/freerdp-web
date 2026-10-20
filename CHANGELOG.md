@@ -6,6 +6,28 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 0.4.10
+
+- **Capture: the mouse and the keyboard stay with the remote desktop until Ctrl + Alt.** In
+  full screen a click on the remote desktop captures them (the click still reaches it); in a
+  window, the toolbar's new Capture button does. The mouse is held with Pointer Lock, the
+  keyboard (full screen only) with Keyboard Lock as before. Ctrl + Alt, pressed and released
+  with no other key in between, releases both and shows the toolbar; full screen stays. Only
+  the left Alt counts, because Windows reports AltGr as Ctrl + right Alt (French and German
+  keyboards type @ and € with it), and Ctrl + Alt + End or any other Ctrl + Alt shortcut does
+  not release. SDL is not told about the lock: SDL treats a locked mouse as relative, while
+  the RDP server wants absolute positions. The page instead moves its own cursor by the
+  lock's `movementX/Y`, clamps it to the remote desktop and hands SDL ordinary mouse events
+  at that position (the `pointerlockchange` event is stopped at the window, as
+  `fullscreenchange` is). It draws the remote pointer's image there, which is the canvas's
+  CSS cursor that SDL sets and the browser hides under the lock. A short notice says how to
+  release, and the toolbar's grip steps aside while the mouse is captured. The new
+  `test-capture.mjs` checks against xrdp: Capture locks; ten relative moves of (12, 7) move the
+  page's cursor by (120, 70) and the session's X pointer (XQueryPointer) to the same spot
+  within a pixel; the cursor stops at the edge; Ctrl + Alt + X and Ctrl + right Alt keep the
+  capture; a Ctrl + Alt tap releases; in full screen a click captures and Ctrl + Alt releases
+  while full screen stays.
+
 ## 0.4.9
 
 - **Cmd + Tab on a Mac no longer leaves the remote side with a pressed Super key or opens

@@ -228,12 +228,20 @@ async function enterFullscreen() {
     return false;
   }
   document.body.classList.add("fs");
-  try { await navigator.keyboard?.lock?.(); } catch (e) { log("[page] keyboard lock unavailable: " + e.message); }
+  await lockKeyboard();
   $("canvas").focus();
   return true;
 }
+// Keyboard Lock (full screen only) sends Esc, Alt + Tab and the Windows key to the remote side
+let kbLocked = false;
+async function lockKeyboard() {
+  if (!document.fullscreenElement || !navigator.keyboard?.lock) return;
+  try { await navigator.keyboard.lock(); kbLocked = true; syncCaptured(); }
+  catch (e) { log("[page] keyboard lock unavailable: " + e.message); }
+}
+function unlockKeyboard() { navigator.keyboard?.unlock?.(); kbLocked = false; syncCaptured(); }
 function toggleFullscreen() {
-  if (document.fullscreenElement) { navigator.keyboard?.unlock?.(); realExitFullscreen(); }
+  if (document.fullscreenElement) { unlockKeyboard(); releasePointer(); realExitFullscreen(); }
   else enterFullscreen();
 }
 // The page's full screen is not SDL's: SDL 3.2 marks its window full screen on this event and
@@ -243,13 +251,31 @@ function toggleFullscreen() {
 for (const type of ["fullscreenchange", "webkitfullscreenchange"])
   window.addEventListener(type, (e) => { e.stopImmediatePropagation(); if (type === "fullscreenchange") onFullscreenChange(); }, true);
 function onFullscreenChange() {
-  if (!document.fullscreenElement) { document.body.classList.remove("fs"); log("[page] left full screen"); }
+  if (!document.fullscreenElement) { document.body.classList.remove("fs"); kbLocked = false; syncCaptured(); log("[page] left full screen"); }
   $("tbFs").textContent = document.fullscreenElement ? "Window" : "Full screen";
   document.body.classList.toggle("tbhide", !!document.fullscreenElement);
   // The browser fires "resize" before or after "fullscreenchange" (macOS: after), so measure
   // again once the new layout is in place; SDL's handler reads the current sizes, not the event.
   requestAnimationFrame(() => { placeToolbar(); window.dispatchEvent(new Event("resize")); });
 }
+// Ctrl + Alt releases a capture (below): both down, nothing else pressed meanwhile. Registered
+// before the other key listeners, which stop some keys (Ctrl + Alt + End), so it sees every key.
+const chordKey = (code) => code === "ControlLeft" || code === "ControlRight" || code === "AltLeft";
+window.addEventListener("keydown", (e) => {
+  if (synthetic || e.repeat) return;
+  if (!chordKey(e.code)) cap.chordOther = true;
+  cap.held.add(e.code);
+}, true);
+window.addEventListener("keyup", (e) => {
+  if (synthetic) return;
+  const ctrl = cap.held.has("ControlLeft") || cap.held.has("ControlRight"), alt = cap.held.has("AltLeft");
+  if (chordKey(e.code) && ctrl && alt && !cap.chordOther && !cap.chordFired && keysCaptured()) {
+    cap.chordFired = true; release();
+  }
+  cap.held.delete(e.code);
+  if (!cap.held.size) { cap.chordOther = false; cap.chordFired = false; }
+}, true);
+window.addEventListener("blur", () => { cap.held.clear(); cap.chordOther = cap.chordFired = false; }, true);
 // FreeRDP's own hotkeys stay active (Right Shift + Enter full screen, + D disconnect, ...).
 // Browsers only allow full screen *during* a key or click event, but FreeRDP handles the hotkey
 // later in its main loop, so Emscripten would defer SDL's request to the user's next input. The
@@ -292,12 +318,12 @@ window.addEventListener("keydown", (e) => {
 // down are released here, or the remote side would keep them pressed and repeat them.
 // SDL reads the key's code, so a KeyboardEvent dispatched on the canvas reaches the remote side.
 const meta = { pending: null, sent: false, withMeta: new Map() };
-let synthetic = false;
-function synthKey(type, init) {
+let synthetic = false;   // the page's own events to SDL, which its listeners let pass
+function dispatchToSdl(event) {
   synthetic = true;
-  try { $("canvas").dispatchEvent(new KeyboardEvent(type, { bubbles: true, cancelable: true, ...init })); }
-  finally { synthetic = false; }
+  try { $("canvas").dispatchEvent(event); } finally { synthetic = false; }
 }
+const synthKey = (type, init) => dispatchToSdl(new KeyboardEvent(type, { bubbles: true, cancelable: true, ...init }));
 const isMeta = (code) => code === "MetaLeft" || code === "MetaRight";
 const isModifier = (code) => /^(Shift|Control|Alt|Meta)(Left|Right)$|^CapsLock$|^AltGraph$/.test(code);
 function flushMeta() {
@@ -334,6 +360,89 @@ window.addEventListener("keyup", (e) => {
 window.addEventListener("blur", resetMeta, true);   // SDL releases what the remote side holds
 window.addEventListener("mousedown", (e) => { if (e.target === $("canvas")) flushMeta(); }, true);   // Cmd + click
 window.addEventListener("wheel", (e) => { if (e.target === $("canvas")) flushMeta(); }, true);
+
+// Capture: the mouse is locked to the remote desktop (Pointer Lock) and, in full screen, the
+// keyboard too (Keyboard Lock, above); Ctrl + Alt, pressed and released with nothing else,
+// releases both, as in VMware. In full screen a click on the remote desktop captures again; in
+// a window, the toolbar's Capture button. Only the left Alt counts: Windows reports AltGr as
+// Ctrl + right Alt, and French or German keyboards type @ or € with it.
+//
+// SDL is not told about the lock: it would treat the mouse as relative and the RDP server still
+// wants absolute positions. The page moves its own cursor by the lock's movementX/Y, clamped to
+// the remote desktop, and hands SDL ordinary mouse events at that position; the remote pointer's
+// image (the canvas CSS cursor SDL sets, which the browser hides under the lock) is drawn there.
+const cap = { x: 0, y: 0, hotX: 0, hotY: 0, chordOther: false, chordFired: false, held: new Set(), toast: 0 };
+const ARROW = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="17" height="25" viewBox="0 0 17 25">' +
+  '<path d="M1 1v20l5-5 3.5 8 3-1.3L9 15h7z" fill="#fff" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/></svg>');
+const pointerLocked = () => document.pointerLockElement === $("canvas");
+// "captured": the mouse is (the grip and the toolbar's mouse reveal step aside); Ctrl + Alt also
+// releases a keyboard that is captured alone, as in full screen before the first click
+const keysCaptured = () => pointerLocked() || (kbLocked && !!document.fullscreenElement);
+function syncCaptured() {
+  document.body.classList.toggle("captured", pointerLocked());
+  $("tbCapture").classList.toggle("on", pointerLocked());
+}
+function capture(x, y) {
+  if (!document.body.classList.contains("session") || pointerLocked()) return;
+  const r = $("canvas").getBoundingClientRect();
+  cap.x = x ?? r.width / 2; cap.y = y ?? r.height / 2;
+  lockKeyboard();
+  const asked = $("canvas").requestPointerLock();
+  asked?.catch?.((e) => log("[page] mouse capture refused: " + e.message));
+}
+function releasePointer() { if (pointerLocked()) document.exitPointerLock(); }
+function release() {
+  releasePointer(); unlockKeyboard(); showToolbar();
+  log("[page] Ctrl + Alt: mouse and keyboard released");
+}
+function drawCursor() {
+  const c = $("vcursor"), r = $("canvas").getBoundingClientRect();
+  c.style.transform = `translate(${r.left + cap.x - cap.hotX}px, ${r.top + cap.y - cap.hotY}px)`;
+}
+// SDL's cursor: url(<png data>) <hot x> <hot y>, auto; or a CSS name ("none" when hidden)
+function readCursor() {
+  const css = $("canvas").style.cursor || "default", c = $("vcursor");
+  const m = /url\((["']?)(.*?)\1\)\s*(\d+)?\s*(\d+)?/.exec(css);
+  if (m) { c.src = m[2]; cap.hotX = +(m[3] || 0); cap.hotY = +(m[4] || 0); }
+  else { c.src = ARROW; cap.hotX = 1; cap.hotY = 1; }
+  c.hidden = !pointerLocked() || (!m && css.trim() === "none");
+  drawCursor();
+}
+new MutationObserver(() => { if (pointerLocked()) readCursor(); }).observe($("canvas"), { attributes: true, attributeFilter: ["style"] });
+for (const type of ["pointerlockchange", "webkitpointerlockchange"])
+  window.addEventListener(type, (e) => {
+    e.stopImmediatePropagation();   // SDL's listener is on the document
+    if (type !== "pointerlockchange") return;
+    readCursor(); syncCaptured();
+    if (pointerLocked()) {
+      log("[page] mouse captured; Ctrl + Alt releases it");
+      clearTimeout(cap.toast); $("captureToast").hidden = false;
+      cap.toast = setTimeout(() => { $("captureToast").hidden = true; }, 3000);
+    } else { $("captureToast").hidden = true; showToolbar(); }
+  }, true);
+window.addEventListener("pointerlockerror", () => log("[page] mouse capture refused by the browser"), true);
+// under the lock: the page's cursor position, then the event as SDL would have seen it there
+for (const type of ["mousemove", "mousedown", "mouseup"])
+  window.addEventListener(type, (e) => {
+    if (synthetic || !pointerLocked()) return;
+    e.stopImmediatePropagation(); e.preventDefault();
+    const r = $("canvas").getBoundingClientRect();
+    if (type === "mousemove") {
+      cap.x = Math.min(Math.max(cap.x + e.movementX, 0), r.width - 1);
+      cap.y = Math.min(Math.max(cap.y + e.movementY, 0), r.height - 1);
+      drawCursor();
+    }
+    dispatchToSdl(new MouseEvent(type, { bubbles: true, cancelable: true, clientX: r.left + cap.x, clientY: r.top + cap.y,
+      screenX: r.left + cap.x, screenY: r.top + cap.y, movementX: e.movementX, movementY: e.movementY,
+      button: e.button, buttons: e.buttons, ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey }));
+  }, true);
+// in full screen, a click on the remote desktop captures (the click still reaches it)
+window.addEventListener("mousedown", (e) => {
+  if (synthetic || pointerLocked() || e.target !== $("canvas") || e.button !== 0 || !document.fullscreenElement) return;
+  const r = $("canvas").getBoundingClientRect();
+  capture(e.clientX - r.left, e.clientY - r.top);
+}, true);
+$("tbCapture").onclick = () => { if (pointerLocked()) release(); else { capture(); backToCanvas(); } };
 
 // Clipboard (text and images). SDL3 has no browser clipboard driver, so the page bridges it:
 //  - remote -> local: FreeRDP hands over text (freerdpClipboardWrite) and CF_DIB images
