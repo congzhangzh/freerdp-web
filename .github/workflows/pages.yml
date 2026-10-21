@@ -3,7 +3,7 @@ name: pages
 # This repository's GitHub Pages. The release kit (rdp-release-kit) builds the
 # WebAssembly client with this page, tests it (a browser login to xrdp over
 # SSH and websockify) and hands it over as its pre-release
-# web-<commit>-<kit commit>, published once and never replaced (kit-release.sh
+# web-<YYYYMMDD>.<N>-<kit commit> (titled with the page commit), published once and never replaced (kit-release.sh
 # finds it); this workflow builds nothing. A push or a pull request runs the page's own tests.
 # Publishing happens only on purpose, a v* tag or Run workflow with "publish":
 # a tested client of the kit, this commit's page and the demo videos, checked
@@ -71,7 +71,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # the kit's newest build of this commit: web-<commit>-<kit commit>
+          # the kit's newest build of this commit: web-<YYYYMMDD>.<N>-<kit commit>, titled with it
           tag=$(./kit-release.sh "$GITHUB_SHA")
           base=https://github.com/$KIT/releases/download/$tag
           mkdir -p handoff site

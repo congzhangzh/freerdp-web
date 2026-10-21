@@ -39,6 +39,23 @@ check "a short commit works too" "web-${P%????}-eeeeeeeeeeee" aaaaaaa
 check "a commit with only the older name" "web-${Q%????}" "$Q"
 check "a commit the kit never built" "(fails)" 0123456789ab
 check "not a commit" "(fails)" 'web-x;rm'
+# the names by date (since 21 October 2026): the page commit is in the title
+R=cccccccccccc3333
+cat > "$TMP/dated.json" << EOF
+[
+ {"tag_name": "web-20261022.2-999999999999", "name": "Web client for freerdp-web ${R%????} (kit 999999999999)", "draft": true, "published_at": null, "body": ""},
+ {"tag_name": "web-20261022.1-888888888888", "name": "Web client for freerdp-web ${R%????} (kit 888888888888)", "draft": false, "published_at": "2026-10-22T09:00:00Z", "body": "WITHDRAWN: no; use web-20261021.2-777777777777"},
+ {"tag_name": "web-20261021.2-777777777777", "name": "Web client for freerdp-web ${R%????} (kit 777777777777)", "draft": false, "published_at": "2026-10-21T12:00:00Z", "body": "built"},
+ {"tag_name": "web-20261021.1-666666666666", "name": "Web client for freerdp-web ${P%????} (kit 666666666666)", "draft": false, "published_at": "2026-10-21T08:00:00Z", "body": "built"},
+ {"tag_name": "web-20261021.3-555555555555", "name": "something else", "draft": false, "published_at": "2026-10-21T13:00:00Z", "body": ""},
+ {"tag_name": "web-${P%????}-eeeeeeeeeeee", "draft": false, "published_at": "2026-10-20T10:00:00Z", "body": "built"}
+]
+EOF
+cp "$TMP/dated.json" "$TMP/releases.json"
+check "dated names: the newest published, not withdrawn, not a draft" "web-20261021.2-777777777777"
+check "dated names: a page commit, found by the title" "web-20261021.2-777777777777" "$R"
+check "dated names: newer than an older name of the same page" "web-20261021.1-666666666666" "$P"
+check "dated names: a title that names no page is not a web client" "(fails)" 555555555555
 echo '[]' > "$TMP/releases.json"
 check "no releases at all" "(fails)"
 

@@ -28,7 +28,7 @@ this repository publishes. Nothing is compiled here.
 
 | Where | What |
 |---|---|
-| the kit, on each push | builds the WebAssembly client with the freerdp-web release pinned in its `sources.lock` (a version and its commit), logs in from a browser to xrdp over SSH and websockify, and hands the tested client over as its pre-release `web-<commit>-<kit commit>`, with the xrdp packages; published once, never replaced |
+| the kit, on each push | builds the WebAssembly client with the freerdp-web release pinned in its `sources.lock` (a version and its commit), logs in from a browser to xrdp over SSH and websockify, and hands the tested client over as its pre-release `web-<YYYYMMDD>.<N>-<kit commit>` (its title names the page commit), with the xrdp packages; published once, never replaced |
 | here, on each push or pull request | the page's unit tests (Node) |
 | here, on publication | takes a tested client of the kit (below), lays this commit's page over it, adds the demo videos ([`media.json`](../media.json), checked), runs `test-page.mjs` on exactly these files, deploys, then logs in from the published page with that pre-release's kit test and xrdp packages |
 
@@ -39,7 +39,7 @@ Which client:
   minutes from the tag to the checked site. The `MANIFEST` names the client's pre-release and,
   on its last line, this page commit.
 - **exact** (chosen by hand only): the client the kit built and tested with this very
-  commit: the kit's newest build of it, `web-<commit>-<kit commit>` (or, from before the kit froze
+  commit: the kit's newest build of it, `web-<YYYYMMDD>.<N>-<kit commit>` titled with it (before 21 October 2026 `web-<commit>-<kit commit>`; from before the kit froze
   its pre-releases, `web-<commit>`), found by [`kit-release.sh`](../kit-release.sh),
   SHA-256 checked; its `MANIFEST` must name the commit. Pin the commit in the kit's `sources.lock`
   first; a commit the kit has not built cannot be published this way.
@@ -59,7 +59,7 @@ follows on its own schedule:
    that commit. Its upstream check watches this repository's `v*` tags and opens an update
    issue for a new one.
 3. The kit builds and tests its client with that release and hands it over as a pre-release
-   (`web-<commit>-<kit commit>`), which later publications take as their "latest" client.
+   (`web-<YYYYMMDD>.<N>-<kit commit>`), which later publications take as their "latest" client.
 
 Not every version needs a release: tag the ones the kit should carry.
 

@@ -99,7 +99,7 @@ python3 serve.py 8180 dist/site            # then open http://localhost:8180
 node test-page.mjs dist/site               # or test it in Chrome
 ```
 
-The kit's clients are its pre-releases `web-<page commit>-<kit commit>`, each built and tested
+The kit's clients are its pre-releases `web-<YYYYMMDD>.<N>-<kit commit>` (titled with the page commit; `web-<page commit>-<kit commit>` before 21 October 2026), each built and tested
 (a browser login to xrdp) before it is uploaded, and never replaced afterwards: a new build of
 the same page is a new pre-release. [`kit-release.sh`](kit-release.sh) finds the newest one (or
 the newest for a page commit); `site.sh` checks its SHA-256 and keeps it in

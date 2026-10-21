@@ -3,8 +3,11 @@
 #
 #   ./kit-release.sh              the newest web-* pre-release
 #   ./kit-release.sh <commit>     the newest the kit built for this page commit (7 or more
-#                                 hex digits): web-<commit, 12>-<kit commit, 12>, or the
-#                                 older web-<commit, 12>
+#                                 hex digits)
+#
+# Names: web-<YYYYMMDD>.<N>-<kit commit, 12> since 21 October 2026, titled "Web client for
+# freerdp-web <page commit, 12> (kit <kit commit, 12>)"; before, web-<page commit,
+# 12>-<kit commit, 12> and web-<page commit, 12>, which name the page commit themselves.
 #
 # The kit publishes each pre-release once and never replaces its files (its
 # docs/RELEASE.md, "Frozen releases"); a new build of the same page is a new tag, so the
@@ -41,11 +44,19 @@ def releases():
         page += 1
 
 
+def page(r):
+    """the page commit (12) a web pre-release was built for, or None"""
+    tag = r.get("tag_name") or ""
+    if re.fullmatch(r"web-[0-9]{8}\.[0-9]+-[0-9a-f]{12}", tag):
+        m = re.fullmatch(r"Web client for freerdp-web ([0-9a-f]{12}) \(kit [0-9a-f]{12}\)", r.get("name") or "")
+        return m and m.group(1)
+    m = re.fullmatch(r"web-([0-9a-f]{12})(-[0-9a-f]{12})?", tag)
+    return m and m.group(1)
 def wanted(r):
-    m = re.fullmatch(r"web-([0-9a-f]{12})(-[0-9a-f]{12})?", r["tag_name"])
-    return (m and not r.get("draft") and r.get("published_at")
+    p = page(r)
+    return (p and not r.get("draft") and r.get("published_at")
             and not (r.get("body") or "").startswith("WITHDRAWN")
-            and m.group(1).startswith(commit[:12]))
+            and p.startswith(commit[:12]))
 
 
 found = sorted(filter(wanted, releases()), key=lambda r: r["published_at"], reverse=True)
