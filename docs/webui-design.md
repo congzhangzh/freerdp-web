@@ -54,7 +54,7 @@ A collapsed panel under the form; its summary line says `recommended`, or what d
 | Setting | Choices (default first) | FreeRDP options (`web/options.js`) |
 |---|---|---|
 | Sound | on, off | `/sound`; off: `/audio-mode:2` (the server plays nothing) |
-| Microphone | shown disabled, “not in this build” | none: the WASM build has no audio-input backend (`channels/audin/client` has no Emscripten driver) |
+| Microphone | off, on; disabled with “not in this build” when the client lacks it | `/microphone`; off: none, so the browser never asks. A client built with FreeRDP's Web Audio backend (`channels/audin/client/emscripten`, #13811; the kit's preview 20261020.1) exports `audin_emscripten_release`, which turns the switch on. The browser asks when the server opens the channel: an xrdp session needs `pipewire-module-xrdp` for that |
 | Clipboard | on, off | `+clipboard`; off: `-clipboard`, and the page's clipboard bridge stops too |
 | Full screen | off, on | page full screen on Connect (as before) |
 | Video | Automatic, AV1 4:2:0, AV1 4:4:4 | `/gfx` (every codec; this build offers AV1 4:4:4 by default), `/gfx:AV1:i420`, `/gfx:AV1:i444` |
