@@ -1,12 +1,17 @@
 # Changes
 
 The version is the one in `web/.well-known/manifest.webmanifest`; the page shows it in the
-session's Info panel. An installed app (IWA) updates only to a newer version. The WASM
+session's Info panel. An installed app (IWA) updates only to a newer version.
+
+Since 20261021.1 the version is the release date and that day's release number,
+`<YYYYMMDD>.<N>` (tag `v<YYYYMMDD>.<N>`): the page is released continuously, so the date
+says how new it is, and the number orders two releases of one day. It stays numeric with
+at most four parts, as installed apps require, and is higher than every 0.4.x. The WASM
 client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
-## 0.4.14
+## 20261021.1
 
 - **Microphone.** The Microphone switch under Session settings works with a client built with
   FreeRDP's Web Audio microphone backend (FreeRDP pull request #13811, in the kit's preview
