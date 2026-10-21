@@ -1,4 +1,4 @@
-// The splash: on a first visit, the two demo videos (a minute each) before the client, with
+// The splash: on a first visit, the demo videos (a minute or so each) before the client, with
 // Skip; the header's "Demo" shows it again. Only where the site has them: the Pages build puts
 // the videos and demo/demo.json next to the page (see media.json); without them nothing shows.
 (function () {

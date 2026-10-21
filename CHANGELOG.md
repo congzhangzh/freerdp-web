@@ -11,6 +11,17 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 20261021.3
+
+- **A third demo video, first in the splash:** the xrdp preview with GNOME 51 on Wayland
+  (Fedora 45). sesman starts the GNOME session, xrdp sends it in AV1 4:4:4, and the
+  browser decodes it (WebCodecs); then the usual visit, with Firefox playing web video
+  next to WebGL on the server, sound included. Recorded by rdp-release-kit
+  (`SERVER=xrdp-gnome test/wasm-session.sh`, kit a17d161).
+- **Media release `demo-media-2`.** `media.json` now points to it. It holds the new video
+  and its poster, plus the other two videos byte for byte; `demo-media-1` stays as it was.
+  `media.json` also records how the 720p files are encoded.
+
 ## 20261021.2
 
 - **A newer client.** The kit's web client `web-20261021.2-03d465e8b817`: FreeRDP preview

@@ -1,13 +1,22 @@
 {
   "repository": "congzhangzh/freerdp-web",
-  "release": "demo-media-1",
+  "release": "demo-media-2",
+  "encoding": "720p from the 1080p recording: ffmpeg -vf scale=1280:720:flags=lanczos,format=yuv420p -c:v libx264 -crf 28 -preset slow -c:a aac -b:a 96k -movflags +faststart",
   "files": {
+    "demo-xrdp-gnome.mp4": "1b79f6c5fee1baa5a958037ac4270f6748da7d31d093e0a0e2c7f37bc7419f92",
+    "demo-xrdp-gnome.jpg": "bd560ff4a143f9ee659ee50c31e2da384b3fe97c81af4e26aad179be0e258bc6",
     "demo-xfce.mp4": "e86ccc17ec7b2cc782ef73232fe1b88f44edde58a8fbf3b6afcb661fba02f0b7",
     "demo-xfce.jpg": "f089c197bc8cfb9643149d0628c0df1d3083466026dce998d60da5cfb96aee1a",
     "demo-gnome.mp4": "6c2691b3d90d849f756aed892eba40c8bbdcaa8887b8ed5e43d0712a24242fc9",
     "demo-gnome.jpg": "a3f2db9b123740de75a38a3bdd137ce8e76c141feba6d825ea6dacc66131360b"
   },
   "videos": [
+    {
+      "title": "xrdp preview + GNOME 51 Wayland, AV1",
+      "src": "demo/demo-xrdp-gnome.mp4",
+      "poster": "demo/demo-xrdp-gnome.jpg",
+      "caption": "The xrdp preview with GNOME 51 on Wayland, Fedora 45: sesman starts a GNOME session and xrdp sends it in AV1 (4:4:4), decoded by the browser. The same visit, the terminal started from the search, then Firefox on the server with web video and WebGL, with sound. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD."
+    },
     {
       "title": "xrdp + Xfce",
       "src": "demo/demo-xfce.mp4",
