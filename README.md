@@ -128,3 +128,8 @@ python3 serve.py 8180 dist
 connection goes to a port where nothing listens. Its screenshots and log go to `out/`.
 The client directory can be the release kit's `dist/wasm/web` or an unpacked
 `freerdp-web-*.zip` from its releases. Changes: [CHANGELOG.md](CHANGELOG.md).
+
+## License
+
+The page and its scripts are licensed under the Apache License 2.0: see
+[LICENSE](LICENSE) and [NOTICE](NOTICE). The FreeRDP client it loads keeps its own licences.

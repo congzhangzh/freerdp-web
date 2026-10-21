@@ -1,0 +1,9 @@
+freerdp-web
+Copyright 2026 Cong Zhang
+
+This product includes software developed by Cong Zhang
+(https://github.com/congzhangzh/freerdp-web).
+
+The web client it serves (FreeRDP built for WebAssembly) and the
+libraries inside it come under their own licences; their texts ship with
+the client (licenses/ in each release from rdp-release-kit).
