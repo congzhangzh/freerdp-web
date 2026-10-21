@@ -11,6 +11,15 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 20261021.2
+
+- **A newer client.** The kit's web client `web-20261021.2-03d465e8b817`: FreeRDP preview
+  `20261021.1` (master of 21 October with AV1 through WebCodecs and the Opus microphone fix
+  merged, plus the open pull requests for sound, clipboard, microphone and H.264), SDL 3.2.30,
+  FreeType 2.15.0 and Opus 1.6.1. Tested by the kit with a browser login to xrdp.
+- **License.** The page is licensed under the Apache License 2.0 (`LICENSE`, `NOTICE`); the
+  client keeps its own licences, which ship with it under `licenses/`.
+
 ## 20261021.1
 
 - **Microphone.** The Microphone switch under Session settings works with a client built with
