@@ -6,6 +6,16 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 0.4.14
+
+- **Microphone.** The Microphone switch under Session settings works with a client built with
+  FreeRDP's Web Audio microphone backend (FreeRDP pull request #13811, in the kit's preview
+  client from `20261020.1`). On, the page adds `/microphone`; the browser asks for the
+  microphone when the server opens it. Off by default, so the page never asks unless you want
+  it. The page finds out from the client itself (it exports `audin_emscripten_release`): with
+  an older client the switch stays off and says "not in this build". Extra options win, as for
+  the other settings (`/microphone:...` or `/mic`).
+
 ## 0.4.13
 
 - **The app icon and the tab icon load on the published site.** The manifest named its icon

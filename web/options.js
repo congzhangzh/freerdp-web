@@ -3,11 +3,12 @@
 // generated ones of the same kind, so a hand-written /gfx:... never meets a generated /gfx.
 (function (root) {
   "use strict";
-  const DEFAULTS = Object.freeze({ audio: true, clipboard: true, codec: "auto", strategy: "recommended", scale: "auto" });
+  const DEFAULTS = Object.freeze({ audio: true, mic: false, clipboard: true, codec: "auto", strategy: "recommended", scale: "auto" });
   // what each kind of option looks like on the command line (FreeRDP accepts / + -)
   const KINDS = {
     video: /^[/+-]gfx(?::|$)/i,
     audio: /^[/+-](?:sound|audio-mode)(?::|$)/i,
+    mic: /^[/+-](?:microphone|mic)(?::|$)/i,
     clipboard: /^[/+-]clipboard(?::|$)/i,
     network: /^[/+-]network(?::|$)/i,
     compression: /^[/+-](?:compression|compression-level|z)(?::|$)/i,
@@ -31,7 +32,7 @@
     if (!(s.codec in CODECS)) s.codec = DEFAULTS.codec;
     if (!(s.strategy in STRATEGIES)) s.strategy = DEFAULTS.strategy;
     s.scale = String(s.scale); if (!SCALES.includes(s.scale)) s.scale = DEFAULTS.scale;
-    s.audio = s.audio !== false; s.clipboard = s.clipboard !== false;
+    s.audio = s.audio !== false; s.mic = s.mic === true; s.clipboard = s.clipboard !== false;
     return s;
   }
   // [kind, option] pairs for the settings, before Extra options are applied
@@ -40,6 +41,7 @@
     return [
       ["video", CODECS[s.codec]],
       ["audio", s.audio ? "/sound" : "/audio-mode:2"],   // 2: the server plays nothing
+      ...(s.mic ? [["mic", "/microphone"]] : []),        // off: the browser never asks for it
       ["clipboard", s.clipboard ? "+clipboard" : "-clipboard"],
       ...STRATEGIES[s.strategy],
       ...(s.scale === "auto" ? [] : [["scale", "/scale-desktop:" + s.scale]]),

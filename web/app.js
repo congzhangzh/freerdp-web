@@ -116,12 +116,12 @@ function loadSettings() {
 const radio = (name) => document.querySelector(`input[name=${name}]:checked`)?.value;
 const setRadio = (name, value) => { const r = document.querySelector(`input[name=${name}][value="${value}"]`); if (r) r.checked = true; };
 function readSession() {
-  return FreeRDPOptions.normalize({ audio: $("optAudio").checked, clipboard: $("optClipboard").checked,
+  return FreeRDPOptions.normalize({ audio: $("optAudio").checked, mic: $("optMic").checked, clipboard: $("optClipboard").checked,
     codec: radio("codec"), strategy: radio("strategy"), scale: radio("scale") });
 }
 function showSession(session) {
   const s = FreeRDPOptions.normalize(session);
-  $("optAudio").checked = s.audio; $("optClipboard").checked = s.clipboard;
+  $("optAudio").checked = s.audio; $("optMic").checked = s.mic; $("optClipboard").checked = s.clipboard;
   setRadio("codec", s.codec); setRadio("strategy", s.strategy); setRadio("scale", s.scale);
   setRadio("keys", FreeRDPKeyboard.get());
   updateSessionText();
@@ -136,7 +136,7 @@ const STRATEGY_HINTS = {
   bandwidth: "For slow links: the server sends less (no wallpaper or animations) and compresses more, which costs it more CPU.",
   server: "For a busy server: it compresses less and sends more data instead.",
 };
-const KIND_NAMES = { video: "Video", audio: "Sound", clipboard: "Clipboard", network: "Priority", compression: "Priority", scale: "Remote scale" };
+const KIND_NAMES = { video: "Video", audio: "Sound", mic: "Microphone", clipboard: "Clipboard", network: "Priority", compression: "Priority", scale: "Remote scale" };
 // what Automatic sends: the screen's scale, above 100 % (vault.js connectionArgs)
 function scaleHint(scale) {
   const screen = Math.min(500, Math.round((window.devicePixelRatio || 1) * 100));
@@ -158,7 +158,7 @@ function updateSessionText() {
   $("sessionSummary").textContent = over.length ? "custom" : !changed ? "recommended" :
     [s.codec !== "auto" && label("codec", s.codec), s.strategy !== "recommended" && label("strategy", s.strategy),
      s.scale !== "auto" && "scale " + label("scale", s.scale),
-     !s.audio && "no sound", !s.clipboard && "no clipboard"].filter(Boolean).join(", ");
+     !s.audio && "no sound", s.mic && "microphone", !s.clipboard && "no clipboard"].filter(Boolean).join(", ");
   $("preview").textContent = FreeRDPOptions.resolve(s, extra).join(" ");
   updateSummary();
 }
@@ -229,6 +229,11 @@ var Module = {
   onRuntimeInitialized() {
     runtimeReady = true; resolveRuntime(true);
     $("go").disabled = false; $("go").textContent = "Connect"; status("ready");
+    // a client built with the Web Audio microphone backend (FreeRDP's audin "emscripten")
+    if (typeof Module._audin_emscripten_release === "function") {
+      $("optMic").disabled = false; $("micNote").hidden = true;
+      $("optMic").parentElement.title = "Send this browser's microphone to the remote session (the browser asks first)";
+    }
     if (autoconnect) connect();
   },
   onExit(code) {

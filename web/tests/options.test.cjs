@@ -25,6 +25,14 @@ test("remote scale: automatic adds nothing, a number is sent as /scale-desktop, 
   assert.deepEqual(O.resolve({scale: "200"}, "/scale:140").filter((a) => /scale/.test(a)), ["/scale:140"]);
   assert.ok(!O.isDefault({scale: "100"}));
 });
+test("microphone: off by default, /microphone when on, extra options win", () => {
+  assert.ok(!O.resolve({}, "").some((a) => /microphone/.test(a)));
+  assert.ok(O.resolve({mic: true}, "").includes("/microphone"));
+  assert.ok(!O.resolve({mic: "yes"}, "").includes("/microphone"));   // only a real true turns it on
+  assert.deepEqual(O.resolve({mic: true}, "/microphone:format:1").filter((a) => /microphone/.test(a)), ["/microphone:format:1"]);
+  assert.deepEqual(O.overridden("/mic"), ["mic"]);
+  assert.ok(!O.isDefault({mic: true}));
+});
 test("off switches", () => {
   const a = O.resolve({audio: false, clipboard: false}, "");
   assert.ok(a.includes("/audio-mode:2") && a.includes("-clipboard") && !a.includes("/sound"));
