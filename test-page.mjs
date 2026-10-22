@@ -118,6 +118,15 @@ if (hasDemo) {
   check("closing drops the address", !await splashShown() && await ev("location.hash") === "");
   await ev("location.hash = '#intro', true"); await sleep(300);
   check("#intro opens the first demo", await splashShown() && await selected() === 0 && await ev("location.hash") === tabs[0]);
+  check("the demo's link is shown under it, as the address bar has it",
+    await ev("document.getElementById('splashLink').href === location.href && document.getElementById('splashLink').textContent.endsWith(location.hash)"));
+  // a demo's file name (its address before media.json's anchors) leads to it, under its lasting address
+  const file = await ev("fetch('demo/demo.json').then(r => r.json()).then(d => d.videos[2].src.replace(/^.*\\//, '').replace(/\\.[^.]*$/, ''))");
+  await ev(`location.hash = '#${file}', true`); await sleep(300);
+  check(`#${file} leads to that demo, at ${tabs[2]}`, await selected() === 2 && await ev("location.hash") === tabs[2]);
+  await ev("document.getElementById('splashSkip').click(), true");
+  await ev("location.hash = '#no-such-demo', true"); await sleep(300);
+  check("an anchor no demo has opens the first", await splashShown() && await selected() === 0 && await ev("location.hash") === tabs[0]);
   await ev("document.getElementById('splashSkip').click(), true");
 } else {
   await sleep(500);

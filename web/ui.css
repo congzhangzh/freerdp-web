@@ -77,6 +77,9 @@ input:disabled, select:disabled { opacity:.55; }
 .splash video { width:100%; aspect-ratio:16/9; background:#000; border-radius:6px; }
 .splash .hint { margin:0; }
 .splash .row { justify-content:flex-end; }
+.splash .splash-foot { justify-content:space-between; }
+.splash-link { flex:1; min-width:0; overflow-wrap:anywhere; }
+.splash-link button { margin-left:6px; }
 
 /* the saved hosts, under the safety notice */
 .hosts { margin:0 0 16px; }

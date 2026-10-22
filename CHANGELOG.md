@@ -11,6 +11,20 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 20261022.3
+
+- **The demos' addresses are kept for good**: `#xrdp-gnome`, `#xrdp-kde`, `#xrdp-xfce` and
+  `#gnome-remote-desktop`, whichever set of videos is published. They are this page's, in
+  `media.json`'s `anchors`, and `fetch-media.sh` gives them to the videos by file name; until
+  now an address was the video's file name, and the Xfce video is `demo-xfce` in the pinned set
+  but `demo-xrdp` in the kit's, so its address depended on the set. Each demo's file names stay
+  addresses of it (`#demo-xrdp-kde` and the others of 20261022.2 still work, and lead to the
+  lasting one); a key is never removed, and a renamed file only adds a name. A video with no
+  key keeps its file name as address, with a warning from `fetch-media.sh`.
+- **The demo's link is shown under it**, with **Copy link**, so it can be seen and copied
+  without an address bar too (the installed app, a full-screen window).
+- **Any other anchor opens the first demo**: one no demo has any more no longer opens nothing.
+
 ## 20261022.2
 
 - **Every demo has its own address**, to share: `index.html#intro` opens the first,

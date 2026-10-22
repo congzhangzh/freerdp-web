@@ -8,7 +8,9 @@
 # once (its demo.json names what they were recorded with). Each file is
 # checked against the pre-release's SHA256SUMS. Without one (or with
 # MEDIA=pinned), from this repository's media release that media.json pins,
-# each file checked against its SHA-256 there. Downloads are kept in
+# each file checked against its SHA-256 there. Either way each video gets its
+# lasting address from media.json's anchors ("id", "aliases" in demo.json).
+# Downloads are kept in
 # ~/.cache/freerdp-web/media by SHA-256, so the next run is instant. Not in
 # git: binaries this size belong to a release. GH_TOKEN, when set, is sent
 # (more API calls an hour).
@@ -73,6 +75,15 @@ else:
     base = f"https://github.com/{spec['repository']}/releases/download/{spec['release']}/"
     demo, files = {"videos": spec["videos"]}, spec["files"]
     source = f"{spec['release']} (media.json)"
+# each demo's lasting address (media.json's anchors): this page's, so it wins over a set's own
+anchors = {k: v for k, v in json.load(open(spec_file)).get("anchors", {}).items() if not k.startswith("_")}
+for v in demo["videos"]:
+    name = os.path.splitext(os.path.basename(v["src"]))[0]
+    for key, names in anchors.items():
+        if name in names:
+            v["id"], v["aliases"] = key, names
+    if "id" not in v:
+        print(f"warning: {name} has no anchor in media.json; its address is #{name}", file=sys.stderr)
 for name, sha in files.items():
     data = fetch(base, name, sha)
     open(f"{out}/{name}", "wb").write(data)

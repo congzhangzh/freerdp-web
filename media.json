@@ -1,6 +1,13 @@
 {
   "repository": "congzhangzh/freerdp-web",
   "release": "demo-media-2",
+  "anchors": {
+    "_": "each demo's address, index.html#<key>, whichever set is published: fetch-media.sh gives the video whose file is one of the names that key; the names, and earlier anchors (#<name>), lead to it too. Keep keys forever; add names when a file is renamed",
+    "xrdp-gnome": ["demo-xrdp-gnome"],
+    "xrdp-kde": ["demo-xrdp-kde"],
+    "xrdp-xfce": ["demo-xrdp", "demo-xfce"],
+    "gnome-remote-desktop": ["demo-gnome"]
+  },
   "encoding": "720p from the 1080p recording: ffmpeg -vf scale=1280:720:flags=lanczos,format=yuv420p -c:v libx264 -crf 28 -preset slow -c:a aac -b:a 96k -movflags +faststart",
   "files": {
     "demo-xrdp-gnome.mp4": "1b79f6c5fee1baa5a958037ac4270f6748da7d31d093e0a0e2c7f37bc7419f92",
