@@ -11,6 +11,19 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 20261022.4
+
+- **A slogan and who it is for**, under the header: lightning-fast remote desktop in the browser
+  (AV1 decoded by the browser, multi-user sessions with xrdp, no client to install), a gift from
+  a hobby to the world for VDI, HPC, AI, VPS, research and the community. The same words are the
+  page's description for search engines and link previews (`og:` tags, with a demo picture),
+  and the installed app's.
+- **A GitHub link in every page's header**, to the source, issues and releases.
+- **The README shows the demos**: the GNOME AV1 video plays in the README itself (uploaded to
+  GitHub, the only place a README may play video from), and a gallery of all four as 8-second
+  animated clips (`docs/media/*.webp`, 480px, about 1.1 MB each), each linking to its demo's
+  lasting address on the page, where it plays in full with sound.
+
 ## 20261022.3
 
 - **The demos' addresses are kept for good**: `#xrdp-gnome`, `#xrdp-kde`, `#xrdp-xfce` and

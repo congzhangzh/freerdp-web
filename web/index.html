@@ -7,6 +7,10 @@
 <script src="coi-serviceworker.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FreeRDP Web</title>
+<meta name="description" content="Lightning-fast remote desktop in your browser: FreeRDP in WebAssembly, AV1, multi-user sessions with xrdp, no client to install.">
+<meta property="og:title" content="FreeRDP Web">
+<meta property="og:description" content="Lightning-fast remote desktop in your browser: AV1, multi-user sessions with xrdp, no client to install. Free and open source.">
+<meta property="og:image" content="https://raw.githubusercontent.com/congzhangzh/freerdp-web/main/docs/media/xrdp-gnome.jpg">
 <link rel="manifest" href=".well-known/manifest.webmanifest">
 <link rel="icon" href="icon-256.png" type="image/png">
 <link rel="stylesheet" href="ui.css">
@@ -43,9 +47,15 @@
     <a href="keyboard.html">Keyboard</a>
     <a href="install.html">Install as app</a>
     <a href="release-notes.html">Release notes</a>
+    <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener" title="The source, issues and releases">GitHub</a>
     <label><span class="sr-only">Theme</span><select id="theme" aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
   </nav>
 </header>
+<!-- what this is, in one line, and who it is for -->
+<p class="tagline"><b>Lightning-fast remote desktop in your browser:</b> AV1 decoded by the browser,
+  multi-user sessions with xrdp, no client to install.</p>
+<p class="tagline hint">A gift from a hobby to the world, for VDI, HPC, AI, VPS, research and the community:
+  free and open source on <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener">GitHub</a>.</p>
 
 <!-- standing safety notice: who this is from, and the route a session takes -->
 <section class="route" id="route" aria-label="Safety">

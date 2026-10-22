@@ -1,4 +1,48 @@
-# FreeRDP in the browser
+# FreeRDP Web
+
+**Lightning-fast remote desktop in your browser:** AV1 decoded by the browser, multi-user
+sessions with xrdp, no client to install.
+
+A gift from a hobby to the world, for VDI, HPC, AI, VPS, research and the community: free and
+open source under the Apache License 2.0.
+
+**[Open the page](https://congzhangzh.github.io/freerdp-web/)** ·
+[Demos](#demos) · [Safety](#safety) · [Release notes](CHANGELOG.md) ·
+[Release kit](https://github.com/congzhangzh/rdp-release-kit)
+
+## Demos
+
+The xrdp preview with GNOME on Wayland, sent in AV1 and decoded by the browser (unmute for sound):
+
+https://github.com/user-attachments/assets/cfed0bd1-1bf8-4614-9800-f35469f1d236
+
+All four demos: each clip opens its video on the page, where it plays in full with sound. The
+videos are recorded by the [release kit](https://github.com/congzhangzh/rdp-release-kit)'s CI:
+a browser login to a throwaway server, then Firefox on the server with web video and WebGL.
+
+<table>
+<tr>
+<td width="50%"><a href="https://congzhangzh.github.io/freerdp-web/#xrdp-gnome"><img src="docs/media/xrdp-gnome.webp" alt="xrdp preview with GNOME on Wayland, in AV1"></a><br>
+<b>xrdp preview + GNOME Wayland, AV1</b><br>sesman starts a GNOME session per user; xrdp sends it in AV1 (4:4:4)</td>
+<td width="50%"><a href="https://congzhangzh.github.io/freerdp-web/#xrdp-kde"><img src="docs/media/xrdp-kde.webp" alt="xrdp preview with KDE Plasma on Wayland, in AV1"></a><br>
+<b>xrdp preview + KDE Plasma Wayland, AV1</b><br>KWin rendering in software, no GPU on the server</td>
+</tr>
+<tr>
+<td width="50%"><a href="https://congzhangzh.github.io/freerdp-web/#xrdp-xfce"><img src="docs/media/xrdp-xfce.webp" alt="xrdp with Xfce"></a><br>
+<b>xrdp + Xfce</b><br>xrdp on Debian 13, reached over SSH and websockify</td>
+<td width="50%"><a href="https://congzhangzh.github.io/freerdp-web/#gnome-remote-desktop"><img src="docs/media/gnome-remote-desktop.webp" alt="gnome-remote-desktop with GNOME on Wayland"></a><br>
+<b>gnome-remote-desktop + GNOME Wayland</b><br>GNOME's own RDP server, headless</td>
+</tr>
+</table>
+
+The links are the demos' lasting addresses (`media.json`'s `anchors`). The clips are 8-second
+animated WebP cuts of the videos (480px, 10 fps, about 1.1 MB each), kept in
+[`docs/media/`](docs/media). GitHub plays a video in a README only when it is uploaded to
+GitHub itself (the `user-attachments` link above); a `<video>` tag is removed and other sites
+are not allowed to serve media to the README. In the videos: Big Buck Bunny © Blender
+Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD.
+
+## What it is
 
 A web page that runs FreeRDP's SDL3 client, compiled to WebAssembly, to
 connect to an RDP server from a browser. It needs a FreeRDP build with the
