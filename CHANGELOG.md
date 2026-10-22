@@ -11,6 +11,21 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 20261022.1
+
+- **Four demo videos, recorded by the kit's CI**, newest first in the splash: the xrdp preview
+  with GNOME on Wayland and with **KDE Plasma** on Wayland (KWin 6.8, rendered without a GPU),
+  both sent in AV1, then xrdp with Xfce and gnome-remote-desktop with GNOME. The kit records
+  them after every green build, with that build's web client and xrdp preview, and publishes
+  each set once as a `demo-*` pre-release; its `demo.json` names what they were recorded with.
+  `fetch-media.sh` takes the newest set every time the site is published, each file checked
+  against the pre-release's `SHA256SUMS`. `media.json`'s pinned set (`demo-media-2`) remains
+  for when the kit has none, or with `MEDIA=pinned`.
+- **Sound in the videos.** Until now each video carried only about 31 s of sound, starting
+  over the login: the recorder dropped the quiet stretches, so the web video's soundtrack came
+  too early and the video itself played silent. The new recordings carry the whole session's
+  sound, in time; the kit now fails a recording whose web video cannot be heard.
+
 ## 20261021.3
 
 - **A third demo video, first in the splash:** the xrdp preview with GNOME 51 on Wayland

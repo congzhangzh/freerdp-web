@@ -30,7 +30,7 @@ this repository publishes. Nothing is compiled here.
 |---|---|
 | the kit, on each push | builds the WebAssembly client with the freerdp-web release pinned in its `sources.lock` (a version and its commit), logs in from a browser to xrdp over SSH and websockify, and hands the tested client over as its pre-release `web-<YYYYMMDD>.<N>-<kit commit>` (its title names the page commit), with the xrdp packages; published once, never replaced |
 | here, on each push or pull request | the page's unit tests (Node) |
-| here, on publication | takes a tested client of the kit (below), lays this commit's page over it, adds the demo videos ([`media.json`](../media.json), checked), runs `test-page.mjs` on exactly these files, deploys, then logs in from the published page with that pre-release's kit test and xrdp packages |
+| here, on publication | takes a tested client of the kit (below), lays this commit's page over it, adds the demo videos: the kit's newest `demo-*` pre-release, recorded in its CI with its newest tested client and xrdp preview, each file checked against its `SHA256SUMS` ([`fetch-media.sh`](../fetch-media.sh); [`media.json`](../media.json)'s pinned set when the kit has none), runs `test-page.mjs` on exactly these files, deploys, then logs in from the published page with that pre-release's kit test and xrdp packages |
 
 Which client:
 
