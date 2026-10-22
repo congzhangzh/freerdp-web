@@ -47,6 +47,12 @@ ticked, encrypted with a passphrase when that box is ticked (PBKDF2-SHA-256, AES
 exported by a page; the dialog says so. The keyboard profile stays a preference of the
 browser, not of a host.
 
+**Copy link** (20261022.2) copies the selected host's link, `index.html?v=<host:port>`: the
+address only, never the user, settings or a password. Opening it selects the saved host with
+that address, or adds a new host named after it, with a reminder to check the address before
+connecting (anyone can send such a link, and the session's certificate is not checked); the
+address then leaves the address bar, so a reload keeps the host chosen afterwards.
+
 ## Session settings
 
 A collapsed panel under the form; its summary line says `recommended`, or what differs.

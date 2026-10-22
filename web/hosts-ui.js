@@ -45,6 +45,27 @@
     $("hostName").focus(); $("hostName").select();
     say(base ? `“${h.name}”: a copy, without the saved password.` : `“${h.name}”: set it up below; it is saved as you type.`);
   }
+  // a host's link, index.html?v=<host:port>: the address only (no name, user or settings)
+  const linkTo = (address) => location.origin + location.pathname + "?v=" + encodeURIComponent(address).replace(/%3A/gi, ":");
+  // following one: the saved host with that address, or a new host for it
+  function openLink(address) {
+    address = address.trim();
+    if (!address || address.length > 255 || /[\s/]/.test(address)) return false;
+    const found = state.hosts.find((h) => target(h) === address || h.host === address || h.directHost === address);
+    if (found) { select(found.id); say(`“${found.name}”, from the link.`); return true; }
+    const h = H.blank(H.uniqueName(state, address));
+    if (window.directSocketsAvailable) { h.direct = true; h.directHost = address; } else h.host = address;
+    state.hosts.push(h);
+    select(h.id);
+    say(`“${h.name}”: a new host from the link. Check the address before you connect.`);
+    return true;
+  }
+  $("hostLink").onclick = () => {
+    const t = target(current());
+    if (!t) { say("Enter the address first; the link carries it."); return; }
+    const link = linkTo(t);
+    navigator.clipboard.writeText(link).then(() => say("Link copied: " + link), () => say("The link: " + link));
+  };
   $("hostNew").onclick = () => addHost(null);
   $("hostDuplicate").onclick = () => addHost(current());
   // delete asks twice (no blocking dialog); a password in the vault goes with the host
@@ -231,6 +252,7 @@
     current,
     get selected() { return state.selected; },
     onSelect(fn) { selectListener = fn; },
+    openLink,
     // the form's edits; false (and nothing stored) when they are not allowed, e.g. /p: in Extra options
     update(patch) {
       const h = current();

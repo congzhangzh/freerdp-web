@@ -11,6 +11,27 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 20261022.2
+
+- **Every demo has its own address**, to share: `index.html#intro` opens the first,
+  `index.html#<id>` that one, where `<id>` is the video's file name without its extension
+  (`#demo-xrdp-gnome`, `#demo-xrdp-kde`, `#demo-xrdp`, `#demo-gnome`), or `demo.json`'s `id`
+  when it gives one. The tabs are links, so a demo's address can be copied or opened in a new
+  tab; while the splash is open the address bar follows the tab, and closing it drops the
+  anchor, so a reload gives the client. An address followed while the page is open switches
+  the demo too.
+- **The demos play with their sound.** Browsers start a video with sound only after a click on
+  the site: after ▶ Intro or a tab it plays with sound; on a visit that has not clicked yet it
+  plays muted, with a **🔊 Sound on** button, and the first click or key in the splash turns the
+  sound on. Muting with the video's own speaker button is kept for the next visit.
+- **A host's link:** `index.html?v=<host:port>` selects the saved host with that address (the
+  gateway, or with Direct TCP the RDP server), or adds a new host for it, named after the
+  address and with a reminder to check it before connecting; the address then leaves the
+  address bar. **Copy link** in the host bar copies the selected host's link: the address
+  only, never the user, settings or a password. Until now `?v=` only filled the address field,
+  and Connect saved it over whichever host was selected.
+- The tabs of the splash keep the buttons' hover border now that they are links.
+
 ## 20261022.1
 
 - **Four demo videos, recorded by the kit's CI**, newest first in the splash: the xrdp preview

@@ -105,6 +105,20 @@ if (hasDemo) {
   await screenshot("page-splash.png");
   await ev("document.getElementById('splashSkip').click(), true");
   check("Skip closes it, and the Demo link stays", !await splashShown() && await ev("!document.getElementById('demoOpen').hidden"));
+  // each demo has an address: #intro the first, #<id> that one; the address bar follows the tabs
+  const tabs = await ev("[...document.querySelectorAll('#splashTabs [role=tab]')].map(a => a.hash)");
+  const selected = () => ev("[...document.querySelectorAll('#splashTabs [role=tab]')].findIndex(a => a.getAttribute('aria-selected') === 'true')");
+  await ev(`location.hash = ${JSON.stringify(tabs[1])}, true`); await sleep(300);
+  check(`${tabs[1]} opens that demo`, await splashShown() && await selected() === 1 && await ev("location.hash") === tabs[1]);
+  await ev("document.querySelectorAll('#splashTabs [role=tab]')[2].click(), true"); await sleep(300);
+  check("a tab puts its demo's address in the address bar, with sound",
+    await selected() === 2 && await ev("location.hash") === tabs[2] && await ev("!document.getElementById('splashVideo').muted"),
+    `${await ev("location.hash")}, muted ${await ev("document.getElementById('splashVideo').muted")}`);
+  await ev("document.getElementById('splashSkip').click(), true");
+  check("closing drops the address", !await splashShown() && await ev("location.hash") === "");
+  await ev("location.hash = '#intro', true"); await sleep(300);
+  check("#intro opens the first demo", await splashShown() && await selected() === 0 && await ev("location.hash") === tabs[0]);
+  await ev("document.getElementById('splashSkip').click(), true");
 } else {
   await sleep(500);
   check("no splash without demo media", !await splashShown() && await ev("document.getElementById('demoOpen').hidden"));
@@ -218,6 +232,23 @@ await key("rawKeyDown", "End", "End", 35, 3); await key("keyUp", "End", "End", 3
 await key("keyUp", "Alt", "AltLeft", 18, 2); await key("keyUp", "Control", "ControlLeft", 17, 0);
 await sleep(300);
 check("mstsc: Ctrl + Alt + End sends Ctrl + Alt + Delete", logs.includes("[page] Ctrl + Alt + End: sent Ctrl + Alt + Delete"));
+// a host's link: ?v=<address> selects the saved host with it, or adds one; Copy link gives it
+// a host not selected now, with an address no other host has (the checks above changed some)
+const pick = await ev(`(() => {
+  const all = [...document.querySelectorAll('#hostList .host')].map((b, i) => ({ i, on: b.getAttribute('aria-checked') === 'true',
+    where: b.querySelector('span').textContent.split(' @ ').pop() }));
+  return all.find((h) => !h.on && all.filter((o) => o.where === h.where).length === 1);
+})()`);
+await send("Page.navigate", { url: `${ORIGIN}/index.html?v=${pick.where}` }); await sleep(1500);
+check(`a link with a saved host's address selects that host (${pick.where})`,
+  (await hosts())[pick.i].endsWith("*") && await ev("location.search") === "", `${JSON.stringify(await hosts())}, ${await ev("location.search")}`);
+await send("Page.navigate", { url: `${ORIGIN}/index.html?v=192.0.2.7:3390` }); await sleep(1500);
+const linked = await hosts();
+check("a link with a new address adds a host for it", linked.length === 5 && linked[4] === "192.0.2.7:3390*"
+  && await ev("document.getElementById('host').value") === "192.0.2.7:3390", JSON.stringify(linked));
+await ev("document.getElementById('hostLink').click(), true"); await sleep(300);
+check("Copy link gives the host's link", (await ev("document.getElementById('hostStatus').textContent")).includes("/index.html?v=192.0.2.7:3390"),
+  await ev("document.getElementById('hostStatus').textContent"));
 check("no page errors", !logs.some((l) => l.startsWith("EXCEPTION")), logs.filter((l) => l.startsWith("EXCEPTION")).join("; "));
 
 writeFileSync(join(out, "page.log"), logs.join("\n") + "\n");

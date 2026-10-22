@@ -94,9 +94,12 @@ HostsUI.onSelect((h, vaultOnly) => { if (vaultOnly) updateSummary(); else showHo
 const uiPrefs = (() => { try { return JSON.parse(localStorage.getItem("freerdp-web-ui") || "{}"); } catch (e) { return {}; } })();
 const saveUiPrefs = () => { try { localStorage.setItem("freerdp-web-ui", JSON.stringify(uiPrefs)); } catch (e) {} };
 function loadSettings() {
+  const q = new URLSearchParams(location.search);
+  // a host's link (?v=<host:port>, its Copy link): that saved host, or a new one for the address
+  if (q.has("v") && !HostsUI.openLink(q.get("v"))) log("[page] ignored the link's address");
+  q.delete("v");
   showHost(HostsUI.current());
-  const q = new URLSearchParams(location.search);   // URL overrides, for testing: the form only
-  if (q.get("v")) $("host").value = q.get("v");
+  // URL overrides, for testing: the form only
   if (q.get("u")) $("user").value = q.get("u");
   if (q.has("extra")) {
     try { $("extra").value = FreeRDPVault.validateOptions(q.get("extra")); }

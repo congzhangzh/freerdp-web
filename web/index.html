@@ -18,7 +18,10 @@
   <div class="splash-box">
     <div class="splash-head">
       <h2 id="splashTitle">FreeRDP Web in a minute</h2>
-      <button id="splashSkip" type="button" class="small">Skip</button>
+      <div class="row">
+        <button id="splashSound" type="button" class="small" hidden>🔊 Sound on</button>
+        <button id="splashSkip" type="button" class="small">Skip</button>
+      </div>
     </div>
     <div id="splashTabs" class="splash-tabs" role="tablist" aria-label="Demo"></div>
     <video id="splashVideo" controls playsinline preload="none"></video>
@@ -68,6 +71,7 @@
     <button id="hostDelete" type="button" class="small">Delete</button>
     <button id="hostExport" type="button" class="small">Export…</button>
     <button id="hostImport" type="button" class="small">Import…</button>
+    <button id="hostLink" type="button" class="small" title="A link that opens this page with this host">Copy link</button>
     <input id="hostImportFile" type="file" accept="application/json,.json" hidden>
   </div>
   <p id="hostStatus" class="hint" role="status" aria-live="polite"></p>
