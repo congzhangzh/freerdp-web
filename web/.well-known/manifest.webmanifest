@@ -4,7 +4,7 @@
   "id": "/",
   "start_url": "/",
   "display": "standalone",
-  "version": "20261022.4",
+  "version": "20261023.1",
   "description": "Lightning-fast remote desktop in your browser: FreeRDP SDL3 client compiled to WebAssembly",
   "icons": [
     {

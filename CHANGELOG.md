@@ -11,6 +11,22 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 20261023.1
+
+- **SSH lines that fail fast**: every ssh command (README, *Safety and tunnels*, the page's
+  safety notice) adds `-o ServerAliveInterval=30 -o ServerAliveCountMax=3
+  -o ExitOnForwardFailure=yes`. A dead network ends the tunnel within about 90 seconds
+  instead of hanging, and a local port that is already taken stops ssh with an error
+  instead of logging in without the forward. `-J user@jumphost` is mentioned for a server
+  reachable only through another host.
+- **Three ways, the simple one first**: *Safety and tunnels* lists 1. port → port, the normal
+  forward (xrdp on the server's 127.0.0.1:3389), shown by default; a collapsed **Advanced**
+  panel holds the one-time xrdp setup (xrdp on a Unix socket in a setgid directory of your
+  group, kept by `tmpfiles.d`), 2. port → socket (websockify on 127.0.0.1:3390, xrdp on the
+  socket) and 3. socket → socket (websockify on a socket in `/run/user/<ID>`, the ID asked
+  from the server, so nothing but sshd listens). Loopback ports keep the network out but
+  not the server's other local users; a socket's owner and mode do. The uvx variant is gone.
+
 ## 20261022.4
 
 - **A slogan and who it is for**, under the header: lightning-fast remote desktop in the browser
