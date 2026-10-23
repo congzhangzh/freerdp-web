@@ -54,25 +54,59 @@
   <p>Each runs in a terminal on your computer. Replace <code>user@server</code>; Ctrl-C in that terminal ends
     the tunnel and the gateway. Then open the page and connect with the gateway <code>127.0.0.1:3390</code>.</p>
 
-  <h3>1. websockify installed on the server (recommended)</h3>
+  <h3>1. Port → port: the normal port forward (recommended)</h3>
   <p>Install it once with the server's package manager (Debian and Ubuntu: <code>apt install websockify</code>;
     Fedora: <code>dnf install python3-websockify</code>). One line then starts the tunnel and the gateway:</p>
-  <div class="copyable"><pre>ssh -tt -L 127.0.0.1:3390:127.0.0.1:3390 user@server websockify 127.0.0.1:3390 127.0.0.1:3389</pre><button class="small" data-copy>Copy</button></div>
+  <div class="copyable"><pre>ssh -tt -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -L 127.0.0.1:3390:127.0.0.1:3390 user@server websockify 127.0.0.1:3390 127.0.0.1:3389</pre><button class="small" data-copy>Copy</button></div>
   <p><code>-tt</code> always gives websockify a terminal on the server, even when ssh itself runs without one (from a
     script or a shortcut). When the connection ends, the server closes that terminal and websockify gets the hang-up
     signal and stops. Without a terminal it keeps running there. A connection that dies silently (the network gone)
     is noticed by the server after its keepalive timeout, and then cleaned up the same way.</p>
+  <ul>
+    <li><code>-o ServerAliveInterval=30 -o ServerAliveCountMax=3</code>: ssh checks the connection every 30 seconds
+      and gives up after 3 missed answers, so a dead network ends the tunnel within about 90 seconds instead of
+      hanging, and the server cleans up websockify as above.</li>
+    <li><code>-o ExitOnForwardFailure=yes</code>: if port 3390 is taken on your computer (an earlier tunnel still
+      runs), ssh stops with an error instead of logging in without the forward, which would leave a gateway that does
+      not work.</li>
+    <li><code>-J user@jumphost</code> (add it if needed): the server is not reachable from your computer, only from
+      another host you can log in to, and ssh hops through it. Everything else stays the same.</li>
+  </ul>
 
-  <h3>2. websockify through uvx, nothing to install</h3>
-  <p>If the server has <a href="https://docs.astral.sh/uv/" target="_blank" rel="noopener">uv</a>, uvx downloads
-    and caches websockify the first time:</p>
-  <div class="copyable"><pre>ssh -tt -L 127.0.0.1:3390:127.0.0.1:3390 user@server uvx websockify 127.0.0.1:3390 127.0.0.1:3389</pre><button class="small" data-copy>Copy</button></div>
-
-  <h3>3. A gateway that already runs on the server</h3>
-  <p>If websockify already listens on the server's 127.0.0.1:3390 (a service you set up), only forward the port:</p>
-  <div class="copyable"><pre>ssh -N -L 127.0.0.1:3390:127.0.0.1:3390 user@server</pre><button class="small" data-copy>Copy</button></div>
+  <p>If websockify already runs on the server's 127.0.0.1:3390 (a service you set up), only forward the port:</p>
+  <div class="copyable"><pre>ssh -N -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -L 127.0.0.1:3390:127.0.0.1:3390 user@server</pre><button class="small" data-copy>Copy</button></div>
   <p>No websockify on the server at all? The repository's <code>rdp-gateway.sh --local user@server</code>
     forwards the RDP port over SSH and runs websockify on your computer instead.</p>
+
+  <details class="panel">
+  <summary>Advanced: 2. port → socket, 3. socket → socket <small>Unix sockets on the server</small></summary>
+  <p>In 1, websockify listens on the server's 127.0.0.1:3390 and xrdp on 127.0.0.1:3389. Loopback keeps the network
+    out, but not the server's other local users: any account on that machine can reach both ports. A Unix socket is
+    a file with an owner and a mode, so only the users it allows can open it. Your computer's side stays
+    <code>127.0.0.1:3390</code>, the page's Gateway field, in both.</p>
+
+  <h3>Once, on the server: xrdp on a socket</h3>
+  <p>xrdp moves from its TCP port to a socket in a directory of your group (the setgid bit <code>2</code> gives the
+    socket that group). 2 and 3 both need it.</p>
+  <div class="copyable"><pre>echo "d /run/xrdp-ws 2750 root $(id -gn) -" | sudo tee /etc/tmpfiles.d/xrdp-ws.conf
+sudo systemd-tmpfiles --create /etc/tmpfiles.d/xrdp-ws.conf
+sudo sed -i 's#^\( *\)port=\(tcp://[^ ]*:\)\{0,1\}3389 *$#\1port=unix://./run/xrdp-ws/xrdp.socket#' /etc/xrdp/xrdp.ini
+sudo systemctl restart xrdp</pre><button class="small" data-copy>Copy</button></div>
+  <p>Check: <code>ls -l /run/xrdp-ws/xrdp.socket</code> shows <code>srw-rw---- root &lt;your group&gt;</code>, and
+    <code>ss -tln</code> no longer lists 3389.</p>
+
+  <h3>2. Port → socket: websockify on 127.0.0.1:3390, xrdp on the socket</h3>
+  <p>xrdp listens on no TCP port any more. websockify still does while the tunnel runs, and it opens the socket as
+    you, so during your session the server's other users could still reach xrdp through it; 3 closes that.</p>
+  <div class="copyable"><pre>ssh -tt -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -L 127.0.0.1:3390:127.0.0.1:3390 user@server websockify 127.0.0.1:3390 --unix-target=/run/xrdp-ws/xrdp.socket</pre><button class="small" data-copy>Copy</button></div>
+
+  <h3>3. Socket → socket: nothing listens but sshd</h3>
+  <p>websockify listens on a socket too, in <code>/run/user/&lt;your ID&gt;</code> (mode 0700, yours only). The line
+    runs in bash or zsh on your computer (Linux, macOS, WSL): the first ssh asks the server for your user ID, so it
+    is never typed by hand; without an SSH key it asks for the password twice. Not in <code>/tmp</code>: anyone can
+    create files there, and a socket another user created first under that name would receive your session.</p>
+  <div class="copyable"><pre>S=user@server; R=$(ssh "$S" id -u) &amp;&amp; ssh -tt -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -L 127.0.0.1:3390:/run/user/$R/rdp-ws.sock "$S" websockify --unix-listen=/run/user/$R/rdp-ws.sock --unix-target=/run/xrdp-ws/xrdp.socket</pre><button class="small" data-copy>Copy</button></div>
+  </details>
 
   <h2>When something goes wrong</h2>
   <table>
@@ -85,6 +119,9 @@
       shows <code>ERR_BLOCKED_BY_LOCAL_NETWORK_ACCESS_CHECKS</code>.</td></tr>
     <tr><td>The connection fails at once</td><td>Nothing listens on the gateway port, or the server's RDP port is not
       3389. The page's Log (under the form) shows the stage that failed.</td></tr>
+    <tr><td><code>channel … open failed: … No such file or directory</code></td><td>2 or 3: a socket is
+      missing on the server. websockify did not start (is it installed?), or xrdp does not listen on
+      <code>/run/xrdp-ws/xrdp.socket</code>.</td></tr>
     <tr><td>websockify keeps running after the session</td><td>The tunnel was started without <code>-tt</code>, or the
       network dropped before the server noticed. Log in and stop it (<code>pkill -f websockify</code>).</td></tr>
   </table>

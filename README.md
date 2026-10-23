@@ -87,7 +87,7 @@ your servers safe is up to you. The page's **Safety and tunnels** help
   itself checks nothing.
 - **Keep the gateway on 127.0.0.1**, on both ends.
 
-### One step: SSH and websockify together
+### 1. Port → port: SSH and websockify together
 
 With websockify on the server (Debian/Ubuntu: `apt install websockify`,
 Fedora: `dnf install python3-websockify`), one ssh command does both, and
@@ -95,7 +95,8 @@ your computer needs nothing but ssh, which Windows 10/11, macOS and Linux
 include:
 
 ```sh
-ssh -tt -L 127.0.0.1:3390:127.0.0.1:3390 user@server websockify 127.0.0.1:3390 127.0.0.1:3389
+ssh -tt -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes \
+    -L 127.0.0.1:3390:127.0.0.1:3390 user@server websockify 127.0.0.1:3390 127.0.0.1:3389
 ```
 
 Then open the page and connect with the gateway `127.0.0.1:3390` (the
@@ -107,6 +108,11 @@ line matter:
 - `-tt` always gives websockify a terminal (even when ssh has none), so it gets
   the hang-up signal and ends when the connection ends;
   without it, websockify keeps running on the server.
+- `ServerAliveInterval=30` with `ServerAliveCountMax=3` ends a tunnel whose network died
+  within about 90 seconds instead of leaving it hanging; `ExitOnForwardFailure=yes` makes
+  ssh stop with an error when port 3390 is taken on your computer, instead of logging in
+  without the forward.
+- A server you cannot reach directly, only through another host: add `-J user@jumphost`.
 
 When the page comes from a web site (for example GitHub Pages), Chrome asks
 whether the site may access other apps and services on this device. Allow
@@ -122,13 +128,50 @@ Network Access protection; it blocks the connection otherwise, with
 ```
 
 If websockify already runs on the server (on its 127.0.0.1:3390), a plain
-forward is enough: `ssh -N -L 127.0.0.1:3390:127.0.0.1:3390 user@server`.
+forward is enough: `ssh -N -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -L 127.0.0.1:3390:127.0.0.1:3390 user@server`.
+
+<details>
+<summary><b>Advanced: 2. port → socket, 3. socket → socket</b> (Unix sockets on the server)</summary>
+
+Loopback keeps the network out, but not the server's other local users: any account on
+that machine can reach 127.0.0.1:3389 and :3390. A Unix socket is a file with an owner and
+a mode, so only the users it allows can open it. Your computer's side stays `127.0.0.1:3390`.
+
+**Once, on the server**, for 2 and 3: xrdp moves from TCP to a socket in a setgid directory
+of your group.
+
+```sh
+echo "d /run/xrdp-ws 2750 root $(id -gn) -" | sudo tee /etc/tmpfiles.d/xrdp-ws.conf
+sudo systemd-tmpfiles --create /etc/tmpfiles.d/xrdp-ws.conf
+sudo sed -i 's#^\( *\)port=\(tcp://[^ ]*:\)\{0,1\}3389 *$#\1port=unix://./run/xrdp-ws/xrdp.socket#' /etc/xrdp/xrdp.ini
+sudo systemctl restart xrdp
+```
+
+**2. Port → socket**: websockify on 127.0.0.1:3390, xrdp on the socket. xrdp listens on no
+TCP port; websockify still does while the tunnel runs (3 closes that).
+
+```sh
+ssh -tt -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes \
+    -L 127.0.0.1:3390:127.0.0.1:3390 user@server websockify 127.0.0.1:3390 --unix-target=/run/xrdp-ws/xrdp.socket
+```
+
+**3. Socket → socket**: nothing listens but sshd. websockify's socket goes to
+`/run/user/<ID>` (yours only); the first ssh fetches the ID, so it is never typed (bash or zsh):
+
+```sh
+S=user@server; R=$(ssh "$S" id -u) && ssh -tt -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes \
+    -L 127.0.0.1:3390:/run/user/$R/rdp-ws.sock "$S" \
+    websockify --unix-listen=/run/user/$R/rdp-ws.sock --unix-target=/run/xrdp-ws/xrdp.socket
+```
+
+The page's **Safety and tunnels** help has the details.
+
+</details>
 
 ### Without websockify on the server
 
 `./rdp-gateway.sh --local user@server` forwards the RDP port over SSH and
-runs websockify on your computer (`pip install websockify`, or `uvx` from
-[uv](https://docs.astral.sh/uv/)).
+runs websockify on your computer (`pip install websockify`).
 
 ## Working on the page
 
