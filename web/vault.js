@@ -71,6 +71,7 @@
         request.onsuccess = () => {
           result = request.result;
           if (operation === "get") return;
+          if (operation === "delete") { store.delete("default"); return; }
           // Atomic compare-and-swap: another tab must not silently lose its edits.
           if ((result?.revision ?? null) !== expectedRevision) { conflict = true; tx.abort(); return; }
           store.put(value, "default");
@@ -150,6 +151,12 @@
           this.#key = key; this.#record = record; this.#payload = payload;
         } finally { prf.fill(0); raw?.fill(0); plaintext?.fill(0); }
       });
+    }
+    // For a passkey that is gone or on another device: no passkey can open the vault without its
+    // own PRF secret, so starting over is the way out. The passwords in it are lost; locked or not.
+    async destroy() {
+      this.lock();
+      return this.#operation(async check => { check(); await this.store("delete"); });
     }
     #require() { if (!this.unlocked) throw new Error("Unlock the vault first."); }
     list() { this.#require(); return this.#payload.hosts.map(({password, ...metadata}) => ({...metadata})); }

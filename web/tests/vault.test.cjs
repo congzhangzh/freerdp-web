@@ -28,6 +28,7 @@ function memoryStore() {
   let value;
   return async (operation, next, expected) => {
     if (operation === "get") return structuredClone(value);
+    if (operation === "delete") { value = undefined; return; }
     assert.equal(value?.revision ?? null, expected, "revision conflict");
     value = structuredClone(next);
   };
@@ -118,4 +119,18 @@ test("a passkey that evaluates the PRF while it is created needs one prompt, and
 test("a PRF value from creation without user verification is not used: a second prompt runs", async () => {
   const gets={count:0}, vault=new Vault(memoryStore(),authenticator({early:true,uv:false,gets}));
   await assert.rejects(vault.create(), /User verification/); assert.equal(gets.count,1);
+});
+test("a vault whose passkey is gone can be deleted without unlocking, and a new passkey starts over", async () => {
+  const {store,vault}=await fixture(); await vault.save(host()); vault.lock();
+  const other=new Vault(store,authenticator({secret:7}));
+  await assert.rejects(other.unlock(),{name:"OperationError"});
+  await other.destroy(); assert.equal(await store("get"),undefined); assert.equal(await other.exists(),false);
+  await other.create(); const id=await other.save(host("beta","second-secret")); other.lock();
+  await other.unlock(); assert.deepEqual(other.list().map(h=>h.id),[id]);
+  await assert.rejects(vault.unlock(),{name:"OperationError"});
+});
+test("deleting an unlocked vault locks it and clears its passwords from the page", async () => {
+  const {store,vault}=await fixture(); await vault.save(host());
+  await vault.destroy(); assert.equal(vault.unlocked,false); assert.throws(()=>vault.list());
+  assert.equal(await store("get"),undefined);
 });

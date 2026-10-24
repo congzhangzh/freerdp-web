@@ -185,7 +185,7 @@ await ev("document.querySelector('#hostList .host').click(), true");
 // IndexedDB record without it, and after a reload Connect unlocks the vault and gives the
 // client exactly that password (read from the client's argv by this test, synthetic)
 await send("WebAuthn.enable", { enableUI: false });
-await send("WebAuthn.addVirtualAuthenticator", { options: { protocol: "ctap2", ctap2Version: "ctap2_1", transport: "internal",
+const { authenticatorId } = await send("WebAuthn.addVirtualAuthenticator", { options: { protocol: "ctap2", ctap2Version: "ctap2_1", transport: "internal",
   hasResidentKey: true, hasUserVerification: true, hasPrf: true, isUserVerified: true, automaticPresenceSimulation: true } });
 const vaultText = () => ev("document.getElementById('vaultStatus').textContent");
 const waitFor = async (expr, ms = 15000) => { for (let t = 0; t < ms && !await ev(expr); t += 200) await sleep(200); return ev(expr); };
@@ -216,7 +216,22 @@ check("vault: Connect unlocks it and the client gets the saved password",
 await ev("window.__argv = null; true");
 await send("Page.reload");   // callMain runs once per page: a fresh page for the checks below
 for (let i = 0; i < 120 && !await ev("document.getElementById('status')?.textContent === 'ready'"); i++) await sleep(500);
-await ev("document.querySelector('#hostList .host').click(), true");
+// the vault's passkey is gone (removed from the system, or kept on another device): Delete the
+// vault, clicked twice, starts over without it; the host stays, its saved password goes
+await send("WebAuthn.clearCredentials", { authenticatorId });
+await ev("document.querySelectorAll('#hostList .host')[1].click(), true");
+await ev("document.getElementById('vaultDelete').click(), true"); await sleep(300);
+const armed = await ev("document.getElementById('vaultDelete').textContent + ' | ' + document.getElementById('hostStatus').textContent");
+await ev("document.getElementById('vaultDelete').click(), true");
+await waitFor("!document.getElementById('vaultCreate').hidden");
+const gone = await ev(`new Promise((done) => { const r = indexedDB.open('freerdp-credential-vault', 1);
+  r.onsuccess = () => { const g = r.result.transaction('vault').objectStore('vault').get('default'); g.onsuccess = () => done(g.result === undefined); }; })`);
+check("vault: Delete the vault asks twice, then deletes it without its passkey", /click again/.test(armed) && /1 saved password/.test(armed)
+  && gone && !await ev("FreeRDPHostsUI.current().vaultSaved"), armed);
+await ev("document.getElementById('vaultCreate').click(), true");
+check("vault: a new passkey creates a new vault after that", await waitFor("!document.getElementById('vaultSave').hidden && !document.getElementById('vaultSave').disabled"),
+  await vaultText());
+await ev("document.getElementById('vaultLock').click(), document.querySelector('#hostList .host').click(), true");
 logs.length = 0;
 
 // session settings as a user clicks them; the mstsc shortcuts; a gateway port with no server

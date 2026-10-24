@@ -117,7 +117,8 @@
     let text;
     if (!available) text = "The vault needs HTTPS (or localhost) and a browser with passkeys that support PRF.";
     else if (!exists) text = "There is no vault in this browser yet: create one, with a passkey.";
-    else if (!unlocked) text = h.vaultSaved ? "Saved. Connect asks for your passkey." : "Unlock the vault to save this host's password in it.";
+    else if (!unlocked) text = (h.vaultSaved ? "Saved. Connect asks for your passkey." : "Unlock the vault to save this host's password in it.") +
+      " Its passkey gone, or on another device? Delete the vault and create a new one.";
     else text = h.vaultSaved ? "Saved in the vault. Type a new password and save it to replace it." : "Type the password above, then save it in the vault.";
     if (busy) text = "Waiting for the passkey…";
     $("vaultStatus").textContent = text;
@@ -127,6 +128,7 @@
     show("vaultSave", unlocked);
     show("vaultForget", unlocked && h.vaultSaved);
     show("vaultLock", unlocked || busy, true);
+    show("vaultDelete", available && exists);
     $("vaultLock").disabled = false;   // also cancels a pending passkey prompt
   }
   function lock() { vault?.lock(); $("pass").value = ""; renderVault(); }
@@ -152,6 +154,24 @@
     const h = current();
     await vault.remove(h.id); h.vaultSaved = false; store();
     say(`“${h.name}”: the saved password is gone from the vault.`);
+  });
+  // only its own passkey opens the vault (its PRF secret): without it, the way out is to start
+  // over. Asks twice, like deleting a host; the hosts stay, their saved passwords go.
+  let vaultDeleteArmed = 0;
+  $("vaultDelete").onclick = () => run(async () => {
+    const saved = state.hosts.filter((h) => h.vaultSaved);
+    if (Date.now() - vaultDeleteArmed > 4000) {
+      vaultDeleteArmed = Date.now(); $("vaultDelete").textContent = "Delete the vault: click again";
+      setTimeout(() => { $("vaultDelete").textContent = "Delete the vault"; }, 4000);
+      say(saved.length ? `This deletes ${saved.length} saved password${saved.length > 1 ? "s" : ""}. To keep ${saved.length > 1 ? "them" : "it"}, unlock and export first.`
+        : "This deletes the vault in this browser.");
+      return;
+    }
+    vaultDeleteArmed = 0; $("vaultDelete").textContent = "Delete the vault";
+    await vault.destroy(); exists = false; $("pass").value = "";
+    for (const h of saved) h.vaultSaved = false;
+    store();
+    say(`Vault deleted${saved.length ? `, with ${saved.length} saved password${saved.length > 1 ? "s" : ""}` : ""}. Create a new one with the passkey you have now.`);
   });
   window.addEventListener("pagehide", lock);
 
