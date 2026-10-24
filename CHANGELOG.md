@@ -11,6 +11,21 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 20261023.2
+
+- **FreeRDP's hotkeys, your choice**: the **Keyboard** page sets the modifiers (Right Alt + Right
+  Shift, the new default; Right Ctrl + Right Shift; Right Shift, FreeRDP's own; or off) and one
+  key for full screen, disconnect and keyboard grab. Right Shift alone made a capital D typed
+  with the right hand disconnect the session. The page writes the choice to the client's
+  `sdl-freerdp.json` in its in-memory file system before the client starts.
+- **The keys are shown where you look**: under **Shortcuts** in the form, on the toolbar's Full
+  screen and Disconnect buttons, and once in the session after they change.
+- **Delete the vault**: only the passkey that created the passkey vault can open it (its key
+  comes from that passkey's PRF secret). With that passkey gone, or kept by a provider this
+  device does not have, **Delete the vault** (two clicks) starts over; the hosts stay, their
+  saved passwords go. *The passkey vault* shows how to move the vault to another passkey:
+  export with the passwords, delete, create with the new passkey, import.
+
 ## 20261023.1
 
 - **SSH lines that fail fast**: every ssh command (README, *Safety and tunnels*, the page's
