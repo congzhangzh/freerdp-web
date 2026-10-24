@@ -11,7 +11,7 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
-## Unreleased
+## 20261024.1
 
 - **One vault, several passkeys**: **Add a passkey** makes another key for the same passkey
   vault, wherever the system's dialog puts it: this device (Windows Hello, Touch ID, Google
