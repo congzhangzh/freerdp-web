@@ -12,7 +12,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const base = new URL(".chrome/", import.meta.url).pathname;
 const profile = mkdtempSync(join(base, "vs-"));
 const chrome = spawn("google-chrome", ["--headless=new", "--remote-debugging-port=9345", `--user-data-dir=${profile}`, "--no-first-run",
-  "--window-size=1280,900", "--enable-unsafe-swiftshader", "about:blank"], { stdio: "ignore", env: { ...process.env, TMPDIR: base } });
+  "--window-size=1280,900", "--enable-unsafe-swiftshader",
+  ...(process.env.CHROME_FLAGS ? process.env.CHROME_FLAGS.split(" ") : []), "about:blank"], { stdio: "ignore", env: { ...process.env, TMPDIR: base } });
 chrome.on("exit", () => { rmSync(profile, { recursive: true, force: true });
   for (const n of readdirSync(base)) if (n.startsWith("com.google.Chrome.")) rmSync(join(base, n), { recursive: true, force: true }); });
 let t; for (let i = 0; i < 150 && !t; i++) { await sleep(200); try { t = (await (await fetch("http://127.0.0.1:9345/json")).json()).find((x) => x.type === "page"); } catch {} }
@@ -56,7 +57,9 @@ await connectTestSession(send, { password: "" }).catch(e => { chrome.kill(); thr
 s = JSON.parse(await session()); console.log("connected from the vault:", JSON.stringify(s), "| ceremonies:", ceremonies.join(", "));
 check("Connect with the saved password unlocks the vault once and connects", s.session && ceremonies.length === 1 && !/failed|exited/.test(s.status));
 check("no offer when the password came from the vault", !s.bar);
-check("xrdp logged the user in with the password from the vault", logins() === before + 1);
+const after = logins();
+check("xrdp logged the user in with the password from the vault", after === before + 1);
+if (after !== before + 1) console.log(`xrdp's logins: ${before} before, ${after} after`);
 const login = logs.filter((l) => /ERRCONNECT|logon|LOGON|failed/i.test(l));
 check("no logon error in the client log", !login.length); if (login.length) console.log(login.join("\n"));
 
