@@ -176,7 +176,7 @@ body.fs.tbhide:not(.tbpinned):not(.captured) #tbGrip { display:block; }
 #toolbar #tbCapture.on { background:#2f6fde; }
 /* the remote pointer while the mouse is captured (app.js draws it; the browser hides its own) */
 #vcursor { position:fixed; left:0; top:0; z-index:11; pointer-events:none; image-rendering:pixelated; }
-#captureToast { position:fixed; top:calc(var(--tbtop, 8px) + 52px); left:50%; transform:translateX(-50%); z-index:12; padding:8px 14px; border-radius:6px;
+#captureToast, #hotkeyToast { position:fixed; top:calc(var(--tbtop, 8px) + 52px); left:50%; transform:translateX(-50%); z-index:12; padding:8px 14px; border-radius:6px;
   background:rgba(24,33,43,.92); color:#e3e9ef; font-size:13px; pointer-events:none; }
 /* after connecting: offer to keep the typed password in the passkey vault. It and the capture
    notice sit below the toolbar (--tbtop is 0 in full screen), never over its buttons */
@@ -186,6 +186,8 @@ body.fs.tbhide:not(.tbpinned):not(.captured) #tbGrip { display:block; }
 #saveBar[hidden] { display:none; }
 #saveBar .row { display:flex; gap:6px; }
 #saveBar button:not(.primary) { background:#34404d; color:#fff; border-color:#4a5866; }
+#hotkeyToast { top:calc(var(--tbtop, 8px) + 96px); max-width:min(640px, calc(100vw - 32px)); text-align:center; }
+#hotkeyToast[hidden] { display:none; }
 #captureToast kbd { background:#34404d; color:#fff; border-color:#4a5866; }
 #toolbar #tbPin { opacity:.55; } #toolbar #tbPin.on { opacity:1; background:#2f6fde; }
 /* connection info overlay, toggled from the toolbar */

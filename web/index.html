@@ -161,6 +161,7 @@
         </div>
         <a href="keyboard.html">Which keys?</a>
       </div>
+      <p class="hint" id="hotkeyHint"></p>
     </fieldset>
     <p class="note" id="customNote" hidden><span id="customText"></span>
       <button id="restoreDefaults" type="button" class="small">Restore recommended settings</button></p>
@@ -224,7 +225,7 @@
 
 <div id="toolbar" role="toolbar" aria-label="Session">
   <button id="tbPin" aria-label="Pin toolbar">📌</button>
-  <button id="tbFs" title="Right Shift + Enter">Full screen</button>
+  <button id="tbFs">Full screen</button>
   <button id="tbCapture" title="Capture the mouse and keyboard; Ctrl + Alt releases them">Capture</button>
   <button id="tbInfo">Info</button>
   <button id="tbLog">Log</button>
@@ -239,6 +240,7 @@
   <span class="row"><button id="saveYes" class="small primary">Save with passkey</button>
     <button id="saveLater" class="small">Not now</button><button id="saveNever" class="small">Never for this host</button></span>
 </div>
+<div id="hotkeyToast" role="status" hidden></div>
 <div id="captureToast" role="status" hidden>Mouse and keyboard captured · <kbd>Ctrl</kbd> + <kbd>Alt</kbd> releases them</div>
 <details id="logPanel"><summary>Log</summary><pre id="log"></pre></details>
 </div>

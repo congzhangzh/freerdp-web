@@ -33,6 +33,15 @@
     </select></label>
   <p class="row"><button id="resetProfile" type="button" class="small">Back to FreeRDP</button>
     <span id="profileStatus" class="muted" role="status" aria-live="polite"></span></p>
+  <h2>FreeRDP's hotkeys</h2>
+  <p>A modifier set plus one key: full screen, disconnect, keyboard grab. FreeRDP's own default is
+    Right Shift alone, and then typing a capital D with the right hand disconnects; the recommended
+    set adds Right Alt (Right Option on a Mac), which typing never holds with Shift.</p>
+  <label class="field"><span>Modifiers</span><select id="hotkeyModifier"></select></label>
+  <div id="hotkeyKeys"></div>
+  <p class="row"><button id="resetHotkeys" type="button" class="small">Back to the recommended hotkeys</button>
+    <span id="hotkeyStatus" class="muted" role="status" aria-live="polite"></span></p>
+  <h2>The shortcuts now</h2>
   <dl class="keys" id="keyList"></dl>
 
   <h2>Keys the browser keeps</h2>

@@ -101,8 +101,33 @@ the panel never hides how the session will connect.
 
 ## Keyboard profiles
 
-FreeRDP's own hotkeys (Right Shift + Enter, + D, + G, …) are compiled into the client and
-always work. The **mstsc** profile adds Windows Remote Desktop's shortcuts on top:
+FreeRDP's own hotkeys (full screen, disconnect, keyboard grab) are a modifier set plus one key.
+FreeRDP's SDL client reads them from `sdl-freerdp.json` (`SDL_KeyModMask`, `SDL_Fullscreen`,
+`SDL_Disconnect`, `SDL_Grab`; `client/SDL/SDL3/sdl_input.cpp`), at
+`$XDG_CONFIG_HOME/freerdp/`. The page sets `XDG_CONFIG_HOME=/config` in `preRun` (the C runtime
+copies `ENV` into `environ` before `main()`) and writes the file into the runtime's in-memory
+file system just before `callMain`, from the Keyboard page's choice (`keyboard.js`, saved per
+browser). The page logs the file as `[page] hotkeys: …`, and FreeRDP logs the set it uses when
+a hotkey fires (`<KMOD_RSHIFT>+<KMOD_RALT>+<SDL_SCANCODE_D> pressed, disconnecting RDP session`).
+
+| Modifiers | |
+|---|---|
+| **Right Alt + Right Shift** (default) | typing never holds both; Right Alt is Right Option on a Mac |
+| Right Ctrl + Right Shift | not on MacBooks, which have no Right Ctrl |
+| Right Shift | FreeRDP's own default: a capital D typed with the right hand disconnects |
+| Off | `KMOD_NONE`: no hotkeys; full screen and Disconnect stay on the toolbar |
+
+Each action takes a letter, a digit, F1–F12 or a named key (Enter, Space, End, …), never one
+another action has. FreeRDP falls back to its default for an unknown key name, so the page
+only writes names from its own list. The chosen keys are shown where people look for them:
+under **Shortcuts** in the form, on the toolbar's Full screen and Disconnect buttons, and once
+in the session after they change. `test-hotkeys.mjs` checks them against the CI xrdp session.
+
+FreeRDP reads the modifiers with `SDL_GetModState()` when its loop handles the key, not from
+the key event, so a modifier released very quickly after the key (a script, not a hand) can
+miss the hotkey.
+
+The **mstsc** profile adds Windows Remote Desktop's shortcuts on top:
 
 | Keys | Action |
 |---|---|

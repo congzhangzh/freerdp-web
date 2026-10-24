@@ -1,5 +1,5 @@
 import { connectTestSession } from "./test-connect.mjs";
-// UI test: page inputs editable during a session, remote typing, Right Shift + Enter full screen
+// UI test: page inputs editable during a session, remote typing, Right Alt + Right Shift + Enter full screen
 // with dynamic resolution. Uses the CI xrdp (websockify 6081). Usage: node test-ui.mjs <outdir>
 import { spawn } from "node:child_process";
 import { readdirSync, rmSync, mkdtempSync, writeFileSync } from "node:fs";
@@ -39,12 +39,14 @@ await shot("ui-1-remote.png");
 // 2) page input box during the session
 await ev("document.getElementById('extra').focus()"); await typeText("abc"); await sleep(300);
 console.log("extra field after typing abc:", JSON.stringify(await ev("document.getElementById('extra').value")));
-// 3) Right Shift + Enter -> full screen, dynamic resolution
+// 3) Right Alt + Right Shift + Enter -> full screen, dynamic resolution
 await ev("canvas.focus()");
-await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Shift", code: "ShiftRight", windowsVirtualKeyCode: 16, modifiers: 8 });
-await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, modifiers: 8 });
-await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, modifiers: 8 });
+await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Alt", code: "AltRight", windowsVirtualKeyCode: 18, modifiers: 1, location: 2 });
+await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Shift", code: "ShiftRight", windowsVirtualKeyCode: 16, modifiers: 9 });
+await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, modifiers: 9 });
+await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, modifiers: 9 });
 await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Shift", code: "ShiftRight", windowsVirtualKeyCode: 16 });
+await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Alt", code: "AltRight", windowsVirtualKeyCode: 18, location: 2 });
 await sleep(6000);
 console.log("after RShift+Enter:", await ev("JSON.stringify({fullscreen: !!document.fullscreenElement, body: document.body.className, canvas: [canvas.width, canvas.height], screen: [screen.width, screen.height]})"));
 await shot("ui-3-fullscreen.png");

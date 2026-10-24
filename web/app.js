@@ -3,7 +3,7 @@ const $ = (id) => document.getElementById(id);
 const logEl = $("log");
 const info = { started: 0, decoder: "–", transport: "–", server: "–" };
 // Crash capture: the last log lines are kept and, while a session runs, saved to localStorage
-// every few seconds. A clean end (Disconnect, Right Shift + D) marks them "clean"; anything else
+// every few seconds. A clean end (Disconnect, FreeRDP's disconnect hotkey) marks them "clean"; anything else
 // (wasm abort, connection lost, tab crash or reload) leaves "running" or "crashed", and the next
 // start offers the log. Only the page log is kept: it never contains the password (/p:***) or
 // clipboard content.
@@ -20,7 +20,7 @@ const log = (s) => {
   if (sessionPassword) s = s.split(sessionPassword).join("***");
   s = s.replace(/([/+-](?:p|gp|password):)(?:"[^"\n]*"|'[^'\n]*'|[^\s]*)/gi, "$1***");
   crash.lines.push(s); if (crash.lines.length > CRASH_LINES) crash.lines.shift();
-  if (/pressed, disconnecting RDP session/.test(s)) crash.userEnded = true;   // FreeRDP's Right Shift + D
+  if (/pressed, disconnecting RDP session/.test(s)) crash.userEnded = true;   // FreeRDP's disconnect hotkey
   logEl.textContent += s + "\n"; logEl.scrollTop = logEl.scrollHeight; console.log(s);
   const m = /AV1 decoder: ([^,\n]+)/.exec(s);
   if (m) info.decoder = m[1].trim();
@@ -187,7 +187,21 @@ $("restoreDefaults").onclick = () => {
 $("extra").addEventListener("input", updateSessionText);
 $("extra").addEventListener("change", updateSessionText);
 $("advancedPanel").addEventListener("toggle", () => { uiPrefs.advancedOpen = $("advancedPanel").open; saveUiPrefs(); });
-window.addEventListener("storage", (e) => { if (e.key === FreeRDPKeyboard.KEY) setRadio("keys", FreeRDPKeyboard.get()); });
+window.addEventListener("storage", (e) => {
+  if (e.key === FreeRDPKeyboard.KEY) setRadio("keys", FreeRDPKeyboard.get());
+  if (e.key === FreeRDPKeyboard.HOTKEYS_KEY || e.key === null) showHotkeys();
+});
+// FreeRDP's hotkeys as chosen on the Keyboard page, where people look for them: under the
+// Shortcuts choice, on the toolbar's buttons, and once in the session after they change
+function showHotkeys() {
+  const h = FreeRDPKeyboard.getHotkeys(), text = (a) => FreeRDPKeyboard.hotkeyText(h, a);
+  $("hotkeyHint").textContent = FreeRDPKeyboard.MODIFIERS[h.modifier].codes
+    ? `FreeRDP's hotkeys: ${text("fullscreen")} full screen, ${text("disconnect")} disconnect, ${text("grab")} keyboard grab.`
+    : "FreeRDP's hotkeys are off; full screen and Disconnect are on the toolbar.";
+  $("tbFs").title = FreeRDPKeyboard.MODIFIERS[h.modifier].codes ? text("fullscreen") : "";
+  $("tbQuit").title = FreeRDPKeyboard.MODIFIERS[h.modifier].codes ? text("disconnect") : "";
+}
+showHotkeys();
 
 // ---- the one-line SSH command of the safety notice: the local end follows the gateway's
 // port; on the server, websockify stays on 3390, next to RDP on 3389
@@ -222,11 +236,14 @@ $("canvas").addEventListener("mousedown", () => $("canvas").focus());
 let runtimeReady = false, runtimeFailed = false, connectStarted = false;
 let resolveRuntime;
 const runtime = new Promise(resolve => { resolveRuntime = resolve; });
+const HOTKEY_DIR = "/config";
 var Module = {
   canvas: $("canvas"),
   // SDL listens for keys on the whole window and calls preventDefault(), which blocks typing in
   // the page's own input boxes. SDL reads hints from the environment: limit it to the canvas.
-  preRun: [() => { Module.ENV.SDL_EMSCRIPTEN_KEYBOARD_ELEMENT = "#canvas"; }],
+  // FreeRDP reads its hotkeys from $XDG_CONFIG_HOME/freerdp/sdl-freerdp.json; the C runtime
+  // copies ENV into environ before main(), so this has to be set here (the file comes at connect)
+  preRun: [() => { Module.ENV.SDL_EMSCRIPTEN_KEYBOARD_ELEMENT = "#canvas"; Module.ENV.XDG_CONFIG_HOME = HOTKEY_DIR; }],
   print: (t) => log(t),
   printErr: (t) => log(t),
   onRuntimeInitialized() {
@@ -257,7 +274,7 @@ window.addEventListener("unhandledrejection", (e) => { if (crash.running) log("[
 // a tab closed or reloaded during a session (also what a renderer crash looks like next time)
 window.addEventListener("pagehide", () => { if (crash.running) crashStore(crash.userEnded ? "clean" : "running"); });
 
-// Full screen is requested from a user gesture (Connect click or Right Shift + Enter).
+// Full screen is requested from a user gesture (Connect click or FreeRDP's full screen hotkey).
 // The canvas is sized by CSS, so SDL follows it and /dynamic-resolution resizes the remote
 // desktop. Keyboard Lock sends Esc / Windows keys to the remote side (hold Esc to leave).
 const realExitFullscreen = document.exitFullscreen.bind(document);
@@ -324,17 +341,38 @@ window.addEventListener("keyup", (e) => {
   if (!cap.held.size) { cap.chordOther = false; cap.chordFired = false; }
 }, true);
 window.addEventListener("blur", () => { cap.held.clear(); cap.chordOther = cap.chordFired = false; }, true);
-// FreeRDP's own hotkeys stay active (Right Shift + Enter full screen, + D disconnect, ...).
-// Browsers only allow full screen *during* a key or click event, but FreeRDP handles the hotkey
-// later in its main loop, so Emscripten would defer SDL's request to the user's next input. The
-// page therefore performs the browser part of FreeRDP's Right Shift + Enter in the key event
-// itself, without swallowing the key (SDL still sees it); SDL's late request is then ignored.
-let rightShift = false;
-window.addEventListener("keyup", (e) => { if (e.code === "ShiftRight") rightShift = false; }, true);
+// FreeRDP's own hotkeys stay active (by default Right Alt + Right Shift + Enter full screen,
+// + D disconnect, + G grab; keyboard.js). Browsers only allow full screen *during* a key or click
+// event, but FreeRDP handles the hotkey later in its main loop, so Emscripten would defer SDL's
+// request to the user's next input. The page therefore performs the browser part of FreeRDP's
+// full screen hotkey in the key event itself, without swallowing the key (SDL still sees it);
+// SDL's late request is then ignored. The session keeps the hotkeys it started with.
+let sessionHotkeys = FreeRDPKeyboard.getHotkeys();
+const hotkeyHeld = new Set();
+window.addEventListener("keyup", (e) => { hotkeyHeld.delete(e.code); }, true);
+window.addEventListener("blur", () => { hotkeyHeld.clear(); }, true);
 window.addEventListener("keydown", (e) => {
-  if (e.code === "ShiftRight") rightShift = true;
-  if (e.key === "Enter" && rightShift && document.body.classList.contains("session")) toggleFullscreen();
+  hotkeyHeld.add(e.code);
+  if (!e.repeat && document.body.classList.contains("session") &&
+      FreeRDPKeyboard.hotkey(sessionHotkeys, e, hotkeyHeld) === "fullscreen") toggleFullscreen();
 }, true);
+// the client's sdl-freerdp.json, in the runtime's in-memory file system (MEMFS), before main()
+function writeHotkeys() {
+  sessionHotkeys = FreeRDPKeyboard.getHotkeys();
+  showHotkeys();   // the hint may predate a change made in this tab (no storage event for that)
+  const prefs = FreeRDPKeyboard.sdlPrefs(sessionHotkeys);
+  Module.FS.mkdirTree(HOTKEY_DIR + "/freerdp");
+  Module.FS.writeFile(HOTKEY_DIR + "/freerdp/sdl-freerdp.json", JSON.stringify(prefs));
+  log("[page] hotkeys: " + JSON.stringify(prefs));
+  // once per choice: the hotkeys of this session, in case they are not the ones the hands know
+  const seen = JSON.stringify(sessionHotkeys);
+  let told = null; try { told = localStorage.getItem("freerdp-web-hotkeys-told"); } catch (e) { /* not stored: told every time */ }
+  if (told === seen) return;
+  try { localStorage.setItem("freerdp-web-hotkeys-told", seen); } catch (e) { /* ignored */ }
+  $("hotkeyToast").textContent = $("hotkeyHint").textContent + " Change them on the Keyboard page.";
+  $("hotkeyToast").hidden = false;
+  setTimeout(() => { $("hotkeyToast").hidden = true; }, 8000);
+}
 // The mstsc shortcut profile (keyboard.js), on top of FreeRDP's hotkeys. Only while the remote
 // desktop has focus; the page takes these keys, so the remote side does not see them. The
 // keyup of a taken key is dropped as well.
@@ -774,6 +812,7 @@ async function connect() {
     crash.timer = setInterval(() => crashStore("running"), 5000);
     // callMain is one-shot. FreeRDP copies argv into its runtime settings; JS drops its copies.
     handedToWasm = true;
+    try { writeHotkeys(); } catch (e) { log("[page] hotkeys not written, FreeRDP's defaults apply: " + e); }
     try { Module.callMain(args); }
     catch (e) { if (e !== "unwind") log("[page] " + e); }
     finally { args.fill(""); sessionPassword = ""; HostsUI.lock(); }

@@ -1,5 +1,5 @@
 import { connectTestSession } from "./test-connect.mjs";
-// FreeRDP's own hotkey: Right Shift + Enter toggles full screen (page honours SDL's request).
+// FreeRDP's own hotkey: Right Alt + Right Shift + Enter toggles full screen (page honours SDL's request).
 import { spawn } from "node:child_process";
 import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -19,10 +19,12 @@ const send = (method, params = {}) => new Promise((r) => { const i = ++id; p.set
 const state = async (l) => console.log(l, (await send("Runtime.evaluate", { returnByValue: true, expression: "JSON.stringify({fs: !!document.fullscreenElement, canvas: [canvas.width, canvas.height]})" })).result.value);
 const hotkey = async () => {
   for (const type of ["mousePressed", "mouseReleased"]) await send("Input.dispatchMouseEvent", { type, x: 600, y: 500, button: "left", clickCount: 1 });
-  await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Shift", code: "ShiftRight", windowsVirtualKeyCode: 16, modifiers: 8 });
-  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, text: "\r", modifiers: 8 });
-  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, modifiers: 8 });
+  await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Alt", code: "AltRight", windowsVirtualKeyCode: 18, modifiers: 1, location: 2 });
+  await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Shift", code: "ShiftRight", windowsVirtualKeyCode: 16, modifiers: 9 });
+  await send("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, text: "\r", modifiers: 9 });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, modifiers: 9 });
   await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Shift", code: "ShiftRight", windowsVirtualKeyCode: 16 });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Alt", code: "AltRight", windowsVirtualKeyCode: 18, location: 2 });
 };
 await send("Runtime.enable");
 await send("Page.navigate", { url: (process.env.PAGE || "http://127.0.0.1:8080/index.html") + "?v=127.0.0.1:6081&u=test&extra=/gfx&fs=0" });
