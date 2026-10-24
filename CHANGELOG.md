@@ -11,6 +11,18 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## Unreleased
+
+- **One vault, several passkeys**: **Add a passkey** makes another key for the same passkey
+  vault, wherever the system's dialog puts it: this device (Windows Hello, Touch ID, Google
+  Password Manager, iCloud Keychain), a phone (*Use a phone or tablet*) or a security key.
+  Connect shows every passkey of the vault in one chooser. A new phone no longer needs export,
+  delete and import.
+- **A recovery code**: 28 letters and digits, shown once; it opens the vault without any
+  passkey. **Remove** drops a passkey or the code. The record moves to format 2 (a list of
+  keys, each wrapping the same data key); a format 1 vault opens as before and is rewritten at
+  its next change.
+
 ## 20261023.2
 
 - **FreeRDP's hotkeys, your choice**: the **Keyboard** page sets the modifiers (Right Alt + Right

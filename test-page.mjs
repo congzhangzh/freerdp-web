@@ -185,8 +185,9 @@ await ev("document.querySelector('#hostList .host').click(), true");
 // IndexedDB record without it, and after a reload Connect unlocks the vault and gives the
 // client exactly that password (read from the client's argv by this test, synthetic)
 await send("WebAuthn.enable", { enableUI: false });
-const { authenticatorId } = await send("WebAuthn.addVirtualAuthenticator", { options: { protocol: "ctap2", ctap2Version: "ctap2_1", transport: "internal",
-  hasResidentKey: true, hasUserVerification: true, hasPrf: true, isUserVerified: true, automaticPresenceSimulation: true } });
+const PASSKEY = { protocol: "ctap2", ctap2Version: "ctap2_1", transport: "internal",
+  hasResidentKey: true, hasUserVerification: true, hasPrf: true, isUserVerified: true, automaticPresenceSimulation: true };
+let { authenticatorId } = await send("WebAuthn.addVirtualAuthenticator", { options: PASSKEY });
 const vaultText = () => ev("document.getElementById('vaultStatus').textContent");
 const waitFor = async (expr, ms = 15000) => { for (let t = 0; t < ms && !await ev(expr); t += 200) await sleep(200); return ev(expr); };
 await ev("document.querySelectorAll('#hostList .host')[1].click(), true");   // "Lab"
@@ -216,6 +217,40 @@ check("vault: Connect unlocks it and the client gets the saved password",
 await ev("window.__argv = null; true");
 await send("Page.reload");   // callMain runs once per page: a fresh page for the checks below
 for (let i = 0; i < 120 && !await ev("document.getElementById('status')?.textContent === 'ready'"); i++) await sleep(500);
+// several keys for one vault: a second passkey on another authenticator (a security key, here
+// a virtual USB one) and a recovery code; then each opens the vault on its own
+const keyList = () => ev("[...document.querySelectorAll('#vaultKeyList li')].map((li) => li.firstChild.textContent).join(' | ')");
+await ev("document.querySelectorAll('#hostList .host')[1].click(), true");
+await ev("document.getElementById('vaultUnlock').click(), true");
+await waitFor("!document.getElementById('vaultKeys').hidden");
+const second = (await send("WebAuthn.addVirtualAuthenticator", { options: { ...PASSKEY, transport: "usb" } })).authenticatorId;
+await ev("document.getElementById('vaultKeyName').value = 'Security key', document.getElementById('vaultAddKey').click(), true");
+await waitFor("document.querySelectorAll('#vaultKeyList li').length === 2");
+check("vault: a second passkey, from another authenticator, is added", (await keyList()).includes("Passkey: Security key"),
+  (await keyList()) + " / " + await ev("document.getElementById('hostStatus').textContent"));
+await ev("document.getElementById('vaultNewCode').click(), true");
+await waitFor("!document.getElementById('vaultCodeBox').hidden");
+const code = await ev("document.getElementById('vaultCodeText').textContent");
+check("vault: a recovery code is shown once", /^([A-Z2-9]{4}-){6}[A-Z2-9]{4}$/.test(code) && (await keyList()).includes("Recovery code"), await keyList());
+await ev("document.getElementById('advancedPanel').open = true, true"); await screenshot("page-vault-keys.png");
+const stored = await ev(`new Promise((done) => { const r = indexedDB.open('freerdp-credential-vault', 1);
+  r.onsuccess = () => { const g = r.result.transaction('vault').objectStore('vault').get('default'); g.onsuccess = () => done(JSON.stringify(g.result)); }; })`);
+check("vault: the record keeps 3 keys and no names", JSON.parse(stored).keys.length === 3 && !/Security key|Recovery code/.test(stored));
+await ev("document.getElementById('vaultLock').click(), true");
+await send("WebAuthn.removeVirtualAuthenticator", { authenticatorId });   // the first passkey is gone
+await ev("document.getElementById('vaultUnlock').click(), true");
+check("vault: the second passkey opens it without the first", await waitFor("!document.getElementById('vaultKeys').hidden"),
+  await ev("document.getElementById('hostStatus').textContent"));
+check("vault: the key list says which key opened it", (await keyList()).includes("Security key, added") && (await keyList()).match(/Security key[^|]*opened it now/), await keyList());
+await ev("document.getElementById('vaultLock').click(), true");
+await send("WebAuthn.removeVirtualAuthenticator", { authenticatorId: second });   // no passkey at all
+check("vault: locked, it offers the recovery code", await waitFor("!document.getElementById('vaultRecover').hidden"));
+await ev(`document.getElementById('vaultCodeInput').value = ${JSON.stringify(code.toLowerCase())}, document.getElementById('vaultCodeUnlock').click(), true`);
+check("vault: the recovery code opens it without any passkey", await waitFor("!document.getElementById('vaultKeys').hidden"),
+  await ev("document.getElementById('hostStatus').textContent"));
+await ev("document.getElementById('vaultLock').click(), true");
+({ authenticatorId } = await send("WebAuthn.addVirtualAuthenticator", { options: PASSKEY }));   // a new device, for the checks below
+
 // the vault's passkey is gone (removed from the system, or kept on another device): Delete the
 // vault, clicked twice, starts over without it; the host stays, its saved password goes
 await send("WebAuthn.clearCredentials", { authenticatorId });

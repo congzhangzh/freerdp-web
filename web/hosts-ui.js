@@ -7,6 +7,7 @@
   const H = FreeRDPHosts;
   let state = H.load(localStorage);
   let vault = null, available = false, exists = false, busy = false, selectListener = () => {}, pendingText = "";
+  let methods = null;   // what opens the vault, readable while locked: { passkeys, code }
   const current = () => state.hosts.find((h) => h.id === state.selected);
   const target = (h) => (h.direct ? h.directHost : h.host);
   const store = () => H.save(localStorage, state);
@@ -109,6 +110,7 @@
     if (added) { store(); say(`Added ${added} host${added > 1 ? "s" : ""} kept in the passkey vault.`); }
   }
   async function unlockAndAdopt() { await vault.unlock(); adopt(); }
+  async function refreshMethods() { methods = await vault.methods(); exists = !!methods; }
   function renderVault() {
     const h = current(), on = h.vault, unlocked = !!vault?.unlocked;
     $("vaultKeep").checked = on;
@@ -118,7 +120,8 @@
     if (!available) text = "The vault needs HTTPS (or localhost) and a browser with passkeys that support PRF.";
     else if (!exists) text = "There is no vault in this browser yet: create one, with a passkey.";
     else if (!unlocked) text = (h.vaultSaved ? "Saved. Connect asks for your passkey." : "Unlock the vault to save this host's password in it.") +
-      " Its passkey gone, or on another device? Delete the vault and create a new one.";
+      (methods?.passkeys > 1 ? ` Any of its ${methods.passkeys} passkeys opens it.` : "") +
+      (methods?.code ? " No passkey at hand? Use the recovery code." : " Its passkey gone, or on another device? Delete the vault and create a new one.");
     else text = h.vaultSaved ? "Saved in the vault. Type a new password and save it to replace it." : "Type the password above, then save it in the vault.";
     if (busy) text = "Waiting for the passkey…";
     $("vaultStatus").textContent = text;
@@ -130,6 +133,42 @@
     show("vaultLock", unlocked || busy, true);
     show("vaultDelete", available && exists);
     $("vaultLock").disabled = false;   // also cancels a pending passkey prompt
+    $("vaultRecover").hidden = !(available && exists && !unlocked && methods?.code);
+    $("vaultCodeUnlock").disabled = busy;
+    $("vaultKeys").hidden = !unlocked;
+    if (!unlocked) { $("vaultCodeBox").hidden = true; $("vaultCodeText").textContent = ""; }
+    else renderKeys();
+  }
+  // the vault's keys: passkeys of any provider and the recovery code; removing one asks twice
+  let removeArmed = { id: "", at: 0 };
+  function renderKeys() {
+    const keys = vault.keys(), passkeys = keys.filter((k) => k.kind === "passkey").length;
+    $("vaultKeyList").replaceChildren(...keys.map((k) => {
+      const li = document.createElement("li");
+      const when = k.added ? ", added " + new Date(k.added).toLocaleDateString() : "";
+      li.textContent = (k.kind === "code" ? "Recovery code" : "Passkey: " + k.label) + when + (k.current ? " (opened it now)" : "");
+      if (k.kind === "code" || passkeys > 1) {
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "small"; b.disabled = busy;
+        b.textContent = removeArmed.id === k.id && Date.now() - removeArmed.at < 4000 ? "Remove: click again" : "Remove";
+        b.onclick = () => removeKey(k);
+        li.append(b);
+      }
+      return li;
+    }));
+    $("vaultAddKey").disabled = $("vaultNewCode").disabled = busy;
+    $("vaultNewCode").textContent = keys.some((k) => k.kind === "code") ? "Replace the recovery code" : "Create a recovery code";
+  }
+  function removeKey(k) {
+    if (removeArmed.id !== k.id || Date.now() - removeArmed.at > 4000) {
+      removeArmed = { id: k.id, at: Date.now() }; renderKeys();
+      setTimeout(renderKeys, 4100);
+      say(k.kind === "code" ? "Removing the recovery code: only passkeys will open the vault."
+        : `Removing “${k.label}”: it stops opening the vault. A passkey that was lost or stolen? Change the passwords that matter too.`);
+      return;
+    }
+    removeArmed = { id: "", at: 0 };
+    run(async () => { await vault.removeKey(k.id); await refreshMethods(); say(k.kind === "code" ? "Recovery code removed." : `“${k.label}” removed from the vault.`); });
   }
   function lock() { vault?.lock(); $("pass").value = ""; renderVault(); }
   $("vaultKeep").onchange = () => {
@@ -138,8 +177,38 @@
     store(); render();
     selectListener(current(), true);
   };
-  $("vaultCreate").onclick = () => run(async () => { await vault.create(); exists = true; say("Vault created. Save this host's password in it."); });
+  $("vaultCreate").onclick = () => run(async () => { await vault.create(); await refreshMethods(); say("Vault created. Save this host's password in it."); });
   $("vaultUnlock").onclick = () => run(unlockAndAdopt);
+  // another passkey for the same vault: a phone, Google Password Manager, iCloud Keychain, Windows
+  // Hello, a security key… The system's dialog picks where it is made ("Use a phone or tablet",
+  // "Use a different passkey"); each one unlocks the vault on its own.
+  $("vaultAddKey").onclick = () => run(async () => {
+    const label = $("vaultKeyName").value.trim();
+    try { await vault.addPasskey(label); }
+    catch (e) {
+      if (e.name === "InvalidStateError") throw new Error("That passkey provider already holds a passkey of this vault: choose another one (a phone, a security key…).");
+      throw e;
+    }
+    $("vaultKeyName").value = ""; await refreshMethods();
+    say(`Passkey${label ? ` “${label}”` : ""} added: it opens the vault too.`);
+  });
+  $("vaultNewCode").onclick = () => run(async () => {
+    const code = await vault.newRecoveryCode(); await refreshMethods();
+    $("vaultCodeText").textContent = code; $("vaultCodeBox").hidden = false;
+    say("Recovery code created; an earlier one no longer opens the vault. It is shown below this once.");
+  });
+  $("vaultCodeCopy").onclick = () => navigator.clipboard.writeText($("vaultCodeText").textContent).then(
+    () => say("Recovery code copied."), () => say("Select the code and copy it."));
+  const unlockWithCode = () => run(async () => {
+    const code = $("vaultCodeInput").value;
+    try { await vault.unlockWithCode(code); } finally { $("vaultCodeInput").value = ""; }
+    adopt();
+    say("Vault unlocked with the recovery code. Add a passkey you have now, and maybe a new recovery code.");
+  });
+  $("vaultCodeUnlock").onclick = unlockWithCode;
+  // Enter in the vault's own fields acts there; it must not submit the form (Connect)
+  for (const [field, action] of [["vaultCodeInput", unlockWithCode], ["vaultKeyName", () => $("vaultAddKey").click()]])
+    $(field).addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); action(); } });
   $("vaultLock").onclick = () => { lock(); say("Vault locked; its passwords are cleared from the page."); };
   $("vaultSave").onclick = () => run(async () => {
     const h = current(), password = $("pass").value;
@@ -168,7 +237,7 @@
       return;
     }
     vaultDeleteArmed = 0; $("vaultDelete").textContent = "Delete the vault";
-    await vault.destroy(); exists = false; $("pass").value = "";
+    await vault.destroy(); exists = false; methods = null; $("pass").value = "";
     for (const h of saved) h.vaultSaved = false;
     store();
     say(`Vault deleted${saved.length ? `, with ${saved.length} saved password${saved.length > 1 ? "s" : ""}` : ""}. Create a new one with the passkey you have now.`);
@@ -311,7 +380,7 @@
       if (busy) throw new Error("Wait for the vault operation to finish.");
       busy = true;
       try {
-        if (!exists) { await vault.create(); exists = true; }
+        if (!exists) { await vault.create(); await refreshMethods(); }
         else if (!vault.unlocked) await unlockAndAdopt();
         await vault.save({ id: h.id, label: h.name, host: target(h) || "unset", username: h.user,
           password: offer.password, extra: h.extra, direct: h.direct });
@@ -329,7 +398,8 @@
   (async () => {
     try {
       if (!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials || !window.crypto?.subtle) return;
-      vault = new FreeRDPVault.Vault(); exists = await vault.exists(); available = true;
+      vault = new FreeRDPVault.Vault(); available = true;
+      try { await refreshMethods(); } catch (e) { exists = await vault.exists(); }   // a record this page cannot read
     } catch (e) { /* no vault here: renderVault says why */ }
     finally { renderVault(); }
   })();

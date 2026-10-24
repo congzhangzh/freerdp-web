@@ -190,6 +190,22 @@
           <button id="vaultLock" type="button" class="small">Lock</button>
           <button id="vaultDelete" type="button" class="small">Delete the vault</button>
         </div>
+        <div id="vaultRecover" class="row" hidden>
+          <input id="vaultCodeInput" placeholder="Recovery code" spellcheck="false" autocomplete="off" aria-label="Recovery code">
+          <button id="vaultCodeUnlock" type="button" class="small">Unlock with the recovery code</button>
+        </div>
+        <div id="vaultKeys" hidden>
+          <p class="hint">What opens this vault, kept in this browser: each passkey below (this device's, a phone's, a security key…), or the recovery code.</p>
+          <ul id="vaultKeyList"></ul>
+          <div class="row">
+            <input id="vaultKeyName" placeholder="Name: Phone, Windows Hello…" maxlength="40" spellcheck="false" autocomplete="off" aria-label="Name of the new passkey">
+            <button id="vaultAddKey" type="button" class="small">Add a passkey</button>
+            <button id="vaultNewCode" type="button" class="small">Create a recovery code</button>
+          </div>
+          <p id="vaultCodeBox" class="hint" hidden>The recovery code, shown this once: <code id="vaultCodeText"></code>
+            <button id="vaultCodeCopy" type="button" class="small">Copy</button>
+            Keep it on paper or in a password manager: it opens the vault without a passkey.</p>
+        </div>
       </div>
     </fieldset>
     <fieldset>

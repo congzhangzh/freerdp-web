@@ -2,7 +2,8 @@
 
 Each saved host keeps its password where you choose. By default that is your browser's
 password manager, which fills the form's password field. A host can instead keep its
-password in the **passkey vault**: encrypted in this browser and unlocked with a passkey.
+password in the **passkey vault**: encrypted in this browser and unlocked with any of the
+vault's passkeys (this device's, a phone's, a security key…) or, without one, its recovery code.
 Open the client on a secure origin (HTTPS or localhost); passkey support inside the
 installed app (Isolated Web App) still needs checking with a real authenticator.
 
@@ -40,33 +41,57 @@ forget it. **Lock** clears the decrypted data from the page and cancels a pendin
 prompt; the page also locks after a connection and when it closes. One page runs one RDP
 session (the runtime's `callMain` runs once): reload it for the next.
 
-### Another passkey: a new phone, another provider, a lost passkey
+### Several passkeys, and a recovery code
 
-Only the passkey that created the vault opens it. The vault's key is derived from that
-passkey's PRF output, a secret the passkey provider (Google Password Manager, iCloud Keychain,
-Windows Hello, a security key) never hands out, and every passkey has its own. A synced copy of
-the same passkey works (for example a Google Password Manager passkey on an Android phone
-signed in to the same account, through *Use a phone or tablet*). A different passkey does not,
-even one with the same name.
+A vault opens with any of its keys. **Advanced** lists them once the vault is unlocked, with
+the date each was added and which one opened it now:
 
-To move the vault to another passkey:
+- **Add a passkey** (give it a name: *Phone*, *Windows Hello*…) makes another passkey for the
+  same vault. The system's dialog chooses where: this device (Windows Hello, Touch ID, Google
+  Password Manager in Chrome, iCloud Keychain in Safari), *Use a phone or tablet* (the phone
+  keeps it, Android or iPhone), or a security key. A provider that already holds one of the
+  vault's passkeys is refused, so two keys of one vault never sit in one place. The passkey
+  needs PRF, like the first; one that lacks it is refused and nothing changes.
+- **Connect** and **Unlock with passkey** show the system's chooser with every passkey of the
+  vault: pick any. They share the vault's PRF salt, so one prompt is enough with every
+  provider, also those that do not support PRF per credential.
+- **Create a recovery code** shows a code of 28 letters and digits, once
+  (`ABCD-EFGH-…`, without 0, O, 1 or I; about 140 random bits). Keep it on paper or in a
+  password manager. **Unlock with the recovery code** appears while the vault is locked and
+  opens it without any passkey; then add a passkey you have now. **Replace the recovery
+  code** makes a new one, and the old one stops opening the vault.
+- **Remove** (click twice) drops a key. A vault keeps at least one passkey; to start over
+  without any, delete the vault.
 
-1. Unlock it, then **Export…** with **Include the passwords kept in the passkey vault**, and
-   **Encrypt the file with a passphrase**.
-2. **Delete the vault** (click twice). The hosts stay; their saved passwords go.
-3. **Create vault** with the new passkey, then **Import…** the file: the passwords go into the
-   new vault.
+So a new phone is one step: unlock with a passkey you have (or the code), then **Add a
+passkey** on the new phone. A lost passkey: unlock with another key, **Remove** the lost one,
+and change the passwords that matter (see *Limits*).
 
-If the old passkey is already gone, only step 2 is possible: delete the vault, create a new
-one and type the passwords again. The old passkey, if it still exists, stays in the system's
-passkey list; remove it there if you like.
+Only the vault's own keys open it. A passkey's PRF output is a secret its provider never
+hands out, and each passkey has its own; a passkey that is not one of the vault's keys does
+not open it, even with the same name. A synced copy of a key does (for example a Google
+Password Manager passkey on an Android phone signed in to the same account). With no key at
+all (every passkey gone, no recovery code), **Delete the vault** (two clicks) starts over:
+the hosts stay, their saved passwords go; create a new vault and type the passwords again.
+
+Moving the vault to another browser or origin is still **Export…** with the passwords,
+encrypted with a passphrase, then **Import…** there (*Export* below).
 
 Hosts saved in the vault by earlier versions of the page, with their own list of names,
 become hosts of the host bar the first time the vault is unlocked.
 
 ## Encryption and storage
 
-WebAuthn creation requires a resident passkey with user verification and PRF enabled. A separate verified assertion evaluates a random 32-byte PRF salt; browsers need not evaluate PRF during creation. HKDF-SHA-256 derives a wrapping key from that result. AES-256-GCM wraps an independent random data key and encrypts the entire collection, including names, addresses and users, using separate authenticated contexts and random 96-bit nonces. The IndexedDB record contains only its format version, revision token, credential identifier, PRF salt, wrapped key and ciphertext. The passkey identifier and salt are public encryption metadata. No RDP secret is sent to an authentication backend.
+WebAuthn creation requires a resident passkey with user verification and PRF enabled. A separate verified assertion evaluates the vault's random 32-byte PRF salt; browsers need not evaluate PRF during creation (when they do, with user verification, that value is used and the second prompt is skipped). HKDF-SHA-256 derives a wrapping key from that result. AES-256-GCM encrypts the entire collection, including names, addresses, users and the keys' names, with an independent random data key, using separate authenticated contexts and random 96-bit nonces.
+
+Every key wraps that same data key (envelope encryption, like the key slots of disk encryption):
+
+| Key | Wrapping key | Stored for it |
+|---|---|---|
+| Passkey | HKDF-SHA-256 of its PRF output for the vault's salt | credential identifier, wrapped data key |
+| Recovery code | PBKDF2-SHA-256 of the code, 600,000 iterations, its own 16-byte salt | salt, iteration count, wrapped data key |
+
+The IndexedDB record (format version 2) contains only its format version, revision token, the PRF salt, the list of keys above and the ciphertext. Credential identifiers and salts are public encryption metadata; the keys' names and dates are inside the ciphertext. While the vault is unlocked the page keeps the wrapping key that opened it (a non-extractable `CryptoKey`), so adding a passkey or a recovery code wraps the data key again without another prompt. A version 1 record (one passkey, written by earlier versions of the page) opens as a version 2 record with that one key, and is written as version 2 at its next change. No RDP secret is sent to an authentication backend.
 
 The unlocked data key is a nonextractable `CryptoKey`. Every change persists a new encrypted snapshot; IndexedDB compares revision tokens within the write transaction so two tabs cannot silently overwrite each other's edits. Unsupported PRF, absent user verification, a wrong credential, decryption failure or storage failure aborts the operation. A failed PRF registration may leave an unused passkey in the operating system; remove it there if desired.
 
@@ -86,13 +111,13 @@ the page says so).
 
 ## Limits
 
-The vault protects stored credentials, not a compromised origin: JavaScript executing on this origin can access credentials while unlocked. User verification and PRF are local key-release checks, not server-side WebAuthn signature verification. The same origin and passkey are required to unlock; clearing browser storage loses the vault unless the hosts were exported with their passwords. JavaScript strings and garbage collection do not permit guaranteed memory erasure. FreeRDP necessarily retains session credentials in WASM memory while a session runs; locking the local vault does not revoke the active RDP session.
+Removing a key deletes its wrapped copy of the data key; the data key itself stays (a new one would need every remaining passkey's prompt). A copy of the record taken before the removal, together with the removed passkey or code, still opens the passwords of that time: after losing a passkey or a code, change the passwords that matter. The vault protects stored credentials, not a compromised origin: JavaScript executing on this origin can access credentials while unlocked. User verification and PRF are local key-release checks, not server-side WebAuthn signature verification. The same origin and passkey are required to unlock; clearing browser storage loses the vault unless the hosts were exported with their passwords. JavaScript strings and garbage collection do not permit guaranteed memory erasure. FreeRDP necessarily retains session credentials in WASM memory while a session runs; locking the local vault does not revoke the active RDP session.
 
 ## Verification
 
-`node --test web/tests/*.test.cjs` (Node 20 or newer) runs the vault's crypto and state tests with real Web Crypto and a simulated authenticator (encrypted metadata, multiple entries, updates and deletion, wrong keys, tampering, fail-closed PRF checks, lock cancellation, concurrent writes, deleting a vault whose passkey is gone), and the host list's tests (no password in storage, migration, export and import, encrypted with a passphrase or not).
+`node --test web/tests/*.test.cjs` (Node 20 or newer) runs the vault's crypto and state tests with real Web Crypto and simulated authenticators (encrypted metadata, multiple entries, updates and deletion, wrong keys, tampering, fail-closed PRF checks, lock cancellation, concurrent writes, deleting a vault whose passkey is gone; a second passkey from another provider, a provider that already holds one refused, removing a key, the recovery code and its replacement, reading a version 1 record), and the host list's tests (no password in storage, migration, export and import, encrypted with a passphrase or not).
 
-`node test-page.mjs <client dir>` runs the page with the built client in Chrome, with a virtual CTAP2 authenticator with PRF (`WebAuthn.addVirtualAuthenticator`; the page still calls `navigator.credentials.create/get`). It saves a host's password, checks that the IndexedDB record holds no password, user or address, reloads, and checks that Connect unlocks the vault and gives the client exactly that password. It then removes the passkey from the virtual authenticator and checks that **Delete the vault** asks twice, deletes the record and lets a new passkey create a new vault. Only synthetic credentials are used. `test-vault-save.mjs` runs the offer against the CI xrdp session with the same virtual authenticator: a typed password is offered, Save creates the vault with a single passkey ceremony, a reload then connects with the saved password (one ceremony, and xrdp's log records the login), a different typed password is offered as an update, and Never for this host stops the offer. This verifies the browser and application integration, not a physical authenticator, a biometric prompt, a system passkey provider or the installed app's origin; those remain manual checks. The client still connects with `/cert:ignore`, so none of this establishes the RDP server's identity.
+`node test-page.mjs <client dir>` runs the page with the built client in Chrome, with a virtual CTAP2 authenticator with PRF (`WebAuthn.addVirtualAuthenticator`; the page still calls `navigator.credentials.create/get`). It saves a host's password, checks that the IndexedDB record holds no password, user or address, reloads, and checks that Connect unlocks the vault and gives the client exactly that password. It adds a second passkey on a second virtual authenticator and a recovery code, checks that the record lists three keys and no names, removes the first authenticator and unlocks with the second, removes that one too and unlocks with the recovery code. It then removes every passkey and checks that **Delete the vault** asks twice, deletes the record and lets a new passkey create a new vault. Only synthetic credentials are used. `test-vault-save.mjs` runs the offer against the CI xrdp session with the same virtual authenticator: a typed password is offered, Save creates the vault with a single passkey ceremony, a reload then connects with the saved password (one ceremony, and xrdp's log records the login), a different typed password is offered as an update, and Never for this host stops the offer. This verifies the browser and application integration, not a physical authenticator, a biometric prompt, a system passkey provider or the installed app's origin; those remain manual checks. The client still connects with `/cert:ignore`, so none of this establishes the RDP server's identity.
 
 ## Rebuild and reproduce locally
 

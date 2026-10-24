@@ -44,7 +44,7 @@ test("multi-host encrypted roundtrip hides passwords and metadata; lock requires
   const record=await store("get"), serialized=JSON.stringify(record);
   for (const value of ["alpha.local", "alpha-user", "alpha label", "synthetic-secret-one", "beta.local", "second-secret"])
     assert.ok(!serialized.includes(value), value+" leaked");
-  assert.notEqual(record.wrappedKey.iv,record.payload.iv);
+  assert.notEqual(record.keys[0].wrappedKey.iv,record.payload.iv);
   assert.equal(vault.list().length,2); assert.ok(!("password" in vault.list()[0]));
   let copy; vault.use(b,h=>{copy=h; assert.equal(h.password,"second-secret");}); assert.equal(copy.password,"");
   vault.lock(); assert.equal(vault.unlocked,false); assert.throws(()=>vault.list()); assert.throws(()=>vault.use(a,()=>{}));
@@ -62,9 +62,10 @@ test("update, keep password, and delete persist encrypted and preserve another h
 test("wrong PRF secret and encrypted box tampering fail closed", async () => {
   const {store,vault}=await fixture(); await vault.save(host()); const record=await store("get");
   await assert.rejects(new Vault(store,authenticator({secret:43})).unlock(),{name:"OperationError"});
-  for (const box of ["wrappedKey","payload"]) for (const field of ["iv","ciphertext"]) {
-    const copy=structuredClone(record), bytes=Uint8Array.from(atob(copy[box][field]),c=>c.charCodeAt(0));
-    bytes[0]^=1; copy[box][field]=btoa(String.fromCharCode(...bytes));
+  const boxes={wrappedKey:r=>r.keys[0].wrappedKey, payload:r=>r.payload};
+  for (const box of Object.values(boxes)) for (const field of ["iv","ciphertext"]) {
+    const copy=structuredClone(record), bytes=Uint8Array.from(atob(box(copy)[field]),c=>c.charCodeAt(0));
+    bytes[0]^=1; box(copy)[field]=btoa(String.fromCharCode(...bytes));
     const broken=new Vault(async()=>copy,authenticator());
     await assert.rejects(broken.unlock(),{name:"OperationError"}); assert.equal(broken.unlocked,false);
   }
@@ -133,4 +134,85 @@ test("deleting an unlocked vault locks it and clears its passwords from the page
   const {store,vault}=await fixture(); await vault.save(host());
   await vault.destroy(); assert.equal(vault.unlocked,false); assert.throws(()=>vault.list());
   assert.equal(await store("get"),undefined);
+});
+
+// Several providers, each holding its own passkeys with their own PRF secrets: create() makes
+// one (refusing an excluded one it already holds), get() answers for the first one it holds.
+function provider(name, secret) {
+  const held=new Map(), authData=new Uint8Array(37); authData[32]=5;
+  const b64=b=>btoa(String.fromCharCode(...new Uint8Array(b)));
+  return {name, held,
+    async create(options) {
+      const pk=options.publicKey;
+      if ((pk.excludeCredentials||[]).some(c=>held.has(b64(c.id)))) throw new DOMException("already registered","InvalidStateError");
+      const id=crypto.getRandomValues(new Uint8Array(16)); held.set(b64(id),{secret,name:pk.user.name});
+      return {rawId:id, getClientExtensionResults:()=>({prf:{enabled:true}})};
+    },
+    async get(options) {
+      const c=options.publicKey.allowCredentials.find(c=>held.has(b64(c.id)));
+      if (!c) throw new DOMException("no passkey here","NotAllowedError");
+      const prf=new Uint8Array(32).fill(held.get(b64(c.id)).secret); prf[0]^=options.publicKey.extensions.prf.eval.first[0];
+      return {rawId:c.id, response:{authenticatorData:authData}, getClientExtensionResults:()=>({prf:{results:{first:prf}}})};
+    }};
+}
+test("a second passkey from another provider opens the same vault; names stay encrypted", async () => {
+  const store=memoryStore(), phone=provider("phone",11), hello=provider("hello",22);
+  const vault=new Vault(store,phone); await vault.create(); const a=await vault.save(host());
+  vault.credentials=hello; await vault.addPasskey("Windows Hello");
+  assert.deepEqual(vault.keys().map(k=>[k.kind,k.label,k.current]),[["passkey","First passkey",true],["passkey","Windows Hello",false]]);
+  const record=await store("get"); assert.equal(record.version,2); assert.equal(record.keys.length,2);
+  assert.ok(!JSON.stringify(record).includes("Windows Hello"));
+  for (const p of [phone,hello]) {
+    const other=new Vault(store,p); await other.unlock(); other.use(a,h=>assert.equal(h.password,"synthetic-secret-one"));
+    assert.equal(other.keys().find(k=>k.current).label, p===phone ? "First passkey" : "Windows Hello");
+  }
+  assert.deepEqual(await new Vault(store,phone).methods(),{passkeys:2,code:false});
+});
+test("a provider that already holds a passkey of the vault is refused, and nothing changes", async () => {
+  const store=memoryStore(), phone=provider("phone",11), vault=new Vault(store,phone); await vault.create();
+  const before=await store("get");
+  await assert.rejects(vault.addPasskey("again"),{name:"InvalidStateError"});
+  assert.deepEqual(await store("get"),before); assert.equal(phone.held.size,1);
+});
+test("removing a passkey stops it opening the vault; the last passkey cannot be removed", async () => {
+  const store=memoryStore(), phone=provider("phone",11), key=provider("key",33);
+  const vault=new Vault(store,phone); await vault.create(); await vault.save(host());
+  vault.credentials=key; const id=await vault.addPasskey("Security key");
+  await vault.removeKey(id); vault.lock();
+  await assert.rejects(new Vault(store,key).unlock(),{name:"NotAllowedError"});
+  vault.credentials=phone; await vault.unlock(); assert.equal(vault.keys().length,1);
+  await assert.rejects(vault.removeKey(vault.keys()[0].id),/at least one passkey/);
+});
+test("a recovery code opens the vault without a passkey; a new code replaces the old one", async () => {
+  const store=memoryStore(), vault=new Vault(store,provider("phone",11)); await vault.create(); const a=await vault.save(host());
+  const code=await vault.newRecoveryCode(); assert.match(code,/^([A-HJ-NP-Z2-9]{4}-){6}[A-HJ-NP-Z2-9]{4}$/);
+  assert.ok(!JSON.stringify(await store("get")).includes(code.replace(/-/g,"")));
+  assert.deepEqual(await vault.methods(),{passkeys:1,code:true});
+  const lost=new Vault(store,provider("elsewhere",44));
+  await assert.rejects(lost.unlock(),{name:"NotAllowedError"});
+  await lost.unlockWithCode(" "+code.toLowerCase().replace(/-/g," ")+" ");
+  lost.use(a,h=>assert.equal(h.password,"synthetic-secret-one"));
+  assert.equal(lost.keys().find(k=>k.current).kind,"code");
+  // the way back to passkeys: add one while the code has the vault open
+  lost.credentials=provider("new phone",55); await lost.addPasskey("New phone");
+  const second=await lost.newRecoveryCode(); lost.lock();
+  await assert.rejects(new Vault(store).unlockWithCode(code),/does not open/);
+  await assert.rejects(new Vault(store).unlockWithCode("short"),/28 letters/);
+  const back=new Vault(store,lost.credentials); await back.unlock(); assert.equal(back.keys().length,3);
+  await new Vault(store).unlockWithCode(second);
+});
+test("a version 1 vault opens and is written as version 2 with its passkey kept", async () => {
+  const {store,vault}=await fixture(), a=await vault.save(host());
+  const v2=await store("get"), {keys,...rest}=v2;
+  const v1={...rest,version:1,credentialId:keys[0].credentialId,wrappedKey:keys[0].wrappedKey};
+  await store("put",v1,v2.revision);
+  const old=new Vault(store,authenticator()); await old.unlock();
+  assert.equal(old.keys()[0].label,"First passkey"); old.use(a,h=>assert.equal(h.password,"synthetic-secret-one"));
+  await old.save(host("beta","second-secret")); const after=await store("get");
+  assert.equal(after.version,2); assert.equal(after.credentialId,undefined); assert.equal(after.keys[0].credentialId,keys[0].credentialId);
+  old.lock(); await old.unlock(); assert.equal(old.list().length,2);
+});
+test("a record this version cannot read is refused, not opened", async () => {
+  for (const record of [{version:3}, {version:2,keys:[]}, {version:2,keys:[{kind:"code",salt:"AA==",iterations:1000,wrappedKey:{}}]}])
+    await assert.rejects(new Vault(async()=>record,authenticator()).unlock(),/No supported vault/);
 });

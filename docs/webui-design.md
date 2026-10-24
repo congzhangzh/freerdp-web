@@ -38,8 +38,9 @@ user, its session settings, its advanced options and full screen. **Never a pass
   `current-password` fields). It keys passwords by user name, so hosts with the same user
   share one.
 - **Keep this host's password in the passkey vault** (Advanced) keeps it encrypted instead,
-  per host, unlocked with a passkey when Connect needs it ([VAULT.md](../web/VAULT.md)).
-  The vault's format is unchanged; hosts of the old vault list become hosts of the bar.
+  per host, unlocked when Connect needs it with any of the vault's passkeys, or with its
+  recovery code ([VAULT.md](../web/VAULT.md)). Hosts of the old vault list become hosts of
+  the bar.
 
 **Export…** writes all hosts to a file, with the vault's passwords only when that box is
 ticked, encrypted with a passphrase when that box is ticked (PBKDF2-SHA-256, AES-256-GCM).
@@ -92,8 +93,8 @@ the panel never hides how the session will connect.
   why one installs it; the field then reads *RDP server* and remembers its own address
   list, apart from the gateway's.
 - **Passkey vault**: off by default; the browser's password manager is the normal way.
-  On, it shows the existing vault controls ([VAULT.md](../web/VAULT.md); format
-  unchanged). The default is *on* for a browser that already has a vault, so nobody loses
+  On, it shows the vault controls and, unlocked, the vault's keys: **Add a passkey**,
+  **Create a recovery code**, **Remove** ([VAULT.md](../web/VAULT.md)). The default is *on* for a browser that already has a vault, so nobody loses
   sight of saved hosts. Turning it off locks the vault, clears the password and returns
   the form to the manual connection's remembered settings; encrypted hosts stay stored.
 - **Extra options**: free-form FreeRDP options, with the resolved preview. Credential and
@@ -145,9 +146,9 @@ session panel and `keyboard.html`.
 
 | What | How | Result |
 |---|---|---|
-| Option mapping, overrides, keyboard actions, hosts (storage, migration, export, import) | `node --test web/tests/*.test.cjs` | 30 tests pass |
+| Option mapping, overrides, keyboard actions, hosts (storage, migration, export, import) | `node --test web/tests/*.test.cjs` | 48 tests pass |
 | Connection bridge with session settings, migration | `web/tests/bridge.test.cjs` | pass |
-| The page with the real client: hosts, export and import, the vault with a virtual passkey, settings, mstsc keys, phone width | `node test-page.mjs <client dir>` | 25 checks pass |
+| The page with the real client: hosts, export and import, the vault with virtual passkeys (a second passkey, the recovery code), settings, mstsc keys, phone width | `node test-page.mjs <client dir>` | 41 checks pass (49 with the demo media) |
 | A full login | the release kit's `test/wasm-session.sh`: xrdp in a throwaway container, SSH, websockify | Xorg session and xterm started, screenshot shows the desktop |
 
 Not verified yet:
