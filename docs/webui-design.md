@@ -142,13 +142,37 @@ Ctrl and Alt are held; SDL3 reads the key's `code`, not whether the event is tru
 (`SDL_emscriptenevents.c`). The default profile is FreeRDP; the choice is shared by the
 session panel and `keyboard.html`.
 
+## Reconnect
+
+A session comes back without a passkey prompt or a typed password, in the same page:
+
+| Layer | When | How |
+|---|---|---|
+| FreeRDP's own | the network drops | `+auto-reconnect` (default; `-auto-reconnect` in Extra options turns it off): the same client tries again with its own settings |
+| The page's | the client has ended after a lost connection | a new client in this page (`createFreeRDP()`), with the password kept in memory, after 2, 4, 8, 16, 30… s, up to 8 times; the bar says *Connection lost. Reconnecting in N s* |
+| By hand | a session that hangs, or one that ended | **Reconnect** on the toolbar (it closes a running session's sockets first) or on the end bar |
+
+The password of the running session stays in the page's memory only: encrypted with AES-GCM
+under a non-extractable `CryptoKey` made for it, never in storage. **Disconnect**, choosing
+another host, a refused logon (no retry then) and closing the page drop it.
+
+A new client per connection needs the WebAssembly client linked with `-sMODULARIZE=1
+-sEXPORT_NAME=createFreeRDP` (and `HEAPU8` among `EXPORTED_RUNTIME_METHODS`): each call of
+`createFreeRDP()` is a new runtime, with its own memory, threads and C globals. An older
+client defines a global `Module` that runs `main()` once (`-sEXIT_RUNTIME=1`); with it the end
+bar offers *Reload and connect*, and Connect asks for the passkey as before. Measured with the
+CI xrdp session: FreeRDP's own retry starts, but the client ends about 0.1 s later (the SDL
+main thread returns from `main()` and the runtime exits with the retrying thread), so today
+the page's retry is the one that brings the session back.
+
 ## Verification
 
 | What | How | Result |
 |---|---|---|
-| Option mapping, overrides, keyboard actions, hosts (storage, migration, export, import) | `node --test web/tests/*.test.cjs` | 48 tests pass |
+| Option mapping, overrides, keyboard actions, hosts (storage, migration, export, import) | `node --test web/tests/*.test.cjs` | 49 tests pass |
 | Connection bridge with session settings, migration | `web/tests/bridge.test.cjs` | pass |
 | The page with the real client: hosts, export and import, the vault with virtual passkeys (a second passkey, the recovery code), settings, mstsc keys, phone width | `node test-page.mjs <client dir>` | 41 checks pass (49 with the demo media) |
+| Reconnect: a dropped gateway, then the toolbar's Reconnect, against the CI xrdp session (no reload, no passkey, no typing; xrdp logs each login) | `PAGE=<page URL> node test-reconnect.mjs`, with a modular client | 6 checks pass, 3 runs in a row |
 | A full login | the release kit's `test/wasm-session.sh`: xrdp in a throwaway container, SSH, websockify | Xorg session and xterm started, screenshot shows the desktop |
 
 Not verified yet:

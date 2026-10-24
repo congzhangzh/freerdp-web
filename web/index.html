@@ -245,6 +245,7 @@
   <button id="tbCapture" title="Capture the mouse and keyboard; Ctrl + Alt releases them">Capture</button>
   <button id="tbInfo">Info</button>
   <button id="tbLog">Log</button>
+  <button id="tbReconnect" title="Connect again, with the same password (no passkey, no typing)">Reconnect</button>
   <button id="tbQuit">Disconnect</button>
 </div>
 <div id="tbGrip" aria-hidden="true"></div>
@@ -255,6 +256,10 @@
   <span id="saveText"></span>
   <span class="row"><button id="saveYes" class="small primary">Save with passkey</button>
     <button id="saveLater" class="small">Not now</button><button id="saveNever" class="small">Never for this host</button></span>
+</div>
+<div id="endBar" role="alert" hidden>
+  <span id="endText"></span>
+  <span class="row"><button id="endReconnect" class="small primary">Reconnect</button><button id="endClose" class="small">Close</button></span>
 </div>
 <div id="hotkeyToast" role="status" hidden></div>
 <div id="captureToast" role="status" hidden>Mouse and keyboard captured · <kbd>Ctrl</kbd> + <kbd>Alt</kbd> releases them</div>

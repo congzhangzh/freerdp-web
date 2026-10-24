@@ -361,11 +361,13 @@
       busy = true; renderVault();
       try { await unlockAndAdopt(); } finally { busy = false; render(); }
     },
-    // the connection's host and password, handed synchronously to consume and dropped after
-    use(consume) {
+    // the connection's host and password, handed synchronously to consume and dropped after;
+    // password: the one kept for Reconnect (app.js), instead of the vault or the form
+    use(password, consume) {
       const h = current(), t = target(h);
       if (!t) throw new Error(h.direct ? "Enter the RDP server first." : "Enter the gateway first.");
       const base = { host: t, username: h.user, extra: h.extra, direct: h.direct };
+      if (password !== null) { const host = { ...base, password }; try { return consume(host); } finally { host.password = ""; } }
       if (this.needsVault()) return vault.use(h.id, (e) => consume({ ...base, password: e.password }));
       const host = { ...base, password: $("pass").value };
       keepOffer(h, host.password);

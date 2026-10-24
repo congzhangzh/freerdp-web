@@ -22,6 +22,11 @@ the FreeRDP commit and this page's commit.
   passkey. **Remove** drops a passkey or the code. The record moves to format 2 (a list of
   keys, each wrapping the same data key); a format 1 vault opens as before and is rewritten at
   its next change.
+- **Reconnect without a passkey or a password**: a dropped connection comes back in the same
+  page, by FreeRDP's own retry (`+auto-reconnect`, on by default) and then the page's (a new
+  client after 2, 4, 8… s), with the password kept only in the page's memory. **Reconnect** on
+  the toolbar and on the end bar does it by hand. Needs the client linked with
+  `-sMODULARIZE`; an older client offers *Reload and connect*.
 
 ## 20261023.2
 

@@ -37,7 +37,7 @@ function fixture({search="", extra="", direct=true}={}) {
     session:{...FreeRDPOptions.DEFAULTS},vault:true,vaultSaved:true};
   context.FreeRDPHostsUI={selected:"saved-id",current:()=>current,update:()=>true,onSelect(){},prepare:async()=>{},
     check(){validateOptions(selected.extra);},
-    use(callback){if(locked)throw new Error("Vault locked");return callback({...selected});},lock(){locked=true;context.FreeRDPHostsUI.selected="";element("pass").value="";}};
+    use(password,callback){if(locked)throw new Error("Vault locked");return callback({...selected,...(password!==null?{password}:{})});},lock(){locked=true;context.FreeRDPHostsUI.selected="";element("pass").value="";}};
   vm.createContext(context);vm.runInContext(readFileSync(join(__dirname,"../app.js"),"utf8"),context);
   context.Module.callMain=args=>{calls.push([...args]);context.Module.print("runtime /p:bridge-secret");context.Module.print("runtime mentions bridge-secret");};
   return {context,elements,storage,calls,selected,get locked(){return locked;}};

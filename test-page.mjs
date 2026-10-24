@@ -281,7 +281,7 @@ await screenshot("page-settings.png");
 await ev("document.getElementById('go').click(), true");
 await sleep(4000);
 const cmd = logs.find((l) => l.startsWith("[page] sdl-freerdp ")) || "";
-check("the client gets the settings", cmd.endsWith(expected), cmd.slice(19));
+check("the client gets the settings", cmd.endsWith(expected + " +auto-reconnect"), cmd.slice(19));
 check("the password is masked in the log", cmd.includes("/p:***") && !logs.some((l) => l.includes("synthetic-password")));
 check("the password field is cleared", await ev("document.getElementById('pass').value") === "");
 check("the client tried to connect", logs.some((l) => /ERRCONNECT_|tcp-shim|WebSocket/.test(l)));

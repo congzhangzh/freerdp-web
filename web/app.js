@@ -9,12 +9,36 @@ const info = { started: 0, decoder: "–", transport: "–", server: "–" };
 // clipboard content.
 const CRASH_KEY = "freerdp-web-lastlog", CRASH_LINES = 300;
 const crash = { lines: [], running: false, userEnded: false, timer: 0 };
+const connLog = [];
 function crashStore(state, reason) {
   try {
     localStorage.setItem(CRASH_KEY, JSON.stringify({ state, reason: reason || "", time: Date.now(), lines: crash.lines }));
   } catch (e) {}
 }
 let sessionPassword = "";
+// ---- Reconnect, without a passkey prompt or a typed password. The session's password stays in
+// this page's memory only, encrypted under a key the page cannot read out (a non-extractable
+// CryptoKey); never in storage. Disconnect, another host, a failed logon or closing the page
+// drop it. Needs a modular client (above): an older one reloads, and Connect asks as usual.
+const again = (() => {
+  let kept = null;   // { hostId, key, iv, box }
+  return {
+    keep(hostId, password) {
+      kept = null;
+      const bytes = new TextEncoder().encode(password), iv = crypto.getRandomValues(new Uint8Array(12));
+      crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"])
+        .then(async (key) => { const box = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, bytes); kept = { hostId, key, iv, box }; })
+        .catch((e) => log("[page] reconnect password not kept: " + e.message)).finally(() => bytes.fill(0));
+    },
+    has(hostId) { return !!kept && kept.hostId === hostId; },
+    async take(hostId) {
+      if (!this.has(hostId)) return null;
+      const bytes = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: kept.iv }, kept.key, kept.box));
+      try { return new TextDecoder().decode(bytes); } finally { bytes.fill(0); }
+    },
+    forget() { kept = null; },
+  };
+})();
 const log = (s) => {
   s = String(s);
   if (sessionPassword) s = s.split(sessionPassword).join("***");
@@ -28,6 +52,9 @@ const log = (s) => {
   if (/The connection failed|ERRCONNECT_|tcp-shim\]/.test(s)) { $("logPanel").open = true; saveOffer.failed = true; }
   // the client is past the connection sequence (and, with NLA, the password was accepted)
   if (!saveOffer.due && /\[gdi_init_ex\]: Remote framebuffer format/.test(s)) { saveOffer.due = true; setTimeout(offerSave, 2000); }
+  // this connection's own log, for how it ended (crash.lines spans reconnections)
+  connLog.push(s); if (connLog.length > CRASH_LINES) connLog.shift();
+  if (/\[gdi_init_ex\]: Remote framebuffer format|client_auto_reconnect.*(succeeded|success)/i.test(s)) reconnected();
 };
 // "Save the password?" after connecting with a typed one (hosts-ui.js keeps it until answered)
 const saveOffer = { due: false, failed: false, timer: 0 };
@@ -90,7 +117,7 @@ function storeFields() {
 }
 for (const id of ["hostName", "host", "user", "extra"]) $(id).addEventListener("input", storeFields);
 $("fs").addEventListener("change", storeFields);
-HostsUI.onSelect((h, vaultOnly) => { if (vaultOnly) updateSummary(); else showHost(h); });
+HostsUI.onSelect((h, vaultOnly) => { if (vaultOnly) updateSummary(); else { again.forget(); showHost(h); } });
 const uiPrefs = (() => { try { return JSON.parse(localStorage.getItem("freerdp-web-ui") || "{}"); } catch (e) { return {}; } })();
 const saveUiPrefs = () => { try { localStorage.setItem("freerdp-web-ui", JSON.stringify(uiPrefs)); } catch (e) {} };
 function loadSettings() {
@@ -229,23 +256,31 @@ $("direct").addEventListener("change", () => {
   updateRoute(); updateSummary();
 });
 
-const autoconnect = loadSettings();
+let autoconnect = loadSettings();
 updateRoute();
 $("canvas").addEventListener("contextmenu", (e) => e.preventDefault());
 $("canvas").addEventListener("mousedown", () => $("canvas").focus());
 let runtimeReady = false, runtimeFailed = false, connectStarted = false;
 let resolveRuntime;
-const runtime = new Promise(resolve => { resolveRuntime = resolve; });
+let runtime = new Promise(resolve => { resolveRuntime = resolve; });
 const HOTKEY_DIR = "/config";
-var Module = {
+// One client per connection. A client linked with -sMODULARIZE defines createFreeRDP(): each call
+// is a new runtime (its own memory, threads and C globals), so Reconnect starts a fresh client in
+// this page. An older client runs once, from the global Module below; the next connection reloads.
+const modularClient = () => typeof window.createFreeRDP === "function";
+function moduleConfig() {
+  const m = {
   canvas: $("canvas"),
   // SDL listens for keys on the whole window and calls preventDefault(), which blocks typing in
   // the page's own input boxes. SDL reads hints from the environment: limit it to the canvas.
   // FreeRDP reads its hotkeys from $XDG_CONFIG_HOME/freerdp/sdl-freerdp.json; the C runtime
   // copies ENV into environ before main(), so this has to be set here (the file comes at connect)
-  preRun: [() => { Module.ENV.SDL_EMSCRIPTEN_KEYBOARD_ELEMENT = "#canvas"; Module.ENV.XDG_CONFIG_HOME = HOTKEY_DIR; }],
+  preRun: [() => { m.ENV.SDL_EMSCRIPTEN_KEYBOARD_ELEMENT = "#canvas"; m.ENV.XDG_CONFIG_HOME = HOTKEY_DIR; }],
   print: (t) => log(t),
   printErr: (t) => log(t),
+  // the server's clipboard, from the client's clipboard bridge (below)
+  freerdpClipboardWrite: (text) => clipboardWrite(text),
+  freerdpClipboardWriteImage: (bytes, isPng) => clipboardWriteImage(bytes, isPng),
   onRuntimeInitialized() {
     runtimeReady = true; resolveRuntime(true);
     $("go").disabled = false; $("go").textContent = "Connect"; status("ready");
@@ -254,17 +289,30 @@ var Module = {
       $("optMic").disabled = false; $("micNote").hidden = true;
       $("optMic").parentElement.title = "Send this browser's microphone to the remote session (the browser asks first)";
     }
-    if (autoconnect) connect();
+    if (autoconnect) { autoconnect = false; connect(); }   // the first client only
   },
   onExit(code) {
     status("exited: " + code); log("[page] exit code " + code); window.__freerdpExit = code;
     if (code !== 0) $("logPanel").open = true;   // show the reason
     // exit code 0 also follows a lost connection: look at the log, not only at the code
-    const lost = crash.lines.some((l) => /ERRCONNECT_|Network disconnect|\[tcp-shim\].*(Error|abort)/i.test(l));
+    const lost = connLog.some((l) => /ERRCONNECT_|Network disconnect|\[tcp-shim\].*(Error|abort)/i.test(l));
     crashEnd(!crash.userEnded && (code !== 0 || lost), code !== 0 ? "exit code " + code : lost ? "connection lost" : "");
+    setTimeout(() => sessionEnded(lost || code !== 0), 0);   // after this client's exit is done
   },
   onAbort(what) { runtimeFailed = true; resolveRuntime(false); HostsUI.lock(); log("[page] aborted: " + what); crashEnd(true, "wasm abort: " + what); },
-};
+  };
+  return m;
+}
+var Module = moduleConfig();   // an older client's script reads this global as it loads
+// a modular client: a new runtime, ready for the next connection (the first one at page load)
+function newClient() {
+  runtimeReady = false; runtimeFailed = false;
+  runtime = new Promise(resolve => { resolveRuntime = resolve; });
+  const config = Module = moduleConfig();
+  window.createFreeRDP(config).then((m) => { if (m && m !== config && Module === config) Module = m; },
+    (e) => config.onAbort(e?.message || e));
+}
+document.addEventListener("DOMContentLoaded", () => { if (modularClient()) newClient(); });
 function crashEnd(unexpected, reason) {
   clearInterval(crash.timer); crash.running = false;
   crashStore(unexpected ? "crashed" : "clean", reason);
@@ -590,10 +638,10 @@ const queueOut = (part) => {
   clip.out = Object.assign(clip.out || {}, part);
   clearTimeout(clip.outTimer); clip.outTimer = setTimeout(writeOut, 200);
 };
-Module.freerdpClipboardWrite = (text) => queueOut({ text });
+const clipboardWrite = (text) => queueOut({ text });
 // The server's image arrives as a CF_DIB, or as PNG when the server offers PNG only (e.g. GNOME
 // Remote Desktop for a PNG-only source); a PNG needs no conversion.
-Module.freerdpClipboardWriteImage = (bytes, isPng) =>
+const clipboardWriteImage = (bytes, isPng) =>
   (isPng ? Promise.resolve(new Blob([bytes], { type: "image/png" })) : dibToPng(bytes)).then((png) => queueOut({ png }),
     (e) => log("[page] clipboard image from server not decodable: " + e.message));
 let clipboardOn = true;   // Session settings: off means -clipboard, and the page bridge stays quiet
@@ -616,7 +664,7 @@ async function syncClipboard() {
   if (sig === clip.lastSig) return;
   let ptr = 0, len = 0;
   if (png) {
-    try { const dib = await blobToDib(png); len = dib.length; ptr = Module._malloc(len); HEAPU8.set(dib, ptr); }
+    try { const dib = await blobToDib(png); len = dib.length; ptr = Module._malloc(len); (Module.HEAPU8 ?? globalThis.HEAPU8).set(dib, ptr); }
     catch (e) { log("[page] clipboard image not decodable: " + e.message); }
   }
   const ok = Module.ccall("freerdp_web_clipboard_offer", "number", ["string", "number", "number"], [text || null, ptr, len]);
@@ -631,7 +679,8 @@ const toolbar = $("toolbar");
 const backToCanvas = () => setTimeout(() => $("canvas").focus(), 0);
 $("tbFs").onclick = () => { toggleFullscreen(); backToCanvas(); };
 $("tbLog").onclick = () => { const d = $("logPanel"); d.open = !d.open; backToCanvas(); };
-$("tbQuit").onclick = () => { crash.userEnded = true; if (crash.running) crashEnd(false, ""); location.reload(); };
+$("tbQuit").onclick = () => { crash.userEnded = true; again.forget(); if (crash.running) crashEnd(false, ""); location.reload(); };
+$("tbReconnect").onclick = () => { reconnect(); backToCanvas(); };
 // 📌 keeps the toolbar visible in full screen (remembered across sessions)
 const setPinned = (on) => { document.body.classList.toggle("tbpinned", on); $("tbPin").classList.toggle("on", on);
   $("tbPin").title = on ? "Unpin toolbar (auto-hide in full screen)" : "Pin toolbar (always visible)";
@@ -735,7 +784,9 @@ window.addEventListener("resize", placeToolbar); window.addEventListener("scroll
 const syncHeader = () => document.documentElement.style.setProperty("--hdr", document.querySelector("header").offsetHeight + "px");   // 0 when hidden
 window.addEventListener("resize", syncHeader); syncHeader();
 
-async function connect() {
+let audioContext = null;
+// again: a reconnection with the password kept in memory (no passkey, no typing)
+async function connect(againPassword = null) {
   if (connectStarted || runtimeFailed) return;
   try { HostsUI.check(); } catch (e) { status(e.message); return; }
   if (!storeFields()) { status("Fix the host's settings first."); return; }
@@ -751,10 +802,11 @@ async function connect() {
   // Audio: browsers only start an AudioContext from a user gesture, so create it here, before
   // any await; FreeRDP's Web Audio backend (rdpsnd "emscripten") plays through it.
   try {
-    Module.freerdpAudioContext ??= new AudioContext({ latencyHint: "interactive" });
-    Module.freerdpAudioContext.resume().catch(() => {});
+    audioContext ??= new AudioContext({ latencyHint: "interactive" });
+    audioContext.resume().catch(() => {});
+    Module.freerdpAudioContext = audioContext;
   } catch (e) { log("[page] no Web Audio: " + e.message); }
-  await HostsUI.prepare();   // the vault's passkey, if this host's password is there
+  if (againPassword === null) await HostsUI.prepare();   // the vault's passkey, if this host's password is there
   checkSelection();
   if (!await runtime) throw new Error("WebAssembly runtime unavailable.");
   checkSelection();
@@ -784,7 +836,7 @@ async function connect() {
   const even = (v) => Math.max(2, Math.round(v * dpr / 2) * 2);
   const size = `${even(r.width)}x${even(r.height)}`, scale = Math.round(dpr * 100);
   checkSelection();
-  HostsUI.use(host => {
+  HostsUI.use(againPassword, host => {
     if (host.direct && !window.directSocketsAvailable) throw new Error("This saved host needs Direct TCP. Install and open the isolated app.");
     const session = readSession();
     const resolved = { ...host, extra: FreeRDPOptions.resolve(session, host.extra).join(" ") };
@@ -793,22 +845,25 @@ async function connect() {
     clipboardOn = !args.some((a) => /^-clipboard$|^[/+]clipboard:(?:off|false)$/i.test(a));
     if (host.direct) {
       window.useDirectTcp(); log("[page] direct TCP via Direct Sockets (IWA), no gateway");
-    } else {
+    } else if (!window.WebSocket.counted) {
       const Base = window.WebSocket;
       window.WebSocket = class extends Base {
+        static counted = true;
         send(d) { window.freerdpNet.tx += d.byteLength ?? d.length ?? 0; super.send(d); }
         set onmessage(fn) { super.onmessage = e => { window.freerdpNet.rx += e.data.byteLength ?? 0; fn(e); }; }
         get onmessage() { return super.onmessage; }
       };
     }
+    trackSockets();
     sessionPassword = host.password;
+    if (modularClient()) again.keep(selectedId, host.password);
     info.started = Date.now(); info.server = host.host;
     info.transport = host.direct ? "direct TCP (IWA)" : "WebSocket gateway";
     $("go").disabled = true; status("connecting…");
     log("[page] sdl-freerdp " + args.map(a => a.startsWith("/p:") ? "/p:***" : a).join(" "));
     $("pass").value = "";
     placeToolbar(); $("logPanel").open = false; $("canvas").focus();
-    crash.running = true; crash.userEnded = false; crashStore("running");
+    crash.running = true; crash.userEnded = false; crashStore("running"); connLog.length = 0;
     crash.timer = setInterval(() => crashStore("running"), 5000);
     // callMain is one-shot. FreeRDP copies argv into its runtime settings; JS drops its copies.
     handedToWasm = true;
@@ -818,11 +873,69 @@ async function connect() {
     finally { args.fill(""); sessionPassword = ""; HostsUI.lock(); }
   });
   } catch (e) {
-    status(e.message); document.body.classList.remove("session"); syncHeader();
+    status(e.message);
+    if (againPassword === null) { document.body.classList.remove("session"); syncHeader(); }
     if (!handedToWasm) { connectStarted = false; $("go").disabled = !runtimeReady; }
+    if (againPassword !== null) showEnd("Not reconnected: " + e.message, true);
   }
-
 }
+
+window.addEventListener("pagehide", () => again.forget());
+// the client's sockets (gateway WebSocket or Direct TCP), closed by Reconnect while a session runs
+const sockets = new Set();
+function trackSockets() {
+  const Base = window.WebSocket;
+  if (Base.tracked) return;
+  window.WebSocket = class extends Base {
+    static tracked = true;
+    constructor(...a) { super(...a); sockets.add(this); }
+  };
+}
+// FreeRDP itself retries a dropped network (+auto-reconnect, vault.js) within the same client;
+// when that client gives up and ends, the page starts a new one: after 2, 4, 8… s, up to 8 times
+const retry = { count: 0, timer: 0, max: 8 };
+const LOGON_FAILED = /ERRCONNECT_(LOGON_FAILURE|WRONG_PASSWORD|ACCESS_DENIED|ACCOUNT_\w+|PASSWORD_\w+|NO_OR_MISSING_CREDENTIALS)|credentials do not work/;
+function showEnd(text, canReconnect) {
+  $("endText").textContent = text;
+  $("endReconnect").hidden = !canReconnect;
+  $("endReconnect").textContent = modularClient() && again.has(HostsUI.selected) ? "Reconnect" : "Reload and connect";
+  $("endBar").hidden = false;
+}
+function sessionEnded(unexpected) {
+  if (modularClient()) connectStarted = false;   // an older client runs once
+  if (crash.userEnded) return;
+  if (modularClient()) newClient();   // ready for Reconnect, while the bar says what happened
+  if (connLog.some((l) => LOGON_FAILED.test(l))) {
+    again.forget(); retry.count = 0;
+    showEnd("The server refused the password. Connect again with the right one.", false);
+    return;
+  }
+  const canAgain = modularClient() && again.has(HostsUI.selected);
+  if (unexpected && canAgain && retry.count < retry.max) {
+    const wait = Math.min(30, 2 ** ++retry.count);
+    showEnd(`Connection lost. Reconnecting in ${wait} s (try ${retry.count} of ${retry.max})…`, true);
+    retry.timer = setTimeout(() => reconnect(true), wait * 1000);
+    return;
+  }
+  showEnd(unexpected ? "Connection lost." : "The session ended.", true);
+}
+async function reconnect(automatic = false) {
+  clearTimeout(retry.timer);
+  if (!automatic) retry.count = 0;
+  if (!modularClient() || !again.has(HostsUI.selected)) { again.forget(); location.reload(); return; }
+  log("[page] reconnect" + (automatic ? ` (try ${retry.count})` : ""));
+  // a session that still runs, e.g. a network that hangs instead of failing: close its sockets;
+  // FreeRDP reconnects by itself, or ends and comes back here
+  if (crash.running) { for (const s of sockets) try { s.close(); } catch (e) { /* closed */ } sockets.clear(); return; }
+  $("endText").textContent = "Reconnecting…"; $("endReconnect").hidden = true;
+  const password = await again.take(HostsUI.selected);
+  await connect(password ?? "");
+  if (crash.running) { $("endBar").hidden = true; }
+}
+$("endReconnect").onclick = () => reconnect();
+$("endClose").onclick = () => { clearTimeout(retry.timer); again.forget(); location.reload(); };
+// a session that came back (FreeRDP's own reconnect, or a new client) resets the count
+const reconnected = () => { retry.count = 0; $("endBar").hidden = true; };
 
 // The last session ended unexpectedly: offer its log (copy, or show it in the log panel).
 (() => {

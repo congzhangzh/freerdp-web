@@ -97,6 +97,14 @@ The unlocked data key is a nonextractable `CryptoKey`. Every change persists a n
 
 The host bar's list (names, addresses, users, settings) lives in localStorage and never holds a password (`hosts.js`). Password query parameters are ignored and removed from the displayed URL; do not send passwords in URLs, since an initial request can already be retained by a server or browser history. Password arguments are masked in page logs, and the connection bridge clears its temporary argument array after handing it to WebAssembly.
 
+## Reconnect
+
+A session that drops comes back without a passkey prompt: the page keeps the password it
+connected with (from the vault or the form) in memory, encrypted under a non-extractable
+`CryptoKey`, and gives it to the next client in the same page. Never in storage; Disconnect,
+another host, a refused logon or closing the page drop it. See *Reconnect* in
+[`docs/webui-design.md`](../docs/webui-design.md).
+
 ## Export
 
 **Export…** writes the hosts to a file. **Include the passwords kept in the passkey vault**

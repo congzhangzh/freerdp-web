@@ -341,6 +341,9 @@
     const args = ["/v:" + value.host, "/u:" + value.username, "/p:" + value.password,
       "/cert:ignore", "/size:" + size, "/dynamic-resolution", ...value.extra.split(/\s+/).filter(Boolean)];
     if (!args.some(a => /^[/+-](sound|audio-mode)/.test(a))) args.push("/sound");
+    // a dropped network: FreeRDP reconnects by itself with the session's own credentials (every
+    // 5 s, 20 times by default), and the server gives back the same desktop; -auto-reconnect: off
+    if (!args.some(a => /^[/+-]auto-reconnect(?::|$)/i.test(a))) args.push("+auto-reconnect");
     const percent = Math.min(500, Math.round(scale));
     if (percent > 100 && !args.some(a => /^[/+-]scale(?:-desktop)?(?::|$)/i.test(a))) args.push("/scale-desktop:" + percent);
     return args;

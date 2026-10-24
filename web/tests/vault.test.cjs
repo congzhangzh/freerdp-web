@@ -216,3 +216,9 @@ test("a record this version cannot read is refused, not opened", async () => {
   for (const record of [{version:3}, {version:2,keys:[]}, {version:2,keys:[{kind:"code",salt:"AA==",iterations:1000,wrappedKey:{}}]}])
     await assert.rejects(new Vault(async()=>record,authenticator()).unlock(),/No supported vault/);
 });
+test("FreeRDP reconnects by itself after a dropped network, unless Extra options say otherwise", () => {
+  const args=extra=>connectionArgs({...host(),extra},"800x600").filter(a=>/auto-reconnect/.test(a));
+  assert.deepEqual(args(""),["+auto-reconnect"]);
+  assert.deepEqual(args("-auto-reconnect"),["-auto-reconnect"]);
+  assert.deepEqual(args("/auto-reconnect-max-retries:5"),["/auto-reconnect-max-retries:5","+auto-reconnect"]);
+});

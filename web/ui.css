@@ -186,12 +186,12 @@ body.fs.tbhide:not(.tbpinned):not(.captured) #tbGrip { display:block; }
   background:rgba(24,33,43,.92); color:#e3e9ef; font-size:13px; pointer-events:none; }
 /* after connecting: offer to keep the typed password in the passkey vault. It and the capture
    notice sit below the toolbar (--tbtop is 0 in full screen), never over its buttons */
-#saveBar { position:fixed; top:calc(var(--tbtop, 8px) + 52px); left:50%; transform:translateX(-50%); z-index:12;
+#saveBar, #endBar { position:fixed; top:calc(var(--tbtop, 8px) + 52px); left:50%; transform:translateX(-50%); z-index:12;
   display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; max-width:min(640px, calc(100vw - 32px)); padding:10px 14px;
   border-radius:8px; background:rgba(24,33,43,.95); color:#e3e9ef; font-size:13px; box-shadow:0 4px 16px rgba(0,0,0,.35); }
-#saveBar[hidden] { display:none; }
-#saveBar .row { display:flex; gap:6px; }
-#saveBar button:not(.primary) { background:#34404d; color:#fff; border-color:#4a5866; }
+#saveBar[hidden], #endBar[hidden] { display:none; }
+#saveBar .row, #endBar .row { display:flex; gap:6px; }
+#saveBar button:not(.primary), #endBar button:not(.primary) { background:#34404d; color:#fff; border-color:#4a5866; }
 #hotkeyToast { top:calc(var(--tbtop, 8px) + 96px); max-width:min(640px, calc(100vw - 32px)); text-align:center; }
 #hotkeyToast[hidden] { display:none; }
 #captureToast kbd { background:#34404d; color:#fff; border-color:#4a5866; }
