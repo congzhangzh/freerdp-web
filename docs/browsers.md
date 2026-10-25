@@ -16,10 +16,16 @@ today. Other browsers are what the code is written for, not yet run by CI.
 | `getUserMedia` | the microphone | no microphone. It needs a secure context: the published https page or `localhost` | Chrome |
 | The asynchronous Clipboard API (read and write) | copy and paste between this computer and the session | browsers guard clipboard reading differently: Chrome asks for permission; where reading is refused, text copied here does not reach the session, while copying from the session still works | Chrome |
 
-Not used yet, on purpose: **JSPI** (WebAssembly's JavaScript Promise Integration). A build
-with it is smaller (6.8 MB against 10.5 MB), but it is in Chrome only and does not yet
-reconnect correctly, so the client is built with Asyncify, which every browser with
-WebAssembly runs.
+Two builds of the client, one picked per browser: **JSPI** (WebAssembly's JavaScript Promise
+Integration) where the browser has it, **Asyncify** everywhere else. The client has to
+suspend itself while it waits (for the network, a dialog, a timer); Asyncify rewrites the
+whole program so it can, JSPI lets the browser do it, so the JSPI build is smaller (6.8 MB
+against 10.5 MB) and runs without the rewrite's overhead. `web/engine.js` loads `jspi/` when
+`WebAssembly.Suspending` exists (Chrome 137 and newer today; Firefox and Safari have it in
+their previews), and the session's **Info** panel names the build on its *Client build* line.
+`?engine=asyncify` or `?engine=jspi` forces one. JSPI used to hang after a network drop; the
+release kit's SDL pin fixed that (SDL's Emscripten windows, 3.4.18), and both builds pass the
+same tests.
 
 If a browser misses something not listed here, the page's log (the Log panel) shows the
 error; please open an issue with it and the browser's version.

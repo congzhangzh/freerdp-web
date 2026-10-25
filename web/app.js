@@ -312,7 +312,10 @@ function newClient() {
   window.createFreeRDP(config).then((m) => { if (m && m !== config && Module === config) Module = m; },
     (e) => config.onAbort(e?.message || e));
 }
-document.addEventListener("DOMContentLoaded", () => { if (modularClient()) newClient(); });
+// engine.js loads the client (the build this browser runs best) once the page's scripts have run
+document.addEventListener("DOMContentLoaded", () => (window.freerdpClient ?? Promise.resolve()).then(
+  () => { if (modularClient()) newClient(); },
+  (e) => { log("[page] " + e.message); status("the client did not load"); }));
 function crashEnd(unexpected, reason) {
   clearInterval(crash.timer); crash.running = false;
   crashStore(unexpected ? "crashed" : "clean", reason);
@@ -731,6 +734,7 @@ function updateInfo() {
         parts.push(`${names[i] ?? "codec " + i} ${rate.toFixed(0)}/s ${kb.toFixed(0)} kbit/s`);
       }
       return parts.join(" · ") || "no updates yet"; })()],
+    ["Client build", window.freerdpEngine ?? "–"],
     ["AV1 decoder", info.decoder],
     ["Audio codec", (() => {
       const a = Module._freerdp_web_audio_format?.(); if (!a) return "–";

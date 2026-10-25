@@ -16,10 +16,11 @@ V=$(python3 -c 'import json; print(json.load(open("web/.well-known/manifest.webm
 for d in dist dist-ubsan; do
   [ -d "$d" ] || continue
   cp -r web/. "$d/"
-  # cache-busting: the page loads the runtime as sdl-freerdp.js?v=<version> (workers inherit the URL)
-  sed -i "s|<script src=\"sdl-freerdp.js\"></script>|<script src=\"sdl-freerdp.js?v=$V\"></script>|" "$d/index.html"
+  # cache-busting: the page loads engine.js?v=<version>, which loads the runtime with the same
+  # query (workers inherit the URL)
+  sed -i "s|<script src=\"engine.js\"></script>|<script src=\"engine.js?v=$V\"></script>|" "$d/index.html"
   # precompressed copies for serve.py (rebuilt when the original is newer)
-  for f in "$d/sdl-freerdp.wasm" "$d/sdl-freerdp.js"; do
+  for f in "$d/sdl-freerdp.wasm" "$d/sdl-freerdp.js" "$d/jspi/sdl-freerdp.wasm" "$d/jspi/sdl-freerdp.js"; do
     [ -f "$f" ] && { [ "$f.gz" -nt "$f" ] || gzip -9 -k -f "$f"; }
   done
 done
