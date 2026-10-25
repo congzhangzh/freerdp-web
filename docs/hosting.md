@@ -70,6 +70,35 @@ and the login before the deploy checks that pair once more.
 
 Not every version needs a release: tag the ones the kit should carry.
 
+### Making a release, step by step
+
+1. **The version**, in one commit on main named `<YYYYMMDD>.<N>: <what changed>`: the new
+   `"version"` in `web/.well-known/manifest.webmanifest` (`<N>` counts that day's releases from
+   1), its section at the top of [`CHANGELOG.md`](../CHANGELOG.md) (for developers) and of
+   `web/release-notes.html` (for users, in plain words). Push; CI runs the unit tests.
+2. **The release**: an annotated tag on that commit and a GitHub Release with the CHANGELOG
+   section as its notes. Nothing is published yet.
+
+   ```sh
+   git tag -a 20261025.2 -m "FreeRDP Web 20261025.2" && git push origin 20261025.2
+   gh release create 20261025.2 --verify-tag --latest --title 20261025.2 -F notes.md
+   ```
+
+3. **The kit pins it**: in rdp-release-kit, the `freerdp_web` line of `sources.lock` gets the
+   version and the tag's commit (with `build/pins-table.sh --readme README.md` and a CHANGELOG
+   line), pushed to its main. Its CI builds the client with this page, logs in, and publishes
+   `web-<YYYYMMDD>.<N>-<kit commit>`; `./kit-release.sh <commit>` prints it once it is out.
+4. **Publish** the tag with that client:
+
+   ```sh
+   gh workflow run pages.yml --ref 20261025.2 -f publish=true
+   gh run watch "$(gh run list -w pages.yml -L 1 --json databaseId -q '.[0].databaseId')"
+   ```
+
+   `site` lays the page over the kit's client and runs `test-page.mjs`, `login` logs in from
+   exactly these files (Asyncify and JSPI), `deploy` publishes, `check` logs in from the live
+   site. If `login` fails, nothing is deployed and the site stays as it was.
+
 ## Publishing is a decision, never a side effect
 
 A push to main, a pull request or a release tag builds and tests the page, and does not
