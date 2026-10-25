@@ -2,8 +2,8 @@ import { connectTestSession } from "./test-connect.mjs";
 // Window resize test: shrink the viewport during a session, check canvas CSS box vs backing
 // size (aspect), and what resolution the server ends up with.
 import { spawn } from "node:child_process";
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const base = new URL(".chrome/", import.meta.url).pathname;
 const profile = mkdtempSync(join(base, "rs-"));
@@ -25,5 +25,7 @@ for (const [w, h] of [[900, 600], [600, 700], [500, 400]]) {
   await send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: 1, mobile: false });
   await sleep(4000); await state(`${w}x${h}:`.padEnd(12));
 }
-writeFileSync(process.argv[2] || "out/resize.png", Buffer.from((await send("Page.captureScreenshot", { format: "png" })).data, "base64"));
+const shotFile = process.argv[2] || "out/resize.png";
+mkdirSync(dirname(shotFile), { recursive: true });
+writeFileSync(shotFile, Buffer.from((await send("Page.captureScreenshot", { format: "png" })).data, "base64"));
 ws.close(); chrome.kill();

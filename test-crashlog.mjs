@@ -35,7 +35,8 @@ const restart = async () => { const t = await tab(); await t.send("Page.navigate
 
 // (1) renderer crash during a session
 let t = await tab(); await t.send("Page.navigate", { url: URL_ }); await connectTestSession(t.send).catch(e => { chrome.kill(); throw e; }); await sleep(14000);
-await t.send("Page.crash").catch(() => {}); t.close(); await sleep(1500);
+// Chrome (152) crashes the tab but never answers Page.crash: send it, don't wait for the reply
+t.send("Page.crash"); await sleep(1500); t.close(); await sleep(1500);
 t = await restart(); console.log("(1) after renderer crash:", await notice(t));
 await t.send("Runtime.evaluate", { expression: "document.getElementById('lastlogDismiss').click()" }); t.close();
 

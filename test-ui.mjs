@@ -2,9 +2,10 @@ import { connectTestSession } from "./test-connect.mjs";
 // UI test: page inputs editable during a session, remote typing, Right Alt + Right Shift + Enter full screen
 // with dynamic resolution. Uses the CI xrdp (websockify 6081). Usage: node test-ui.mjs <outdir>
 import { spawn } from "node:child_process";
-import { readdirSync, rmSync, mkdtempSync, writeFileSync } from "node:fs";
+import { readdirSync, rmSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 const out = process.argv[2] || ".";
+mkdirSync(out, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const base = new URL(".chrome/", import.meta.url).pathname;
 const profile = mkdtempSync(join(base, "ui-"));
