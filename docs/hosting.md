@@ -34,7 +34,7 @@ this repository publishes. Nothing is compiled here.
 
 Which client:
 
-- **latest** (a `v*` tag, and the default of a publication by hand): the kit's newest tested
+- **latest** (a release tag, and the default of a publication by hand): the kit's newest tested
   client, as [`site.sh`](../site.sh) does locally. A page release needs no kit run: about five
   minutes from the tag to the checked site. The `MANIFEST` names the client's pre-release and,
   on its last line, this page commit.
@@ -50,13 +50,14 @@ The Pages belong to this repository, which publishes them itself. The release ki
 choose page commits; it pins **freerdp-web releases**, so the page can move fast and the kit
 follows on its own schedule:
 
-1. A release is a version in `web/.well-known/manifest.webmanifest`, an annotated tag `vX.Y.Z`
+1. A release is a version in `web/.well-known/manifest.webmanifest`, an annotated tag of that
+   version, `<YYYYMMDD>.<N>` with no prefix (until 20261024.1 the tags were `v<version>`),
    on the commit that carries it, and a GitHub Release with its notes from
    [`CHANGELOG.md`](../CHANGELOG.md). The tag also publishes the site (above), with the kit's
    newest tested client.
 2. The kit's `sources.lock` names the release as version plus commit; its CI
-   (`build/check-release-pins.sh`) fails unless the tag `vX.Y.Z` exists and points to exactly
-   that commit. Its upstream check watches this repository's `v*` tags and opens an update
+   (`build/check-release-pins.sh`) fails unless the release's tag exists and points to exactly
+   that commit. Its upstream check watches this repository's release tags and opens an update
    issue for a new one.
 3. The kit builds and tests its client with that release and hands it over as a pre-release
    (`web-<YYYYMMDD>.<N>-<kit commit>`), which later publications take as their "latest" client.
@@ -68,11 +69,13 @@ Not every version needs a release: tag the ones the kit should carry.
 A push to main or a pull request builds and tests the page, and does not publish it. The site
 changes only:
 
-1. **by version**: pushing a `v*` tag publishes that tag's tested page; or
+1. **by version**: pushing a release tag publishes that tag's tested page; or
 2. **by hand**: *Run workflow* with **publish** ticked publishes the tested page of the chosen
    branch or tag (for example an older tag, to roll back).
 
-GitHub's `github-pages` environment allows `main` and the tag pattern `v*`.
+GitHub's `github-pages` environment allows `main` and the tag patterns `[0-9]*` (releases are
+named `<YYYYMMDD>.<N>`, no prefix, since 2026-10-25) and `v*` (the older releases, for a
+roll-back).
 
 ## Paths, caching and updates
 

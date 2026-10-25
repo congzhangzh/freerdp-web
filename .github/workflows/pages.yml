@@ -5,18 +5,20 @@ name: pages
 # SSH and websockify) and hands it over as its pre-release
 # web-<YYYYMMDD>.<N>-<kit commit> (titled with the page commit), published once and never replaced (kit-release.sh
 # finds it); this workflow builds nothing. A push or a pull request runs the page's own tests.
-# Publishing happens only on purpose, a v* tag or Run workflow with "publish":
+# Publishing happens only on purpose, a release tag (<YYYYMMDD>.<N>, no prefix; the
+# older v<...> tags still work) or Run workflow with "publish":
 # a tested client of the kit, this commit's page and the demo videos, checked
 # with test-page.mjs, deployed, then a login from the published page. The
 # client: the kit's newest tested client with this commit's page laid over it
-# ("latest", for a v* tag and by default by hand: a page release never waits for
+# ("latest", for a release tag and by default by hand: a page release never waits for
 # a kit run, as with site.sh), or, chosen by hand, the kit's build of this exact
 # commit ("exact"). The Pages are this repository's own; the kit pins this
-# repository's releases (v* tags with a GitHub Release), not the other way round.
+# repository's releases (tags with a GitHub Release), not the other way round.
 on:
   push:
     branches: [main]
-    tags: ['v*']
+    # a release, <YYYYMMDD>.<N>; the older ones were v<...>
+    tags: ['[0-9]*', 'v*']
   pull_request:
   workflow_dispatch:
     inputs:
@@ -25,7 +27,7 @@ on:
         type: boolean
         default: false
       client:
-        description: "The client: latest (the kit's newest tested one, fast; what a v* tag uses) or exact (the kit's build of this commit)"
+        description: "The client: latest (the kit's newest tested one, fast; what a release tag uses) or exact (the kit's build of this commit)"
         type: choice
         options: [latest, exact]
         default: latest
@@ -50,7 +52,7 @@ jobs:
         run: ./test-kit-release.sh
 
   site:
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.publish)
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.publish)
     needs: [test]
     runs-on: ubuntu-24.04
     outputs:
