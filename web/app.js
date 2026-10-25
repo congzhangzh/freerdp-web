@@ -555,8 +555,14 @@ for (const type of ["pointerlockchange", "webkitpointerlockchange"])
     } else { $("captureToast").hidden = true; showToolbar(); }
   }, true);
 window.addEventListener("pointerlockerror", () => log("[page] mouse capture refused by the browser"), true);
-// under the lock: the page's cursor position, then the event as SDL would have seen it there
-for (const type of ["mousemove", "mousedown", "mouseup"])
+// under the lock: the page's cursor position, then the event as SDL would have seen it there.
+// SDL 3.2 reads the mouse from mouse events, SDL 3.4 from pointer events (pointerType "mouse");
+// each ignores the other kind, so SDL gets both. The browser's own pointer events stay away from
+// SDL: under the lock they carry the frozen position (not cancelled, so the mouse events follow).
+const POINTER_TYPE = { mousemove: "pointermove", mousedown: "pointerdown", mouseup: "pointerup" };
+for (const type of Object.values(POINTER_TYPE))
+  window.addEventListener(type, (e) => { if (!synthetic && pointerLocked()) e.stopImmediatePropagation(); }, true);
+for (const type of Object.keys(POINTER_TYPE))
   window.addEventListener(type, (e) => {
     if (synthetic || !pointerLocked()) return;
     e.stopImmediatePropagation(); e.preventDefault();
@@ -566,9 +572,11 @@ for (const type of ["mousemove", "mousedown", "mouseup"])
       cap.y = Math.min(Math.max(cap.y + e.movementY, 0), r.height - 1);
       drawCursor();
     }
-    dispatchToSdl(new MouseEvent(type, { bubbles: true, cancelable: true, clientX: r.left + cap.x, clientY: r.top + cap.y,
+    const init = { bubbles: true, cancelable: true, clientX: r.left + cap.x, clientY: r.top + cap.y,
       screenX: r.left + cap.x, screenY: r.top + cap.y, movementX: e.movementX, movementY: e.movementY,
-      button: e.button, buttons: e.buttons, ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey }));
+      button: e.button, buttons: e.buttons, ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey };
+    dispatchToSdl(new PointerEvent(POINTER_TYPE[type], { ...init, pointerId: 1, pointerType: "mouse", isPrimary: true }));
+    dispatchToSdl(new MouseEvent(type, init));
   }, true);
 // in full screen, a click on the remote desktop captures (the click still reaches it)
 window.addEventListener("mousedown", (e) => {
