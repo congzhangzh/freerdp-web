@@ -11,6 +11,21 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 20261025.2
+
+- **The client is FreeRDP master of 23 October** (`b2403bb99`), as the release kit's FreeRDP
+  `release-20261025.1`: upstream merged four of the page's pull requests (Web Audio sound
+  #13732, H.264 through WebCodecs #13812, and their JavaScript as `.js` libraries #13838,
+  #13839), so the client carries two of its own now, the browser clipboard (#13733) and the
+  Web Audio microphone (#13811). Among the upstream changes: the bitmap codec's null pointer
+  arithmetic fixed, `RDPGFX_CAPVERSION_115` updated. The native clients of the kit build the
+  same FreeRDP, which has the Opus microphone fix (#13810) that 3.32.2 lacks.
+- **Published only after a login from the very files going live**: a release tag no longer
+  publishes the site; it is published by hand from the tag, with the kit's client built for
+  this page, and the new `login` job logs in from exactly those files (Asyncify and JSPI)
+  before the deploy ([docs/hosting.md](docs/hosting.md), "Making a release, step by step").
+  This is the first release published that way.
+
 ## 20261025.1
 
 - **JSPI where the browser has it**: the release kit now links the client twice, with
