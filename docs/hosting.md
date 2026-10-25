@@ -30,19 +30,19 @@ this repository publishes. Nothing is compiled here.
 |---|---|
 | the kit, on each push | builds the WebAssembly client with the freerdp-web release pinned in its `sources.lock` (a version and its commit), logs in from a browser to xrdp over SSH and websockify, and hands the tested client over as its pre-release `web-<YYYYMMDD>.<N>-<kit commit>` (its title names the page commit), with the xrdp packages; published once, never replaced |
 | here, on each push or pull request | the page's unit tests (Node) |
-| here, on publication | takes a tested client of the kit (below), lays this commit's page over it, adds the demo videos: the kit's newest `demo-*` pre-release, recorded in its CI with its newest tested client and xrdp preview, each file checked against its `SHA256SUMS` ([`fetch-media.sh`](../fetch-media.sh); [`media.json`](../media.json)'s pinned set when the kit has none), runs `test-page.mjs` on exactly these files, deploys, then logs in from the published page with that pre-release's kit test and xrdp packages |
+| here, on publication | takes a tested client of the kit (below), lays this commit's page over it, adds the demo videos: the kit's newest `demo-*` pre-release, recorded in its CI with its newest tested client and xrdp preview, each file checked against its `SHA256SUMS` ([`fetch-media.sh`](../fetch-media.sh); [`media.json`](../media.json)'s pinned set when the kit has none), runs `test-page.mjs` on exactly these files, logs in from them with that pre-release's kit test and xrdp packages (`kit-test.sh`; once with the Asyncify build, once with JSPI), and only then deploys; then logs in again from the published page |
 
 Which client:
 
-- **latest** (a release tag, and the default of a publication by hand): the kit's newest tested
-  client, as [`site.sh`](../site.sh) does locally. A page release needs no kit run: about five
-  minutes from the tag to the checked site. The `MANIFEST` names the client's pre-release and,
-  on its last line, this page commit.
-- **exact** (chosen by hand only): the client the kit built and tested with this very
+- **exact** (the default): the client the kit built and tested with this very
   commit: the kit's newest build of it, `web-<YYYYMMDD>.<N>-<kit commit>` titled with it (before 21 October 2026 `web-<commit>-<kit commit>`; from before the kit froze
   its pre-releases, `web-<commit>`), found by [`kit-release.sh`](../kit-release.sh),
-  SHA-256 checked; its `MANIFEST` must name the commit. Pin the commit in the kit's `sources.lock`
-  first; a commit the kit has not built cannot be published this way.
+  SHA-256 checked; its `MANIFEST` must name the commit. The kit builds a page once it pins
+  its release; a release the kit has not built cannot be published this way.
+- **latest** (chosen by hand): the kit's newest tested client with this page laid over it, as
+  [`site.sh`](../site.sh) does locally; for a roll-back to an old page the kit never built. The
+  `MANIFEST` names the client's pre-release and, on its last line, this page commit. The login
+  before the deploy still has to pass with that pair.
 
 ## Releases, and what the kit pins
 
@@ -53,25 +53,38 @@ follows on its own schedule:
 1. A release is a version in `web/.well-known/manifest.webmanifest`, an annotated tag of that
    version, `<YYYYMMDD>.<N>` with no prefix (until 20261024.1 the tags were `v<version>`),
    on the commit that carries it, and a GitHub Release with its notes from
-   [`CHANGELOG.md`](../CHANGELOG.md). The tag also publishes the site (above), with the kit's
-   newest tested client.
+   [`CHANGELOG.md`](../CHANGELOG.md). The tag publishes nothing: it is the release the kit
+   pins (since 2026-10-25; before, a tag also published the site).
 2. The kit's `sources.lock` names the release as version plus commit; its CI
    (`build/check-release-pins.sh`) fails unless the release's tag exists and points to exactly
    that commit. Its upstream check watches this repository's release tags and opens an update
    issue for a new one.
 3. The kit builds and tests its client with that release and hands it over as a pre-release
-   (`web-<YYYYMMDD>.<N>-<kit commit>`), which later publications take as their "latest" client.
+   (`web-<YYYYMMDD>.<N>-<kit commit>`), titled with the page commit.
+4. Then the site is published from the tag, with that client ("exact", below).
+
+So a page change and a kit change that need each other go: page on main → tag (the release;
+the site is untouched) → the kit pins it, with its own change → the kit's pre-release, built and
+tested with that page → publish the tag. The site only ever gets a pair the kit tested together,
+and the login before the deploy checks that pair once more.
 
 Not every version needs a release: tag the ones the kit should carry.
 
 ## Publishing is a decision, never a side effect
 
-A push to main or a pull request builds and tests the page, and does not publish it. The site
-changes only:
+A push to main, a pull request or a release tag builds and tests the page, and does not
+publish it. The site changes only by hand: *Run workflow* with **Use workflow from** set to a
+release tag and **publish** ticked:
 
-1. **by version**: pushing a release tag publishes that tag's tested page; or
-2. **by hand**: *Run workflow* with **publish** ticked publishes the tested page of the chosen
-   branch or tag (for example an older tag, to roll back).
+```sh
+gh workflow run pages.yml --ref 20261025.1 -f publish=true              # client: exact
+gh workflow run pages.yml --ref 20261024.1 -f publish=true -f client=latest   # a roll-back
+```
+
+A run on a branch is refused: what goes live is always a release. Before the deploy, the
+`login` job logs in with the kit's test against exactly the files going live, with each build
+of the client (Asyncify, JSPI); a pair that starts but cannot log in fails there, and the site
+stays as it was. After the deploy, `check` logs in again from the published page.
 
 GitHub's `github-pages` environment allows `main` and the tag patterns `[0-9]*` (releases are
 named `<YYYYMMDD>.<N>`, no prefix, since 2026-10-25) and `v*` (the older releases, for a

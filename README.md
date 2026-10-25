@@ -56,7 +56,7 @@ through a WebSocket gateway, [websockify](https://github.com/novnc/websockify).
 ## The page
 
 It runs at **https://congzhangzh.github.io/freerdp-web/**, published from this repository
-only on purpose (a release tag, `<YYYYMMDD>.<N>`, or *Run workflow* with **publish**): [docs/hosting.md](docs/hosting.md).
+only on purpose (*Run workflow* on a release tag, `<YYYYMMDD>.<N>`, with **publish**), after a login from the very files going live: [docs/hosting.md](docs/hosting.md).
 The site is this repository's own; the [release kit](https://github.com/congzhangzh/rdp-release-kit)
 pins this repository's releases (tags with a GitHub Release) for the client it builds.
 Which browser features the page needs, and what stops working without each:

@@ -5,32 +5,32 @@ name: pages
 # SSH and websockify) and hands it over as its pre-release
 # web-<YYYYMMDD>.<N>-<kit commit> (titled with the page commit), published once and never replaced (kit-release.sh
 # finds it); this workflow builds nothing. A push or a pull request runs the page's own tests.
-# Publishing happens only on purpose, a release tag (<YYYYMMDD>.<N>, no prefix; the
-# older v<...> tags still work) or Run workflow with "publish":
-# a tested client of the kit, this commit's page and the demo videos, checked
-# with test-page.mjs, deployed, then a login from the published page. The
-# client: the kit's newest tested client with this commit's page laid over it
-# ("latest", for a release tag and by default by hand: a page release never waits for
-# a kit run, as with site.sh), or, chosen by hand, the kit's build of this exact
-# commit ("exact"). The Pages are this repository's own; the kit pins this
-# repository's releases (tags with a GitHub Release), not the other way round.
+# A release tag (<YYYYMMDD>.<N>, no prefix) is the release the kit pins, and publishes
+# nothing by itself. Publishing is its own decision: Run workflow on a tag with
+# "publish", once the kit has built and tested that tag's page. A tested client of
+# the kit, this commit's page and the demo videos, checked with test-page.mjs, then a
+# login with the kit's own test against exactly these files (Asyncify and JSPI): only
+# then deployed, and logged in to again from the published page. The client: the
+# kit's build of this exact commit ("exact", the default) or its newest tested
+# client with this commit's page laid over it ("latest", as site.sh does; for a
+# roll-back to a page the kit never built). The Pages are this repository's own; the
+# kit pins this repository's releases (tags with a GitHub Release), not the other way round.
 on:
+  # a release tag runs nothing here: it is what the kit pins, and publishing is by hand
   push:
     branches: [main]
-    # a release, <YYYYMMDD>.<N>; the older ones were v<...>
-    tags: ['[0-9]*', 'v*']
   pull_request:
   workflow_dispatch:
     inputs:
       publish:
-        description: Publish this commit's page on GitHub Pages
+        description: Publish this tag's page on GitHub Pages (a release tag only)
         type: boolean
         default: false
       client:
-        description: "The client: latest (the kit's newest tested one, fast; what a release tag uses) or exact (the kit's build of this commit)"
+        description: "The client: exact (the kit's build of this commit, tested with this page) or latest (the kit's newest, this page laid over it)"
         type: choice
-        options: [latest, exact]
-        default: latest
+        options: [exact, latest]
+        default: exact
 
 permissions:
   contents: read
@@ -52,12 +52,18 @@ jobs:
         run: ./test-kit-release.sh
 
   site:
-    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.publish)
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
     needs: [test]
     runs-on: ubuntu-24.04
     outputs:
       client: ${{ steps.client.outputs.tag }}
     steps:
+      # what goes live is a release: a tag the kit can pin, never a branch's tip
+      - name: Only a release tag is published
+        if: github.ref_type != 'tag'
+        run: |
+          echo "publish runs on a release tag (<YYYYMMDD>.<N>), not on $GITHUB_REF: Run workflow with \"Use workflow from\" set to the tag" >&2
+          exit 1
       - uses: actions/checkout@v7
 
       # the kit's newest tested client, this commit's page over it, the videos (site.sh)
@@ -113,8 +119,48 @@ jobs:
           path: out/
           if-no-files-found: ignore
 
-  deploy:
+  # Logs in with the kit's own test against exactly the files going live, served here
+  # without COOP/COEP (as GitHub Pages), with each build of the client: a page and a
+  # client that start but do not log in never reach the site
+  login:
     needs: [site]
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [asyncify, jspi]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: page
+      - name: The files going live
+        uses: actions/download-artifact@v8
+        with:
+          name: github-pages
+          path: pages
+      - run: mkdir site && tar -xf pages/artifact.tar -C site
+      - name: The kit's test, at the commit that built the client, and its xrdp packages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: page/kit-test.sh "${{ needs.site.outputs.client }}" kit
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      # setup-uv publishes no vN alias any more: pinned by commit
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - name: Log in from these files (${{ matrix.engine }})
+        run: WASM_ENGINE=${{ matrix.engine }} kit/test/wasm-session.sh "$PWD/site" page/rdp-gateway.sh
+      - name: Keep the logs and screenshot
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-login-${{ matrix.engine }}
+          path: kit/dist/test/
+          if-no-files-found: ignore
+          retention-days: 3
+
+  deploy:
+    needs: [site, login]
     runs-on: ubuntu-24.04
     permissions:
       pages: write
@@ -143,17 +189,8 @@ jobs:
 
       - name: The kit's test, at the commit that built the client, and its xrdp packages
         env:
-          tag: ${{ needs.site.outputs.client }}
-        run: |
-          base=https://github.com/$KIT/releases/download/$tag
-          kit=$(curl -fsSL "$base/KIT_COMMIT")
-          git clone -q "https://github.com/$KIT.git" kit
-          git -C kit -c advice.detachedHead=false checkout -q "$kit"
-          mkdir -p kit/dist/xrdp/debian-13
-          for name in $(curl -fsSL "https://api.github.com/repos/$KIT/releases/tags/$tag" | python3 -c 'import json,sys; print(" ".join(a["name"] for a in json.load(sys.stdin)["assets"] if a["name"].endswith(".deb")))'); do
-            curl -fsSL -o "kit/dist/xrdp/debian-13/$name" "$base/$name"
-          done
-          ls kit/dist/xrdp/debian-13
+          GH_TOKEN: ${{ github.token }}
+        run: page/kit-test.sh "${{ needs.site.outputs.client }}" kit
 
       - uses: actions/setup-node@v7
         with:
