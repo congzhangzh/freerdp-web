@@ -11,6 +11,20 @@ client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
 
+## 20261025.1
+
+- **JSPI where the browser has it**: the release kit now links the client twice, with
+  Asyncify and with JSPI (WebAssembly's JavaScript Promise Integration, `jspi/`, 6.9 MB
+  against 10.6 MB, no Asyncify rewrite). `web/engine.js` loads the JSPI build when
+  `WebAssembly.Suspending` exists (Chrome 137+), Asyncify everywhere else; `?engine=jspi` or
+  `?engine=asyncify` forces one, and Info names it (*Client build*). JSPI's hang after a
+  network drop is gone with the kit's SDL pin.
+- **Capture with SDL 3.4**: the kit's client moves to SDL 3.4.18, which reads the mouse from
+  pointer events. Under Capture the page sent only mouse events, so the remote pointer stood
+  still; it now sends a pointer event (`pointerType: "mouse"`) with each, and swallows the
+  browser's own pointer events while the pointer is locked. SDL 3.2 ignores mouse-type pointer
+  events, so this works with either.
+
 ## 20261024.1
 
 - **One vault, several passkeys**: **Add a passkey** makes another key for the same passkey
