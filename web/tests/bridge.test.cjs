@@ -6,6 +6,7 @@ const vm = require("node:vm");
 const {connectionArgs,validateOptions} = require("../vault.js");
 const FreeRDPOptions = require("../options.js");
 const FreeRDPKeyboard = require("../keyboard.js");
+const FreeRDPScreens = require("../screens.js");
 function fixture({search="", extra="", direct=true}={}) {
   const elements=new Map(), storage=new Map(), calls=[], classes=new Set();
   const classList={add:k=>classes.add(k),remove:k=>classes.delete(k),contains:k=>classes.has(k),toggle:(k,on)=>on?classes.add(k):classes.delete(k)};
@@ -27,7 +28,7 @@ function fixture({search="", extra="", direct=true}={}) {
     document:{getElementById:element,querySelector:element,querySelectorAll:()=>[],exitFullscreen:()=>Promise.resolve(),
       addEventListener(){},body:{classList},documentElement:element("root")},
     AudioContext:function(){this.resume=()=>Promise.resolve();},
-    FreeRDPVault:{connectionArgs,validateOptions},FreeRDPOptions,FreeRDPKeyboard,
+    FreeRDPVault:{connectionArgs,validateOptions},FreeRDPOptions,FreeRDPKeyboard,FreeRDPScreens,screen:{},
     WebSocket:class{},directSocketsAvailable:direct,addEventListener(){},useDirectTcp(){context.usedDirect=true;},
   };
   context.window=context;

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- the same cross-origin isolation as the page, or the browser would cut this window off from it -->
+<script src="coi-serviceworker.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FreeRDP Web: screen</title>
+<link rel="icon" href="icon-256.png" type="image/png">
+<style>
+  html, body { margin:0; height:100%; background:#000; overflow:hidden; }
+  #view { display:block; width:100vw; height:100vh; outline:none; }
+  #hint { position:fixed; top:12px; left:50%; transform:translateX(-50%); margin:0; padding:6px 12px;
+    font:13px system-ui, sans-serif; color:#fff; background:#34404dcc; border-radius:4px; pointer-events:none; }
+</style>
+</head>
+<body>
+<canvas id="view" tabindex="-1"></canvas>
+<p id="hint">Click to fill this screen with the remote desktop</p>
+<script src="screens.js"></script>
+<script src="screen.js"></script>
+</body>
+</html>

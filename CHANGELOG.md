@@ -15,6 +15,19 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261026.1
+
+- **All screens**: a new toolbar button spreads the remote desktop over every screen of this
+  computer, as one desktop as wide as the screens side by side (mstsc's `/span`). Through the
+  Window Management API (Chrome, Edge; the button shows where the browser sees more than one
+  screen) this window goes full screen on its own screen and opens `screen.html` on each other
+  one; the canvas grows to the screens' bounding box, so `/dynamic-resolution` resizes the
+  remote desktop, and each window copies its part of the canvas and hands its mouse and keys
+  back to SDL. **One screen**, leaving full screen or closing a window goes back. The server
+  sees one large monitor, not several ([docs/webui-design.md](docs/webui-design.md), "All
+  screens"). Where the page sees several screens at load, the canvas keeps its WebGL drawing
+  buffer, so the other windows can read it. The IWA manifest allows `window-management`.
+
 ## 20261025.2
 
 - **The client is FreeRDP master of 23 October** (`b2403bb99`), as the release kit's FreeRDP

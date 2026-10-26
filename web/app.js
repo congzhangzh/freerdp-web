@@ -336,9 +336,9 @@ for (const name of ["requestFullscreen", "webkitRequestFullscreen"]) {
   if (HTMLCanvasElement.prototype[name] || Element.prototype[name])
     HTMLCanvasElement.prototype[name] = function () { return Promise.resolve(); };   // the page did it already
 }
-async function enterFullscreen() {
+async function enterFullscreen(screen) {   // screen: a ScreenDetailed, for All screens (below)
   try {
-    await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+    await document.documentElement.requestFullscreen({ navigationUI: "hide", ...(screen && { screen }) });
   } catch (e) {
     log("[page] full screen refused: " + e.message);
     return false;
@@ -367,7 +367,10 @@ function toggleFullscreen() {
 for (const type of ["fullscreenchange", "webkitfullscreenchange"])
   window.addEventListener(type, (e) => { e.stopImmediatePropagation(); if (type === "fullscreenchange") onFullscreenChange(); }, true);
 function onFullscreenChange() {
-  if (!document.fullscreenElement) { document.body.classList.remove("fs"); kbLocked = false; syncCaptured(); log("[page] left full screen"); }
+  if (!document.fullscreenElement) {
+    document.body.classList.remove("fs"); kbLocked = false; syncCaptured(); log("[page] left full screen");
+    if (multiOn() && !screensSpec) screensOff();   // the canvas spans the screens from this one's full screen
+  }
   $("tbFs").textContent = document.fullscreenElement ? "Window" : "Full screen";
   document.body.classList.toggle("tbhide", !!document.fullscreenElement);
   // The browser fires "resize" before or after "fullscreenchange" (macOS: after), so measure
@@ -700,6 +703,143 @@ let pinned0 = false; try { pinned0 = localStorage.getItem("freerdp-web-tbpinned"
 setPinned(pinned0);
 $("tbPin").onclick = () => { setPinned(!document.body.classList.contains("tbpinned")); backToCanvas(); };
 $("tbInfo").onclick = () => { $("info").hidden = !$("info").hidden; updateInfo(); backToCanvas(); };
+
+// ---- All screens: the remote desktop across every screen (screens.js has the geometry). The
+// Window Management API (Chrome, Edge) lists the screens and places windows on them: this window
+// goes full screen on its own screen and opens a window on each other one (screen.html), which
+// shows its part of the canvas and hands its mouse and keys back here. The canvas spans all of
+// them, so SDL follows its size and /dynamic-resolution makes the remote desktop that large.
+// Those windows copy the canvas with drawImage(). SDL draws with WebGL, whose canvas reads back
+// empty outside the frame that drew it unless the context keeps its drawing buffer
+// (preserveDrawingBuffer), so the page asks for that where the browser sees more than one screen
+// when it loads; one screen costs nothing. A window copies its part when the canvas's capture
+// stream has a new frame, i.e. when SDL presented one: an idle desktop costs nothing either. The
+// stream alone would not do: it has no frame for a canvas that is not drawn again, so a window
+// opened on an idle desktop would stay black. (A screen connected after the page loaded: its
+// window shows the stream's frames, and a part of the desktop only once it changes.)
+// The browser allows one new window per click, so more than two screens can take more clicks.
+// ?screens=WxH+X+Y,… sets the screens by hand (tests), this window on the first, no full screen.
+const screensSpec = FreeRDPScreens.parse(new URLSearchParams(location.search).get("screens"));
+const multi = { screens: null, cur: 0, box: null, wins: new Map(), details: null, poll: 0, toast: 0, stream: null, resends: 0 };
+const multiOn = () => !!multi.box;
+const screensReadable = !!screensSpec || !!window.screen.isExtended;
+if (screensReadable) {
+  const getContext = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (type, attrs) {
+    if (this.id === "canvas" && /^webgl/.test(type)) attrs = { ...attrs, preserveDrawingBuffer: true };
+    return getContext.call(this, type, attrs);
+  };
+}
+const screensWaiting = () => multiOn() && multi.screens.some((s, i) => i !== multi.cur && !multi.wins.has(i));
+function showScreensButton() {
+  $("tbScreens").hidden = !screensSpec && !(window.screen.isExtended && "getScreenDetails" in window) && !multiOn();
+  $("tbScreens").textContent = !multiOn() ? "All screens" : screensWaiting() ? "Next screen" : "One screen";
+}
+window.screen.addEventListener?.("change", showScreensButton); showScreensButton();
+function screensSay(text) {
+  log("[page] " + text);
+  clearTimeout(multi.toast); $("screensToast").textContent = text; $("screensToast").hidden = false;
+  multi.toast = setTimeout(() => { $("screensToast").hidden = true; }, 6000);
+}
+async function screensOn() {
+  if (!multi.screens) {
+    if (screensSpec) multi.screens = screensSpec;
+    else {
+      try { multi.details ??= await window.getScreenDetails(); }
+      catch (e) { screensSay("The other screens are not available: " + e.message); return; }
+      const d = multi.details;
+      multi.screens = d.screens.map((s) => ({ left: s.left, top: s.top, width: s.width, height: s.height, label: s.label || "Screen", screen: s }));
+      multi.cur = d.screens.indexOf(d.currentScreen);
+      d.onscreenschange = () => { if (multiOn()) { screensOff(); screensSay("The screens changed: the remote desktop is back on this one."); } };
+    }
+    if (multi.screens.length < 2) { multi.screens = null; screensSay("Only one screen is connected."); return; }
+  }
+  // the permission prompt may have used up the click: full screen then asks for another one
+  if (!screensSpec && !document.fullscreenElement && !await enterFullscreen(multi.screens[multi.cur].screen)) {
+    multi.screens = null; screensSay("Full screen needs a click: click All screens again."); return;
+  }
+  const s = multi.screens.find((x, i) => i !== multi.cur && !multi.wins.has(i)), i = multi.screens.indexOf(s);
+  if (!s) return;
+  const at = s.screen ? [s.screen.availLeft, s.screen.availTop, s.screen.availWidth, s.screen.availHeight] : [s.left, s.top, s.width, s.height];
+  const w = window.open("screen.html#" + i, "freerdp-screen-" + i, `popup,left=${at[0]},top=${at[1]},width=${at[2]},height=${at[3]}`);
+  if (!w) {   // the click went to the permission prompt or to full screen, or pop-ups are blocked
+    screensSay(`The browser did not open the window for ${s.label}: click ${multiOn() ? "Next screen" : "All screens"} again, or allow pop-ups for this site.`);
+    if (!multiOn()) multi.screens = null;
+    return;
+  }
+  multi.wins.set(i, w);
+  clearInterval(multi.poll); multi.poll = setInterval(screensCheck, 500);
+  screensLayout();
+  screensSay(screensWaiting() ? `${s.label}: click it to fill it. Click Next screen for the next one.` : `${s.label}: click it to fill it with the remote desktop.`);
+}
+// A window closed: the desktop shrinks to the rest. SDL takes the canvas's size only once FreeRDP
+// made its window resizable (when the display channel is up), and a resize event before that is
+// lost: send another until the canvas has the size it is shown at, 10 at most (each one clears
+// the canvas; SDL keeps the window's size for a window it holds full screen itself).
+function screensCheck() {
+  if ([...multi.wins.values()].some((w) => w.closed)) { screensLayout(); return; }
+  const c = $("canvas"), r = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  if (!document.body.classList.contains("session") || (Math.abs(r.width * dpr - c.width) <= 2 && Math.abs(r.height * dpr - c.height) <= 2)) return;
+  if (++multi.resends <= 10) window.dispatchEvent(new Event("resize"));
+  else if (multi.resends === 11) log(`[page] screens: the client keeps its picture at ${c.width} × ${c.height}, not ${Math.round(r.width * dpr)} × ${Math.round(r.height * dpr)}`);
+}
+function screensLayout() {
+  for (const [i, w] of multi.wins) if (w.closed) multi.wins.delete(i);
+  if (!multi.wins.size) { screensOff(); return; }
+  multi.box = FreeRDPScreens.box([multi.cur, ...multi.wins.keys()].map((i) => multi.screens[i]));
+  const p = FreeRDPScreens.place(multi.screens[multi.cur], multi.box), st = document.documentElement.style;
+  for (const k of ["left", "top", "width", "height"]) st.setProperty("--m" + k, p[k] + "px");
+  document.body.classList.add("multi"); multi.resends = 0;
+  log(`[page] screens: ${multi.wins.size + 1} in use, the remote desktop spans ${multi.box.width} × ${multi.box.height} (CSS pixels)`);
+  screensResized();
+}
+function screensOff() {
+  clearInterval(multi.poll);
+  for (const w of multi.wins.values()) try { w.close(); } catch (e) { /* closed */ }
+  const was = multiOn();
+  multi.wins.clear(); multi.box = null; multi.screens = null;
+  multi.stream?.getTracks().forEach((t) => t.stop()); multi.stream = null;
+  document.body.classList.remove("multi");
+  if (was) { log("[page] screens: back to one"); screensResized(); }
+}
+// SDL measures the canvas on a resize event; the disp channel sends the new layout after that
+function screensResized() { showScreensButton(); requestAnimationFrame(() => { placeToolbar(); window.dispatchEvent(new Event("resize")); }); }
+$("tbScreens").onclick = () => { if (multiOn() && !screensWaiting()) screensOff(); else screensOn(); backToCanvas(); };
+window.addEventListener("pagehide", screensOff);
+// what the windows on the other screens use (screen.js)
+window.freerdpScreens = {
+  // what window n shows: the canvas (readable: it keeps its drawing buffer), its stream, its part
+  // of it (canvas pixels) and the remote pointer's image; null once it is no longer part of the
+  // desktop, and the window closes
+  view(n) {
+    if (!multiOn() || !multi.wins.has(n)) return null;
+    const c = $("canvas"), s = multi.screens[n];
+    multi.stream ??= c.captureStream();
+    return { canvas: c, readable: screensReadable, stream: multi.stream, cursor: c.style.cursor, label: s.label, ...FreeRDPScreens.slice(s, multi.box, c.width, c.height) };
+  },
+  // a mouse event (at fx, fy: fractions of its screen) or a key event of window n, to SDL
+  input(n, type, init) {
+    if (!multiOn() || !multi.wins.has(n) || !document.body.classList.contains("session")) return;
+    if (type === "keydown" || type === "keyup") { dispatchToSdl(new KeyboardEvent(type, { bubbles: true, cancelable: true, ...init })); return; }
+    const { x, y } = FreeRDPScreens.toCanvas(init, multi.screens[n], multi.box, $("canvas").getBoundingClientRect());
+    const ev = { bubbles: true, cancelable: true, clientX: x, clientY: y, screenX: x, screenY: y, button: init.button ?? 0, buttons: init.buttons ?? 0,
+      ctrlKey: !!init.ctrlKey, shiftKey: !!init.shiftKey, altKey: !!init.altKey, metaKey: !!init.metaKey };
+    const pointer = { ...ev, pointerId: 1, pointerType: "mouse", isPrimary: true };
+    if (type === "wheel") dispatchToSdl(new WheelEvent("wheel", { ...ev, deltaX: init.deltaX, deltaY: init.deltaY, deltaMode: init.deltaMode }));
+    else if (type === "mouseenter") dispatchToSdl(new PointerEvent("pointerenter", { ...pointer, bubbles: false }));
+    else {   // SDL 3.4 reads pointer events, SDL 3.2 mouse events (as under Capture, above)
+      dispatchToSdl(new PointerEvent(POINTER_TYPE[type], pointer));
+      dispatchToSdl(new MouseEvent(type, ev));
+    }
+  },
+  // window n has the focus: tell SDL its window has it, or it would drop the keys
+  focus(n) {
+    if (!multi.wins.has(n)) return;
+    synthetic = true;
+    try { window.dispatchEvent(new FocusEvent("focus")); } finally { synthetic = false; }
+  },
+};
+
 let last = { t: performance.now(), rx: 0, tx: 0, frames: 0, ms: 0 };
 let version = "?";
 fetch(".well-known/manifest.webmanifest").then((r) => r.json()).then((m) => { version = m.version; }).catch(() => {});
@@ -734,6 +874,7 @@ function updateInfo() {
         parts.push(`${names[i] ?? "codec " + i} ${rate.toFixed(0)}/s ${kb.toFixed(0)} kbit/s`);
       }
       return parts.join(" · ") || "no updates yet"; })()],
+    ["Screens", multiOn() ? `${multi.wins.size + 1}, the desktop spans ${multi.box.width} × ${multi.box.height} CSS px` : "this one"],
     ["Client build", window.freerdpEngine ?? "–"],
     ["AV1 decoder", info.decoder],
     ["Audio codec", (() => {

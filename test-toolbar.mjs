@@ -25,8 +25,8 @@ const click = async (sel) => { const r = JSON.parse(await ev(`JSON.stringify(doc
   for (const type of ["mousePressed", "mouseReleased"]) await send("Input.dispatchMouseEvent", { type, x, y, button: "left", clickCount: 1 }); };
 const results = {};
 const check = (name, ok) => { results[name] = !!ok; console.log(ok ? "PASS" : "FAIL", name); };
-// nothing (the save offer, the capture notice) may cover the toolbar's buttons
-const reachable = async () => ev(`[...toolbar.querySelectorAll("button")].every((b) => { const r = b.getBoundingClientRect();
+// nothing (the save offer, the capture notice) may cover the toolbar's buttons (those shown)
+const reachable = async () => ev(`[...toolbar.querySelectorAll("button")].filter((b) => !b.hidden).every((b) => { const r = b.getBoundingClientRect();
   return toolbar.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)); })`);
 const state = async (label) => console.log(label, await ev("JSON.stringify({fs: !!document.fullscreenElement, cls: document.body.className, canvas: [canvas.width, canvas.height], btn: tbFs.textContent, tbOpacity: getComputedStyle(toolbar).opacity})"));
 await send("Runtime.enable"); await send("Page.enable");

@@ -165,14 +165,52 @@ CI xrdp session: FreeRDP's own retry starts, but the client ends about 0.1 s lat
 main thread returns from `main()` and the runtime exits with the retrying thread), so today
 the page's retry is the one that brings the session back.
 
+## All screens
+
+**All screens** on the toolbar spreads the remote desktop over every screen of this computer,
+as mstsc's `/span` does: one desktop, as wide as the screens side by side, so a window dragged
+off one screen comes out on the next. The button shows where the browser reports more than one
+screen (`screen.isExtended`) and has the Window Management API (Chrome, Edge).
+
+| Step | What happens |
+|---|---|
+| Click | `getScreenDetails()` lists the screens (the browser asks for permission once); this window goes full screen on its own screen |
+| A window per other screen | `screen.html`, opened on that screen; its first click fills the screen (and does not reach the remote side). Browsers allow one new window per click, so with three screens **Next screen** opens the third |
+| The desktop grows | the canvas is made as large as the bounding box of the screens in use and placed so that this window's screen shows its own part (`screens.js`); SDL follows the canvas's size and `/dynamic-resolution` sends the new size over the display channel |
+| Picture | each window copies its part of the canvas whenever the canvas's capture stream has a new frame (so an idle desktop costs nothing) |
+| Mouse and keys | each window hands its events back to the page, which gives them to SDL on the canvas at that point, as mouse and pointer events (SDL 3.2 and 3.4) |
+| Back to one | **One screen**, leaving full screen, closing a window (the desktop shrinks to the others) or a change of the screens |
+
+What it is not: the server sees one large monitor, not several, so a maximized window covers
+every screen and the taskbar spans them all. Several monitors on the server side need FreeRDP
+to send a monitor layout (`MonitorDefArray`) without an SDL window per monitor; its SDL client
+creates one window per display for `/multimon`, and a page has one canvas. Screens of
+different sizes leave parts of the bounding box that no screen shows. The remote desktop has
+one scale, that of this window's screen; a screen with another pixel ratio shows its part
+scaled.
+
+Three browser details decide how it is built:
+
+- SDL draws with WebGL, and a WebGL canvas reads back empty outside the frame that drew it
+  unless its context keeps the drawing buffer (`preserveDrawingBuffer`, off by default;
+  measured: `[0,0,0,0]` from `drawImage()` on an idle canvas, the right colour with it on). The
+  page asks for it only where the browser sees more than one screen when the page loads.
+- A canvas's capture stream has no frame for a canvas that is not drawn again, not even after
+  `requestFrame()`, so the stream cannot carry the picture alone: a window opened on an idle
+  desktop would stay black. It serves as the signal that something changed.
+- SDL takes the canvas's size only once FreeRDP has made its window resizable (when the
+  display channel is up, `sdl_disp.cpp`); a resize event before that is lost. While the
+  screens are in use the page sends another one until the canvas has the size it is shown at.
+
 ## Verification
 
 | What | How | Result |
 |---|---|---|
-| Option mapping, overrides, keyboard actions, hosts (storage, migration, export, import) | `node --test web/tests/*.test.cjs` | 49 tests pass |
+| Option mapping, overrides, keyboard actions, hosts (storage, migration, export, import), the screens' geometry | `node --test web/tests/*.test.cjs` | 53 tests pass |
 | Connection bridge with session settings, migration | `web/tests/bridge.test.cjs` | pass |
 | The page with the real client: hosts, export and import, the vault with virtual passkeys (a second passkey, the recovery code), settings, mstsc keys, phone width | `node test-page.mjs <client dir>` | 41 checks pass (49 with the demo media) |
 | Reconnect: a dropped gateway, then the toolbar's Reconnect, against the CI xrdp session (no reload, no passkey, no typing; xrdp logs each login) | `PAGE=<page URL> node test-reconnect.mjs`, with a modular client | 6 checks pass, 3 runs in a row |
+| All screens: two screens set by hand (`?screens=640x480+0+0,640x480+640+0`), the desktop grows to 1280 × 480, the second window shows the right half (an xterm there, compared pixel by pixel), its mouse and keys reach the server (X pointer position, keys held), closing it shrinks the desktop | `PAGE=<page URL> GATEWAY=<host:port> XRDP=<container> node test-screens.mjs` | 11 checks pass, 4 runs with JSPI and 3 with Asyncify |
 | A full login | the release kit's `test/wasm-session.sh`: xrdp in a throwaway container, SSH, websockify | Xorg session and xterm started, screenshot shows the desktop |
 
 Not verified yet:

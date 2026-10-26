@@ -165,6 +165,10 @@ body.session canvas { display:block; width:100% !important; height:calc(100vh - 
 body.fs .shell { padding:0; }
 /* full screen session: SDL sets inline sizes, hence !important */
 body.fs canvas { position:fixed; inset:0; width:100vw !important; height:100vh !important; }
+/* All screens (app.js, screens.js): the canvas spans every screen in use, from this window's
+   screen; the windows on the other screens show the rest */
+body.session.multi canvas { position:fixed; inset:auto; left:var(--mleft); top:var(--mtop);
+  width:var(--mwidth) !important; height:var(--mheight) !important; }
 /* session toolbar: top centre of the remote screen; in full screen it hides and comes back
    when the mouse rests at the top edge right above it (app.js) */
 #toolbar { position:fixed; top:var(--tbtop, 8px); left:50%; transform:translateX(-50%); z-index:10; display:none; gap:6px;
@@ -182,7 +186,7 @@ body.fs.tbhide:not(.tbpinned):not(.captured) #tbGrip { display:block; }
 #toolbar #tbCapture.on { background:#2f6fde; }
 /* the remote pointer while the mouse is captured (app.js draws it; the browser hides its own) */
 #vcursor { position:fixed; left:0; top:0; z-index:11; pointer-events:none; image-rendering:pixelated; }
-#captureToast, #hotkeyToast { position:fixed; top:calc(var(--tbtop, 8px) + 52px); left:50%; transform:translateX(-50%); z-index:12; padding:8px 14px; border-radius:6px;
+#captureToast, #hotkeyToast, #screensToast { position:fixed; top:calc(var(--tbtop, 8px) + 52px); left:50%; transform:translateX(-50%); z-index:12; padding:8px 14px; border-radius:6px;
   background:rgba(24,33,43,.92); color:#e3e9ef; font-size:13px; pointer-events:none; }
 /* after connecting: offer to keep the typed password in the passkey vault. It and the capture
    notice sit below the toolbar (--tbtop is 0 in full screen), never over its buttons */
@@ -194,6 +198,8 @@ body.fs.tbhide:not(.tbpinned):not(.captured) #tbGrip { display:block; }
 #saveBar button:not(.primary), #endBar button:not(.primary) { background:#34404d; color:#fff; border-color:#4a5866; }
 #hotkeyToast { top:calc(var(--tbtop, 8px) + 96px); max-width:min(640px, calc(100vw - 32px)); text-align:center; }
 #hotkeyToast[hidden] { display:none; }
+#screensToast { max-width:min(640px, calc(100vw - 32px)); text-align:center; }
+#screensToast[hidden] { display:none; }
 #captureToast kbd { background:#34404d; color:#fff; border-color:#4a5866; }
 #toolbar #tbPin { opacity:.55; } #toolbar #tbPin.on { opacity:1; background:#2f6fde; }
 /* connection info overlay, toggled from the toolbar */

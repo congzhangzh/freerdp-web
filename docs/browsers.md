@@ -14,6 +14,7 @@ today. Other browsers are what the code is written for, not yet run by CI.
 | WebAuthn with the PRF extension | the passkey vault: a passkey's PRF output wraps the vault's key ([VAULT.md](../web/VAULT.md)) | no vault: a passkey provider without PRF is refused when it is added, and the vault cannot be created with it. Connecting with a typed password still works | Chrome (virtual authenticator) |
 | Web Audio | the session's sound | no sound | Chrome |
 | `getUserMedia` | the microphone | no microphone. It needs a secure context: the published https page or `localhost` | Chrome |
+| Window Management API (`getScreenDetails()`, `screen.isExtended`) | **All screens**: the remote desktop over every screen, a window placed on each | the button does not show; the session uses one screen. Chrome and Edge have it; Firefox and Safari do not | Chrome, with the screens set by hand (`?screens=`); a real second screen not yet |
 | The asynchronous Clipboard API (read and write) | copy and paste between this computer and the session | browsers guard clipboard reading differently: Chrome asks for permission; where reading is refused, text copied here does not reach the session, while copying from the session still works | Chrome |
 
 Two builds of the client, one picked per browser: **JSPI** (WebAssembly's JavaScript Promise
