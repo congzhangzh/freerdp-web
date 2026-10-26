@@ -15,6 +15,17 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261026.2
+
+- **The client is FreeRDP `release-20261026.1`** (`0cae530ae`): `release-20261025.1` plus the
+  MessageChannel yield, our pull request #13864. `pollset_poll`'s yield now waits on a
+  MessageChannel task instead of `emscripten_sleep(0)`'s `setTimeout(0)`, which the browser
+  clamps to 4 ms. Measured with a yield forced on every empty poll (an xterm scrolling random
+  text, three runs each): 53–57 kB/s with `setTimeout`, 1913–2291 kB/s with the MessageChannel,
+  JSPI and Asyncify alike. As shipped the yield still does not fire in this client (see
+  20261025.1), so sessions measure the same as before (2009–2538 against 2363–2582 kB/s,
+  within the noise); it is ready for the day it does.
+
 ## 20261026.1
 
 - **All screens**: a new toolbar button spreads the remote desktop over every screen of this
