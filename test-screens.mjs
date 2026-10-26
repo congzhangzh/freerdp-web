@@ -118,6 +118,19 @@ await second.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Shift", code:
 await sleep(600);
 check("a key pressed on the second screen reaches the server", /Shift_L/.test(held) && !/Shift_L/.test(remote("--size")), held.split("\n")[0]);
 
+// captured (Pointer Lock): the browser shows no cursor and the page draws the remote pointer;
+// on the second screen's part of the desktop that window draws it. Headless Chrome refuses
+// Pointer Lock, so the page is told the canvas holds it and its cursor is put there
+await main.ev(`Object.defineProperty(document, "pointerLockElement", { configurable: true, get: () => canvas }); cap.x = ${W + 100}; cap.y = 150; readCursor(); true`);
+await sleep(800);
+const vc = await second.ev("(() => { const c = document.getElementById('vcursor'); return { hidden: c.hidden, at: c.style.transform }; })()");
+const at2 = /translate\(([\d.]+)px, ([\d.]+)px\)/.exec(vc?.at ?? "");
+check("captured: the second window draws the cursor while it is on its screen",
+  vc && !vc.hidden && at2 && Math.abs(+at2[1] - 100) < 40 && Math.abs(+at2[2] - 150) < 40, JSON.stringify(vc));
+await main.ev("cap.x = 100; true"); await sleep(500);
+check("captured: and not while it is on the page's screen", await second.ev("document.getElementById('vcursor').hidden"));
+await main.ev("delete document.pointerLockElement; readCursor(); true");
+
 // Reconnect while on both screens: the client starts from the settings of its first connect, so
 // it has to send the screens' layout again, also when the canvas keeps its size. xrdp 0.10.6.1
 // and older drop a layout with the same bounding box (one 1280 x 480 monitor -> two 640 x 480);
