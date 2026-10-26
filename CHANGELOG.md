@@ -4,12 +4,16 @@ The version is the one in `web/.well-known/manifest.webmanifest`; the page shows
 session's Info panel. An installed app (IWA) updates only to a newer version.
 
 Since 20261021.1 the version is the release date and that day's release number,
-`<YYYYMMDD>.<N>` (tag `v<YYYYMMDD>.<N>`): the page is released continuously, so the date
-says how new it is, and the number orders two releases of one day. It stays numeric with
+`<YYYYMMDD>.<N>` (the tag too; `v<YYYYMMDD>.<N>` before 20261025.1): the page is released
+continuously, so the date says how new it is, and the number orders two releases of one day. It stays numeric with
 at most four parts, as installed apps require, and is higher than every 0.4.x. The WASM
 client itself is built and versioned by
 [rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit); its `MANIFEST` file names
 the FreeRDP commit and this page's commit.
+
+How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI build (a
+35 % smaller download, connects about 30 % sooner, half the processor time or less while
+idle).
 
 ## 20261025.2
 
@@ -34,6 +38,37 @@ the FreeRDP commit and this page's commit.
   `WebAssembly.Suspending` exists (Chrome 137+), Asyncify everywhere else; `?engine=jspi` or
   `?engine=asyncify` forces one, and Info names it (*Client build*). JSPI's hang after a
   network drop is gone with the kit's SDL pin.
+
+  What JSPI gains, measured on 24 October (one compile of FreeRDP master `b2403bb99`, linked
+  once with `-sASYNCIFY` and once with `-sJSPI`, nothing else different; emsdk 6.0.11 and
+  6.0.13; headless Chrome 152 with software rendering; an xrdp session behind websockify; an
+  idle phase, then an xterm scrolling `base64 /dev/urandom`; 6 to 12 runs per side in each of
+  four sets, in alternating order):
+
+  | | Asyncify | JSPI | Change |
+  |---|---|---|---|
+  | `sdl-freerdp.wasm`, that build | 14.47 MB | 8.89 MB | −39 % |
+  | `sdl-freerdp.wasm`, the kit's build (as released) | 10.6 MB | 6.9 MB | −35 % |
+  | Connect (Connect click → display channel up) | 527 / 511 / 550 / 567 ms | 372 / 359 / 369 / 384 ms | −29 to −33 % |
+  | Main-thread CPU while idle | 2.7 / 2.8 / 3.7 / 4.2 % | 1.1 / 1.2 / 1.3 / 2.3 % | −45 to −65 % |
+  | Data received under load | 2721 / 2682 / 2230 / 2564 kB/s | 2914 / 2860 / 2823 / 2543 kB/s | +7 / +7 / +27 / 0 % |
+
+  Connect time and idle CPU won in every run: every JSPI run beat every Asyncify run in each
+  set (Mann–Whitney U at its maximum). Throughput under load did not hold up: it rose by 7 to
+  27 % in three sets and was unchanged in the fourth, so it is not claimed. Why: Asyncify
+  rewrites nearly every function so that the stack can be unwound and rewound around a
+  suspension (FreeRDP's indirect calls through channel, codec and OpenSSL tables make almost
+  everything a possible caller of a suspending import). That makes the code larger, the
+  CPU-heavy TLS/NLA handshake slower, and every sleep of SDL's main loop unwind and rewind the
+  whole stack. JSPI suspends in the engine and leaves the code as it is.
+
+  Not in this release: the MessageChannel wake-up. FreeRDP's `pollset_poll` still yields with
+  `emscripten_sleep(0)`, a `setTimeout(0)` that the browser clamps to 4 ms once timers nest. A
+  MessageChannel yield costs 9 to 16 µs instead of 4.1 ms (forced on every empty poll,
+  throughput 33 → 2113 kB/s with Asyncify and 43 → 2513 kB/s with JSPI). In this client the
+  yield never runs, though: a wait builds a fresh poll set, and `poll()` in a pthread waits
+  for its timeout, so the counter never passes 10 (0 yields in 36 runs). With the yield as
+  shipped, builds with either wake-up differed by 0.4 to 2.4 %, within the noise between runs.
 - **Capture with SDL 3.4**: the kit's client moves to SDL 3.4.18, which reads the mouse from
   pointer events. Under Capture the page sent only mouse events, so the remote pointer stood
   still; it now sends a pointer event (`pointerType: "mouse"`) with each, and swallows the

@@ -38,8 +38,17 @@
   <h2>20261025.1 <span class="muted">· 25 October 2026</span></h2>
   <ul>
     <li>A smaller, faster client in Chrome: where the browser supports JSPI, the page loads a build made for it
-      (6.9 MB instead of 10.6 MB). Other browsers keep the build they had. The session's <b>Info</b> panel shows which
-      one runs, on the <b>Client build</b> line.</li>
+      (6.9 MB instead of 10.6 MB). In our measurements it connects about 30 % sooner and uses half the
+      processor time or less while the remote desktop is idle; under heavy screen traffic it was as fast or faster.
+      Other browsers keep the build they had. The session's <b>Info</b> panel shows which one runs, on the
+      <b>Client build</b> line.
+      <table>
+        <tr><th></th><th>Before (Asyncify)</th><th>JSPI</th><th>Change</th></tr>
+        <tr><td>Download</td><td>10.6 MB</td><td>6.9 MB</td><td>35 % smaller</td></tr>
+        <tr><td>Connect</td><td>0.51 to 0.57 s</td><td>0.36 to 0.38 s</td><td>about 30 % sooner</td></tr>
+        <tr><td>Processor, desktop idle</td><td>2.7 to 4.2 %</td><td>1.1 to 2.3 %</td><td>half or less</td></tr>
+      </table>
+      Measured with the same FreeRDP built both ways, four sets of 6 to 12 connections each.</li>
     <li><b>Capture</b> moves the remote pointer again with the new client (SDL 3.4).</li>
   </ul>
 

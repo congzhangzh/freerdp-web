@@ -53,6 +53,26 @@ protected vault ([`web/VAULT.md`](web/VAULT.md)).
 A browser cannot open TCP connections, so the page talks to the RDP server
 through a WebSocket gateway, [websockify](https://github.com/novnc/websockify).
 
+## How fast, measured
+
+Where the browser has WebAssembly's JavaScript Promise Integration (JSPI, Chrome and Edge
+137+), the page runs a build of the client made for it; other browsers get the Asyncify
+build. Asyncify rewrites nearly every function so the stack can be unwound and rewound
+around each wait; JSPI suspends inside the engine and leaves the code as compiled. The same
+FreeRDP, linked both ways and nothing else different (headless Chrome 152, an xrdp session,
+four sets of 6 to 12 runs per side):
+
+| | Asyncify | JSPI | Change |
+|---|---|---|---|
+| Download, `sdl-freerdp.wasm` | 10.6 MB | 6.9 MB | −35 % |
+| Connect (click → desktop's display channel up) | 511–567 ms | 359–384 ms | −29 to −33 % |
+| Main-thread CPU, desktop idle | 2.7–4.2 % | 1.1–2.3 % | −45 to −65 % |
+| Data received, xterm scrolling random text | 2230–2721 kB/s | 2543–2914 kB/s | 0 to +27 %, not claimed |
+
+Every JSPI run connected sooner and idled lower than every Asyncify run of its set. The
+method, the per-set numbers and what did *not* help (a MessageChannel wake-up instead of
+`setTimeout(0)`) are in [CHANGELOG.md, 20261025.1](CHANGELOG.md#202610251).
+
 ## The page
 
 It runs at **https://congzhangzh.github.io/freerdp-web/**, published from this repository
