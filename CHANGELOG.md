@@ -15,6 +15,19 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261026.5
+
+- **All screens: the cursor on every screen while captured**: under capture (Pointer Lock,
+  which a click on the remote desktop in full screen starts) the browser hides its own cursor
+  and the page draws the remote pointer itself, but only in its own window. Moved onto another
+  screen, the mouse still worked there and the pointer was nowhere. The other screens' windows
+  now draw it too while it is on their part of the desktop (`screen.js`, from the page's
+  `view()`: the cursor's place in canvas pixels, its image and hot spot).
+- **GNOME through xrdp gets a monitor per screen** (server side, the kit's xrdp preview with
+  the wlup GNOME backend): Separate screens used to reach GNOME as one wide virtual monitor;
+  it now gets a virtual monitor per screen, and the screen this page is on as its primary one
+  (the top bar). The page is unchanged for it.
+
 ## 20261026.4
 
 - **Reconnect keeps the session usable**: after a Reconnect (FreeRDP's own, in the same

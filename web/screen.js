@@ -7,6 +7,7 @@
 (() => {
   const n = Number(location.hash.slice(1));
   const view = document.getElementById("view"), g = view.getContext("2d", { alpha: false });
+  const vcursor = document.getElementById("vcursor");
   const page = () => { try { return window.opener?.freerdpScreens ?? null; } catch (e) { return null; } };
   const video = document.createElement("video");
   video.muted = true; video.playsInline = true;
@@ -33,6 +34,14 @@
       fresh = false; drawn = what;
     }
     if (v.cursor !== cursor) view.style.cursor = cursor = v.cursor;   // the remote pointer's image
+    // under the page's capture the mouse belongs to the page, which draws the cursor itself:
+    // here too, while it is on this screen
+    const l = v.locked, inside = l && area && l.x >= v.sx && l.x < v.sx + v.sw && l.y >= v.sy && l.y < v.sy + v.sh;
+    if (inside) {
+      if (vcursor.getAttribute("src") !== l.src) vcursor.src = l.src;
+      vcursor.style.transform = `translate(${area.x + (l.x - v.sx) * area.w / v.sw - l.hotX}px, ${area.y + (l.y - v.sy) * area.h / v.sh - l.hotY}px)`;
+    }
+    vcursor.hidden = !inside;
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);

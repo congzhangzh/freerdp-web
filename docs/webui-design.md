@@ -197,6 +197,7 @@ showing its part. They differ only in the layout FreeRDP sends.
 | The desktop grows | the canvas is made as large as the bounding box of the screens in use and placed so that this window's screen shows its own part (`screens.js`); SDL follows the canvas's size and `/dynamic-resolution` sends the new size over the display channel |
 | Picture | each window copies its part of the canvas whenever the canvas's capture stream has a new frame (so an idle desktop costs nothing) |
 | Mouse and keys | each window hands its events back to the page, which gives them to SDL on the canvas at that point, as mouse and pointer events (SDL 3.2 and 3.4) |
+| Captured mouse | under Pointer Lock the browser shows no cursor and the page draws the remote pointer itself (`#vcursor`), moved by the lock's `movementX/Y` across the whole canvas; `view()` tells each window where it is (canvas pixels, image, hot spot), and the window whose part holds it draws it too |
 | Back to one | **One screen**, leaving full screen, closing a window (the desktop shrinks to the others) or a change of the screens |
 
 **Separate screens, deep down.** FreeRDP's SDL client makes one window per SDL display for

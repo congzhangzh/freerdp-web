@@ -856,12 +856,19 @@ window.addEventListener("pagehide", screensOff);
 window.freerdpScreens = {
   // what window n shows: the canvas (readable: it keeps its drawing buffer), its stream, its part
   // of it (canvas pixels) and the remote pointer's image; null once it is no longer part of the
-  // desktop, and the window closes
+  // desktop, and the window closes. Under capture the browser shows no cursor at all and the
+  // page draws its own (#vcursor, above) in this window only: "locked" says where it is, in
+  // canvas pixels, so the window whose part holds it draws it too
   view(n) {
     if (!multiOn() || !multi.wins.has(n)) return null;
-    const c = $("canvas"), s = multi.screens[n];
+    const c = $("canvas"), s = multi.screens[n], vc = $("vcursor");
     multi.stream ??= c.captureStream();
-    return { canvas: c, readable: screensReadable, stream: multi.stream, cursor: c.style.cursor, label: s.label, ...FreeRDPScreens.slice(s, multi.box, c.width, c.height) };
+    let locked = null;
+    if (pointerLocked() && !vc.hidden) {
+      const r = c.getBoundingClientRect();
+      locked = { x: cap.x * c.width / r.width, y: cap.y * c.height / r.height, src: vc.src, hotX: cap.hotX, hotY: cap.hotY };
+    }
+    return { canvas: c, readable: screensReadable, stream: multi.stream, cursor: c.style.cursor, locked, label: s.label, ...FreeRDPScreens.slice(s, multi.box, c.width, c.height) };
   },
   // a mouse event (at fx, fy: fractions of its screen) or a key event of window n, to SDL
   input(n, type, init) {

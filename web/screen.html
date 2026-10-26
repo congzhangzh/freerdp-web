@@ -10,12 +10,14 @@
 <style>
   html, body { margin:0; height:100%; background:#000; overflow:hidden; }
   #view { display:block; width:100vw; height:100vh; outline:none; }
+  #vcursor { position:fixed; left:0; top:0; pointer-events:none; z-index:1; }
   #hint { position:fixed; top:12px; left:50%; transform:translateX(-50%); margin:0; padding:6px 12px;
     font:13px system-ui, sans-serif; color:#fff; background:#34404dcc; border-radius:4px; pointer-events:none; }
 </style>
 </head>
 <body>
 <canvas id="view" tabindex="-1"></canvas>
+<img id="vcursor" alt="" hidden>
 <p id="hint">Click to fill this screen with the remote desktop</p>
 <script src="screens.js"></script>
 <script src="screen.js"></script>
