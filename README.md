@@ -70,8 +70,8 @@ four sets of 6 to 12 runs per side):
 | Data received, xterm scrolling random text | 2230–2721 kB/s | 2543–2914 kB/s | 0 to +27 %, not claimed |
 
 Every JSPI run connected sooner and idled lower than every Asyncify run of its set. The
-method, the per-set numbers and what did *not* help (a MessageChannel wake-up instead of
-`setTimeout(0)`) are in [CHANGELOG.md, 20261025.1](CHANGELOG.md#202610251).
+method, the per-set numbers, and why the MessageChannel wake-up (9 to 16 µs per yield
+against `setTimeout(0)`'s 4.1 ms, the one we chose) gains nothing yet are in [CHANGELOG.md, 20261025.1](CHANGELOG.md#202610251).
 
 ## The page
 
