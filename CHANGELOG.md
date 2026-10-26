@@ -15,6 +15,23 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261026.4
+
+- **Reconnect keeps the session usable**: after a Reconnect (FreeRDP's own, in the same
+  client) the picture stopped and the keys no longer reached the server, on one screen as on
+  several; only the mouse still worked. FreeRDP's retry dialog got an SDL window of its own,
+  and in a browser every SDL window draws on the page's one canvas: when the dialog closed it
+  left the canvas 0 × 0 and no window with the keyboard focus. The client is now FreeRDP
+  `release-20261026.3` (`cef3ddb47`), which opens no dialog window in a browser (our pull
+  request #13860). test-reconnect now checks the canvas after each reconnect, test-screens
+  the canvas and the second screen's keys; both fail with the previous client.
+- **All screens ▾ asks for the mode**: Separate screens or One wide desktop, in a menu under
+  the button, kept as the host's setting (*Session settings* shows the same choice). On a
+  real pair of screens the page stayed on one wide desktop whichever mode was set in the
+  form; the cause was not found in a headless browser (the page on the right-hand screen,
+  the mode set before Connect: separate monitors there), and the mode is now taken from the
+  click itself and logged (`[page] screens: separate screens chosen`).
+
 ## 20261026.3
 
 - **All screens has two modes**, as mstsc and FreeRDP's clients do: **Separate screens** (the

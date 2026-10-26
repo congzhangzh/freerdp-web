@@ -152,6 +152,14 @@ A session comes back without a passkey prompt or a typed password, in the same p
 | The page's | the client has ended after a lost connection | a new client in this page (`createFreeRDP()`), with the password kept in memory, after 2, 4, 8, 16, 30… s, up to 8 times; the bar says *Connection lost. Reconnecting in N s* |
 | By hand | a session that hangs, or one that ended | **Reconnect** on the toolbar (it closes a running session's sockets first) or on the end bar |
 
+FreeRDP's own reconnect shows a retry dialog. In a browser every SDL window draws on the
+page's one canvas, so that dialog's window took over the session's canvas, and when it
+closed it left the canvas 0 × 0 and no window with the keyboard focus: the picture stopped
+and the keys went nowhere, while the mouse still worked (on one screen as on several). The
+client since FreeRDP `release-20261026.3` opens no dialog window in a browser (our pull
+request #13860; its messages go to the log), and test-reconnect and test-screens check the
+canvas and the keys after a reconnect.
+
 The password of the running session stays in the page's memory only: encrypted with AES-GCM
 under a non-extractable `CryptoKey` made for it, never in storage. **Disconnect**, choosing
 another host, a refused logon (no retry then) and closing the page drop it.
@@ -170,7 +178,9 @@ the page's retry is the one that brings the session back.
 **All screens** on the toolbar spreads the remote desktop over every screen of this computer.
 The button shows where the browser reports more than one screen (`screen.isExtended`) and has
 the Window Management API (Chrome, Edge). It has two modes, the pair mstsc and FreeRDP's
-clients offer (*Session settings*, **All screens**, read when the button is clicked):
+clients offer. A click on **All screens ▾** asks which, in a small menu under the button;
+the choice starts it (it is the click that full screen and the new window need) and is kept
+as the host's setting, which *Session settings*, **All screens**, also shows and sets:
 
 | Mode | The server sees | mstsc / FreeRDP |
 |---|---|---|
@@ -200,15 +210,10 @@ connect itself carries one monitor (FreeRDP writes `TS_UD_CS_MONITOR` only with 
 so a client that starts on a canvas already split, after **Reconnect** for example, sends the
 layout at its first activation. That FreeRDP change is our pull request (not in upstream yet).
 
-Two limits, found by test-screens:
-
-- After **Reconnect** the client sends the screens again, but xrdp 0.10.6.1 and older drop a
-  layout whose bounding box did not change (two 640 × 480 monitors after one 1280 × 480), so
-  the session stays one wide monitor until the next resize. xrdp's devel has the fix
-  (5376e6de), and so do the release kit's xrdp preview packages.
-- After **Reconnect**, in either mode, the other screens' windows showed a blank picture and
-  their keys no longer reached the server in the tests (the mouse still did). Not solved yet;
-  closing them and clicking **All screens** again is the way around.
+One limit, found by test-screens: after **Reconnect** the client sends the screens again, but
+xrdp 0.10.6.1 and older drop a layout whose bounding box did not change (two 640 × 480
+monitors after one 1280 × 480), so the session stays one wide monitor until the next resize.
+xrdp's devel has the fix (5376e6de), and so do the release kit's xrdp preview packages.
 
 What it is not: screens of different sizes leave parts of the bounding box that no screen
 shows (with Separate screens the server puts no window there; with One wide desktop it may).

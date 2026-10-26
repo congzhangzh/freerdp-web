@@ -63,10 +63,11 @@ const connected = async (n = 1) => { for (let i = 0; i < 120; i++) { if (((await
 await connected();
 let size = await settle([W, H]);
 check("one screen first", size[0] === W && size[1] === H, size.join(" x "));
-check("the toolbar offers All screens", await main.ev("!tbScreens.hidden && tbScreens.textContent === 'All screens'"));
+check("the toolbar offers All screens", await main.ev("!tbScreens.hidden && tbScreens.textContent.startsWith('All screens')"));
 
-await main.ev(`document.querySelector('input[name=screens][value=${MODE}]').checked = true`);
-await main.ev("tbScreens.click()");
+await main.ev("tbScreens.click()");   // the mode menu, then the mode
+check("All screens asks for the mode", await main.ev(`!screensMenu.hidden && !!screensMenu.querySelector('[data-mode=${MODE}]')`));
+await main.ev(`screensMenu.querySelector('[data-mode=${MODE}]').click()`);
 let popup; for (let i = 0; i < 50 && !popup; i++) { await sleep(200); popup = (await targets()).find((x) => x.url.includes("screen.html")); }
 check("a window opens for the second screen", !!popup, popup?.url ?? "");
 if (!popup) { chrome.kill(); process.exit(1); }
@@ -121,12 +122,23 @@ check("a key pressed on the second screen reaches the server", /Shift_L/.test(he
 // it has to send the screens' layout again, also when the canvas keeps its size. xrdp 0.10.6.1
 // and older drop a layout with the same bounding box (one 1280 x 480 monitor -> two 640 x 480);
 // devel since 5376e6de applies it.
-if (MODE === "separate") {
-  const before = ((await pageLog()).match(/NumMonitors=2/g) || []).length;
+const layoutsBefore = ((await pageLog()).match(/NumMonitors=2/g) || []).length;
+{
   await main.ev("tbReconnect.click()");
   await connected(2);
-  let sent = 0; for (let i = 0; i < 20 && sent <= before; i++) { sent = ((await pageLog()).match(/NumMonitors=2/g) || []).length; await sleep(500); }
-  check("after Reconnect the client sends a monitor for each screen again", sent > before, `${sent - before} layout(s) of 2`);
+  // the session goes on: the same canvas (FreeRDP's retry dialog no longer takes it, #13860),
+  // and the second screen's keys still reach the server
+  check("after Reconnect the canvas keeps its size", await main.ev(`canvas.width === ${2 * W} && canvas.height === ${H}`), await main.ev("canvas.width + ' x ' + canvas.height"));
+  await second.send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Shift", code: "ShiftLeft", windowsVirtualKeyCode: 16, modifiers: 8 });
+  await sleep(600);
+  const held2 = remote("--size");
+  await second.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Shift", code: "ShiftLeft", windowsVirtualKeyCode: 16 });
+  await sleep(600);
+  check("after Reconnect a key on the second screen still reaches the server", /Shift_L/.test(held2), held2.split("\n")[0]);
+}
+if (MODE === "separate") {
+  let sent = 0; for (let i = 0; i < 20 && sent <= layoutsBefore; i++) { sent = ((await pageLog()).match(/NumMonitors=2/g) || []).length; await sleep(500); }
+  check("after Reconnect the client sends a monitor for each screen again", sent > layoutsBefore, `${sent - layoutsBefore} layout(s) of 2`);
   const old = /xrdp 0\.(\d+)\.(\d+)/.exec(execFileSync("docker", ["exec", XRDP, "xrdp", "--version"]).toString());
   const fixed = !old || +old[1] > 10 || (+old[1] === 10 && +old[2] > 6);
   for (let i = 0; i < 20; i++) { mons = remoteMonitors(); if (mons.length === 2) break; await sleep(500); }
@@ -140,7 +152,8 @@ size = await settle([W, H]);
 check("closing it brings the desktop back to one screen", size[0] === W && size[1] === H, size.join(" x "));
 for (let i = 0; i < 20 && remoteMonitors().length !== 1; i++) await sleep(500);
 check("and to one monitor", JSON.stringify(remoteMonitors()) === JSON.stringify([`${W}x${H}+0+0`]), JSON.stringify(remoteMonitors()));
-check("the toolbar offers All screens again", await main.ev("tbScreens.textContent === 'All screens' && !document.body.classList.contains('multi')"));
+check("the toolbar offers All screens again, the mode kept as the host's setting",
+  await main.ev(`tbScreens.textContent.startsWith('All screens') && !document.body.classList.contains('multi') && readSession().screens === '${MODE}'`));
 
 try { execFileSync("docker", ["exec", "-u", "test", XRDP, "sh", "-c", "kill $(pidof xterm)"]); } catch { /* gone already */ }
 writeFileSync(join(out, "screens-page.log"), String(await main.ev("document.getElementById('log').textContent")));

@@ -741,7 +741,7 @@ if (screensReadable) {
 const screensWaiting = () => multiOn() && multi.screens.some((s, i) => i !== multi.cur && !multi.wins.has(i));
 function showScreensButton() {
   $("tbScreens").hidden = !screensSpec && !(window.screen.isExtended && "getScreenDetails" in window) && !multiOn();
-  $("tbScreens").textContent = !multiOn() ? "All screens" : screensWaiting() ? "Next screen" : "One screen";
+  $("tbScreens").textContent = !multiOn() ? "All screens ▾" : screensWaiting() ? "Next screen" : "One screen";
 }
 window.screen.addEventListener?.("change", showScreensButton); showScreensButton();
 function screensSay(text) {
@@ -825,7 +825,32 @@ function screensMonitors() {
 }
 // SDL measures the canvas on a resize event; the disp channel sends the new layout after that
 function screensResized() { showScreensButton(); requestAnimationFrame(() => { placeToolbar(); window.dispatchEvent(new Event("resize")); }); }
-$("tbScreens").onclick = () => { if (multiOn() && !screensWaiting()) screensOff(); else screensOn(); backToCanvas(); };
+// All screens asks for the mode first (Separate screens or One wide desktop); the choice is the
+// click full screen and the new window need, and it is kept as this host's setting. Next screen
+// and One screen act at once.
+$("tbScreens").onclick = () => {
+  if (!multiOn()) { showScreensMenu(); return; }
+  if (screensWaiting()) screensOn(); else screensOff();
+  backToCanvas();
+};
+function showScreensMenu(show = $("screensMenu").hidden) {
+  const m = $("screensMenu");
+  m.hidden = !show;
+  if (!show) return;
+  const r = $("tbScreens").getBoundingClientRect();
+  m.style.left = r.left + "px"; m.style.top = r.bottom + 4 + "px";
+  const mode = readSession().screens;
+  for (const b of m.querySelectorAll("button")) b.classList.toggle("current", b.dataset.mode === mode);
+  m.querySelector(`[data-mode="${mode}"]`).focus();
+}
+for (const b of document.querySelectorAll("#screensMenu button")) b.onclick = () => {
+  showScreensMenu(false);
+  setRadio("screens", b.dataset.mode); HostsUI.update({ session: readSession() }); updateSessionText();
+  log(`[page] screens: ${b.dataset.mode === "separate" ? "separate screens" : "one wide desktop"} chosen`);
+  screensOn(); backToCanvas();
+};
+document.addEventListener("pointerdown", (e) => { if (!$("screensMenu").hidden && !e.target.closest("#screensMenu, #tbScreens")) showScreensMenu(false); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("screensMenu").hidden) { showScreensMenu(false); backToCanvas(); } });
 window.addEventListener("pagehide", screensOff);
 // what the windows on the other screens use (screen.js)
 window.freerdpScreens = {

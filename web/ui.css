@@ -201,6 +201,13 @@ body.fs.tbhide:not(.tbpinned):not(.captured) #tbGrip { display:block; }
 #screensToast { max-width:min(640px, calc(100vw - 32px)); text-align:center; }
 #screensToast[hidden] { display:none; }
 #captureToast kbd { background:#34404d; color:#fff; border-color:#4a5866; }
+/* All screens: the mode, chosen as the button is clicked (app.js, "All screens") */
+#screensMenu { position:fixed; z-index:13; display:flex; flex-direction:column; gap:3px; padding:4px; border-radius:8px;
+  background:rgba(24,33,43,.95); box-shadow:0 4px 14px rgba(0,0,0,.35); }
+#screensMenu[hidden] { display:none; }
+#screensMenu button { font-size:12px; padding:6px 10px; border:0; border-radius:6px; background:#34404d; color:#fff; text-align:left; }
+#screensMenu button:hover, #screensMenu button:focus-visible, #screensMenu button.current { background:#2f6fde; }
+#screensMenu small { display:block; color:#d3dce5; font-size:11px; }
 #toolbar #tbPin { opacity:.55; } #toolbar #tbPin.on { opacity:1; background:#2f6fde; }
 /* connection info overlay, toggled from the toolbar */
 #info { position:fixed; top:calc(var(--tbtop, 8px) + 44px); right:24px; z-index:10; min-width:260px; padding:8px 12px;

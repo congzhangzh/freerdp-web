@@ -108,6 +108,10 @@ console.log("after the drop:", JSON.stringify(s), "|", tried.slice(0, 3).join(" 
 if (process.env.DUMP) console.log(logs.slice(-40).join("\n"), "\nconnLog:", await ev("JSON.stringify([connLog.length, connLog.filter((l) => /Network|ERRCONNECT|exit/.test(l)).slice(0, 5)])"));
 console.log("seen:", seen.join(" → "));
 check("the session comes back after the network drops (FreeRDP's retry, then the page's)", back && tried.length > 0);
+// FreeRDP's retry dialog used to get an SDL window of its own, on the session's one canvas:
+// it left the canvas 0 x 0, so the picture stopped and the keys went nowhere (FreeRDP #13860)
+const picture = () => ev("(() => { const c = document.getElementById('canvas'); return c.width > 0 && c.height > 0; })()");
+check("the canvas keeps its picture", await picture());
 check("the session goes on in the same page, no prompt", s.session && !/exited/.test(s.status) && ceremonies.length === 0);
 
 // 2. Reconnect on the toolbar: a new client in this page, the password from memory
@@ -120,6 +124,7 @@ console.log("after Reconnect:", JSON.stringify(s), "| ceremonies:", ceremonies.l
 console.log("seen:", seen.join(" → "), "| FreeRDP's own:", logs.filter((l) => /client_auto_reconnect/.test(l)).length);
 if (process.env.DUMP) { const i = logs.findIndex((l) => /Attempting reconnect/.test(l)); console.log(logs.slice(Math.max(0, i - 4), i + 16).join("\n")); }
 check("Reconnect logs in again without a reload, a passkey or a typed password", again && s.session && ceremonies.length === 0);
+check("and after Reconnect too", await picture());
 check("the page was not reloaded (the same page log)", logs.some((l) => /\[page\] reconnect/.test(l)) && !logs.some((l) => /\[page\] FreeRDP Web /.test(l)));
 // "table index is out of bounds" / "function signature mismatch" from a timer callback
 // (emscripten_set_timeout → dynCall_vi) also happens in about half of first sessions, with the
