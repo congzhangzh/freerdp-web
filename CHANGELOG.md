@@ -82,6 +82,10 @@ idle).
   yield never runs, though: a wait builds a fresh poll set, and `poll()` in a pthread waits
   for its timeout, so the counter never passes 10 (0 yields in 36 runs). With the yield as
   shipped, builds with either wake-up differed by 0.4 to 2.4 %, within the noise between runs.
+  The decision for every wake-up in FreeRDP's browser code stands: MessageChannel, not
+  `setTimeout(0)`, and not `scheduler.yield()` or `postTask()`, which cost 4.2 ms inside the
+  client too (3 to 6 µs in a plain page; why is still open). It lands when the yield does
+  something, which needs FreeRDP upstream first.
 - **Capture with SDL 3.4**: the kit's client moves to SDL 3.4.18, which reads the mouse from
   pointer events. Under Capture the page sent only mouse events, so the remote pointer stood
   still; it now sends a pointer event (`pointerType: "mouse"`) with each, and swallows the
