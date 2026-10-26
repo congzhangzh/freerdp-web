@@ -147,12 +147,12 @@ const radio = (name) => document.querySelector(`input[name=${name}]:checked`)?.v
 const setRadio = (name, value) => { const r = document.querySelector(`input[name=${name}][value="${value}"]`); if (r) r.checked = true; };
 function readSession() {
   return FreeRDPOptions.normalize({ audio: $("optAudio").checked, mic: $("optMic").checked, clipboard: $("optClipboard").checked,
-    codec: radio("codec"), strategy: radio("strategy"), scale: radio("scale") });
+    codec: radio("codec"), strategy: radio("strategy"), scale: radio("scale"), screens: radio("screens") });
 }
 function showSession(session) {
   const s = FreeRDPOptions.normalize(session);
   $("optAudio").checked = s.audio; $("optMic").checked = s.mic; $("optClipboard").checked = s.clipboard;
-  setRadio("codec", s.codec); setRadio("strategy", s.strategy); setRadio("scale", s.scale);
+  setRadio("codec", s.codec); setRadio("strategy", s.strategy); setRadio("scale", s.scale); setRadio("screens", s.screens);
   setRadio("keys", FreeRDPKeyboard.get());
   updateSessionText();
 }
@@ -166,6 +166,11 @@ const STRATEGY_HINTS = {
   bandwidth: "For slow links: the server sends less (no wallpaper or animations) and compresses more, which costs it more CPU.",
   server: "For a busy server: it compresses less and sends more data instead.",
 };
+// with the toolbar's All screens, on a computer with more than one screen
+const SCREENS_HINTS = {
+  separate: "Each screen is a monitor of its own for the remote desktop, as on physical screens: a window maximizes on one, and you drag it to the next.",
+  span: "One desktop as wide as all the screens: a maximized window covers every one of them.",
+};
 const KIND_NAMES = { video: "Video", audio: "Sound", mic: "Microphone", clipboard: "Clipboard", network: "Priority", compression: "Priority", scale: "Remote scale" };
 // what Automatic sends: the screen's scale, above 100 % (vault.js connectionArgs)
 function scaleHint(scale) {
@@ -178,6 +183,7 @@ function updateSessionText() {
   $("codecHint").textContent = CODEC_HINTS[s.codec];
   $("strategyHint").textContent = STRATEGY_HINTS[s.strategy];
   $("scaleHint").textContent = scaleHint(s.scale);
+  $("screensHint").textContent = SCREENS_HINTS[s.screens];
   // Extra options of the same kind win: say which settings they override
   const over = [...new Set(FreeRDPOptions.overridden(extra).map((k) => KIND_NAMES[k]))];
   const changed = !FreeRDPOptions.isDefault(s);
@@ -187,7 +193,7 @@ function updateSessionText() {
   const label = (name, value) => document.querySelector(`input[name=${name}][value="${value}"]`).parentElement.textContent.trim();
   $("sessionSummary").textContent = over.length ? "custom" : !changed ? "recommended" :
     [s.codec !== "auto" && label("codec", s.codec), s.strategy !== "recommended" && label("strategy", s.strategy),
-     s.scale !== "auto" && "scale " + label("scale", s.scale),
+     s.scale !== "auto" && "scale " + label("scale", s.scale), s.screens !== "separate" && label("screens", s.screens),
      !s.audio && "no sound", s.mic && "microphone", !s.clipboard && "no clipboard"].filter(Boolean).join(", ");
   $("preview").textContent = FreeRDPOptions.resolve(s, extra).join(" ");
   updateSummary();
@@ -281,6 +287,8 @@ function moduleConfig() {
   // the server's clipboard, from the client's clipboard bridge (below)
   freerdpClipboardWrite: (text) => clipboardWrite(text),
   freerdpClipboardWriteImage: (bytes, isPng) => clipboardWriteImage(bytes, isPng),
+  // with All screens, the screens the canvas is split into (Separate screens; "All screens", below)
+  freerdpMonitors: () => screensMonitors(),
   onRuntimeInitialized() {
     runtimeReady = true; resolveRuntime(true);
     $("go").disabled = false; $("go").textContent = "Connect"; status("ready");
@@ -720,7 +728,7 @@ $("tbInfo").onclick = () => { $("info").hidden = !$("info").hidden; updateInfo()
 // The browser allows one new window per click, so more than two screens can take more clicks.
 // ?screens=WxH+X+Y,… sets the screens by hand (tests), this window on the first, no full screen.
 const screensSpec = FreeRDPScreens.parse(new URLSearchParams(location.search).get("screens"));
-const multi = { screens: null, cur: 0, box: null, wins: new Map(), details: null, poll: 0, toast: 0, stream: null, resends: 0 };
+const multi = { screens: null, cur: 0, box: null, wins: new Map(), details: null, poll: 0, toast: 0, stream: null, resends: 0, mode: "separate" };
 const multiOn = () => !!multi.box;
 const screensReadable = !!screensSpec || !!window.screen.isExtended;
 if (screensReadable) {
@@ -742,6 +750,7 @@ function screensSay(text) {
   multi.toast = setTimeout(() => { $("screensToast").hidden = true; }, 6000);
 }
 async function screensOn() {
+  if (!multiOn()) multi.mode = readSession().screens;   // Session settings, All screens
   if (!multi.screens) {
     if (screensSpec) multi.screens = screensSpec;
     else {
@@ -790,7 +799,7 @@ function screensLayout() {
   const p = FreeRDPScreens.place(multi.screens[multi.cur], multi.box), st = document.documentElement.style;
   for (const k of ["left", "top", "width", "height"]) st.setProperty("--m" + k, p[k] + "px");
   document.body.classList.add("multi"); multi.resends = 0;
-  log(`[page] screens: ${multi.wins.size + 1} in use, the remote desktop spans ${multi.box.width} × ${multi.box.height} (CSS pixels)`);
+  log(`[page] screens: ${multi.wins.size + 1} in use (${multi.mode === "separate" ? "separate monitors" : "one wide desktop"}), the remote desktop spans ${multi.box.width} × ${multi.box.height} (CSS pixels)`);
   screensResized();
 }
 function screensOff() {
@@ -801,6 +810,18 @@ function screensOff() {
   multi.stream?.getTracks().forEach((t) => t.stop()); multi.stream = null;
   document.body.classList.remove("multi");
   if (was) { log("[page] screens: back to one"); screensResized(); }
+}
+// Separate screens: the screens in use as monitors, their edges as fractions of the canvas (it
+// spans their bounding box), this window's screen the primary one. FreeRDP asks on each
+// resize and sends them in its display layout; null leaves it one monitor (One wide desktop).
+function screensMonitors() {
+  if (!multiOn() || multi.mode !== "separate") return null;
+  const b = multi.box;
+  return [multi.cur, ...multi.wins.keys()].map((i) => {
+    const s = multi.screens[i];
+    return { left: (s.left - b.left) / b.width, top: (s.top - b.top) / b.height,
+      right: (s.left + s.width - b.left) / b.width, bottom: (s.top + s.height - b.top) / b.height, primary: i === multi.cur };
+  });
 }
 // SDL measures the canvas on a resize event; the disp channel sends the new layout after that
 function screensResized() { showScreensButton(); requestAnimationFrame(() => { placeToolbar(); window.dispatchEvent(new Event("resize")); }); }
@@ -874,7 +895,7 @@ function updateInfo() {
         parts.push(`${names[i] ?? "codec " + i} ${rate.toFixed(0)}/s ${kb.toFixed(0)} kbit/s`);
       }
       return parts.join(" · ") || "no updates yet"; })()],
-    ["Screens", multiOn() ? `${multi.wins.size + 1}, the desktop spans ${multi.box.width} × ${multi.box.height} CSS px` : "this one"],
+    ["Screens", multiOn() ? `${multi.wins.size + 1}, ${multi.mode === "separate" ? "a monitor each" : "one wide desktop"}; the desktop spans ${multi.box.width} × ${multi.box.height} CSS px` : "this one"],
     ["Client build", window.freerdpEngine ?? "–"],
     ["AV1 decoder", info.decoder],
     ["Audio codec", (() => {

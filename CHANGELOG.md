@@ -15,6 +15,21 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261026.3
+
+- **All screens has two modes**, as mstsc and FreeRDP's clients do: **Separate screens** (the
+  default, `/multimon`) gives the server a monitor per screen, so a window maximizes on one and
+  is dragged to the next as on physical screens; **One wide desktop** (`/span`) is the one
+  monitor of 20261026.1. Chosen in *Session settings*, **All screens**. The page splits its one
+  canvas for the client through `Module.freerdpMonitors`, and the client (FreeRDP with our pull
+  request) sends one monitor per screen in its display layout, also right after a
+  **Reconnect** ([docs/webui-design.md](docs/webui-design.md), "All screens"). test-screens
+  checks the server's RandR monitors in both modes. Known: after **Reconnect** xrdp 0.10.6.1
+  keeps one wide monitor (it drops a layout with an unchanged bounding box; fixed in xrdp's
+  devel, 5376e6de), and the other screens' windows lose their picture and keys (either mode).
+- **The client is FreeRDP `release-20261026.2`** (`dbba4a4ce`): `release-20261026.1` plus our
+  pull request #13865, the page's split of the canvas into monitors.
+
 ## 20261026.2
 
 - **The client is FreeRDP `release-20261026.1`** (`0cae530ae`): `release-20261025.1` plus the

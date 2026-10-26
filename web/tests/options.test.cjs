@@ -53,3 +53,10 @@ test("keyboard: mstsc keys only in the mstsc profile, only with Ctrl + Alt", () 
   assert.equal(K.action("mstsc", ev("End", {ctrlKey: true})), null);
   assert.equal(K.action("mstsc", {...ev("End"), repeat: true}), null);
 });
+
+test("all screens: separate monitors by default, one wide desktop on request, no FreeRDP option", () => {
+  assert.equal(O.normalize({}).screens, "separate");
+  assert.equal(O.normalize({ screens: "span" }).screens, "span");
+  assert.equal(O.normalize({ screens: "mirror" }).screens, "separate");   // not offered
+  assert.deepEqual(O.resolve({ screens: "span" }, ""), O.resolve(O.DEFAULTS, ""));
+});

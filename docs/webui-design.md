@@ -167,10 +167,18 @@ the page's retry is the one that brings the session back.
 
 ## All screens
 
-**All screens** on the toolbar spreads the remote desktop over every screen of this computer,
-as mstsc's `/span` does: one desktop, as wide as the screens side by side, so a window dragged
-off one screen comes out on the next. The button shows where the browser reports more than one
-screen (`screen.isExtended`) and has the Window Management API (Chrome, Edge).
+**All screens** on the toolbar spreads the remote desktop over every screen of this computer.
+The button shows where the browser reports more than one screen (`screen.isExtended`) and has
+the Window Management API (Chrome, Edge). It has two modes, the pair mstsc and FreeRDP's
+clients offer (*Session settings*, **All screens**, read when the button is clicked):
+
+| Mode | The server sees | mstsc / FreeRDP |
+|---|---|---|
+| **Separate screens** (default) | a monitor per screen: a window maximizes on one, the panel stays on the primary one (this window's screen), and a window dragged off one screen comes out on the next, as on physical screens | `/multimon` |
+| **One wide desktop** | one monitor as large as the screens' bounding box: a maximized window covers them all | `/span` |
+
+On the page both modes are the same: one canvas as large as the bounding box, each window
+showing its part. They differ only in the layout FreeRDP sends.
 
 | Step | What happens |
 |---|---|
@@ -181,13 +189,31 @@ screen (`screen.isExtended`) and has the Window Management API (Chrome, Edge).
 | Mouse and keys | each window hands its events back to the page, which gives them to SDL on the canvas at that point, as mouse and pointer events (SDL 3.2 and 3.4) |
 | Back to one | **One screen**, leaving full screen, closing a window (the desktop shrinks to the others) or a change of the screens |
 
-What it is not: the server sees one large monitor, not several, so a maximized window covers
-every screen and the taskbar spans them all. Several monitors on the server side need FreeRDP
-to send a monitor layout (`MonitorDefArray`) without an SDL window per monitor; its SDL client
-creates one window per display for `/multimon`, and a page has one canvas. Screens of
-different sizes leave parts of the bounding box that no screen shows. The remote desktop has
-one scale, that of this window's screen; a screen with another pixel ratio shows its part
-scaled.
+**Separate screens, deep down.** FreeRDP's SDL client makes one window per SDL display for
+`/multimon`, and a browser has one display and one canvas. So the client keeps its one window,
+and on each resize `SdlContext::updateWindowList()` asks the page how the canvas is split:
+`Module.freerdpMonitors()` returns the screens in use as fractions of the canvas, this window's
+screen primary (`app.js`, `screensMonitors()`; FreeRDP's `sdl_monitors_emscripten.js`). Two or
+more become as many monitors in the display channel's `DISPLAYCONTROL_MONITOR_LAYOUT_PDU`, so
+xrdp makes as many RandR monitors (it allows 16), which the window manager maximizes into. The
+connect itself carries one monitor (FreeRDP writes `TS_UD_CS_MONITOR` only with `/multimon`),
+so a client that starts on a canvas already split, after **Reconnect** for example, sends the
+layout at its first activation. That FreeRDP change is our pull request (not in upstream yet).
+
+Two limits, found by test-screens:
+
+- After **Reconnect** the client sends the screens again, but xrdp 0.10.6.1 and older drop a
+  layout whose bounding box did not change (two 640 × 480 monitors after one 1280 × 480), so
+  the session stays one wide monitor until the next resize. xrdp's devel has the fix
+  (5376e6de), and so do the release kit's xrdp preview packages.
+- After **Reconnect**, in either mode, the other screens' windows showed a blank picture and
+  their keys no longer reached the server in the tests (the mouse still did). Not solved yet;
+  closing them and clicking **All screens** again is the way around.
+
+What it is not: screens of different sizes leave parts of the bounding box that no screen
+shows (with Separate screens the server puts no window there; with One wide desktop it may).
+The remote desktop has one scale, that of this window's screen; a screen with another pixel
+ratio shows its part scaled.
 
 Three browser details decide how it is built:
 
