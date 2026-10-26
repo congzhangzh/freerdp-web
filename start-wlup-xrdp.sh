@@ -26,6 +26,7 @@ case $DESKTOP in
 esac
 grep -q "^# --- RDP client in Xvfb" "$E2E" || { echo "$E2E has no RDP client section"; exit 1; }
 sed '/^# --- RDP client in Xvfb/,$d' "$E2E" > "$OUT/setup.sh"
+rm -f "$OUT/setup.log"   # a SETUP-DONE left from the last run would end the wait at once
 echo 'echo SETUP-DONE' >> "$OUT/setup.sh"
 docker rm -f $NAME > /dev/null 2>&1 || true
 docker run -d --name $NAME --privileged --cgroupns=private --tmpfs /run --tmpfs /run/lock \
