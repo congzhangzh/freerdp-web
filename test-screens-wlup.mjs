@@ -72,10 +72,27 @@ const ONE = /^[^@ ]+@0,0\*$/, TWO = new RegExp(`^[^@ ]+@0,0 [^@ ]+@${W},0\\*$`);
 await connected(1);
 let m = await until(ONE);
 check(`connected: ${DESKTOP} has one monitor`, ONE.test(m), m);
+// a window of the session from before All screens: a maximized terminal, dark
+execFileSync("docker", ["exec", "-d", C, "su", "tester", "-c", "export XDG_RUNTIME_DIR=/run/user/1000 " +
+  "WAYLAND_DISPLAY=$(cd /run/user/1000 && ls wayland-? | head -1); foot --maximized"]);
+await sleep(5000);
+// the colour at the middle of each screen's part of the canvas (canvas pixels): this window's
+// screen is the right half, the other one the left half
+const middles = () => main.ev(`(() => {
+  const c = canvas, o = new OffscreenCanvas(c.width, c.height), g = o.getContext("2d");
+  g.drawImage(c, 0, 0);
+  const at = (x, y) => Array.from(g.getImageData(x, y, 1, 1).data.slice(0, 3));
+  return { mine: at(c.width * 3 / 4 | 0, c.height / 2 | 0), other: at(c.width / 4 | 0, c.height / 2 | 0) };
+})()`);
+const dark = (p) => p && Math.max(...p) < 60;
 await main.ev("tbScreens.click()");
 await main.ev("screensMenu.querySelector('[data-mode=separate]').click()");
 m = await until(TWO);
 check(`Separate screens: a ${DESKTOP} monitor per screen, this window's (right) one primary`, TWO.test(m), m);
+// the windows that were there stay on this window's screen, the primary; the other screen is new
+await sleep(3000);
+const mid = await middles();
+check("the session's windows stay on this window's screen", dark(mid?.mine) && !dark(mid?.other), JSON.stringify(mid));
 let popup; for (let i = 0; i < 25 && !popup; i++) { popup = (await targets()).find((x) => x.url.includes("screen.html")); if (!popup) await sleep(200); }
 if (popup) {
   const second = await cdp(popup.webSocketDebuggerUrl);
