@@ -1,27 +1,27 @@
 #!/bin/sh
-# The demo videos of the splash, put into <site>/demo/ with demo.json:
+# The demo videos of the splash, for a local preview (site.sh), put into
+# <site>/demo/ with demo.json:
 #
 #   ./fetch-media.sh <site dir>
 #
 # From the release kit's newest demo-* pre-release: the kit records them in
 # CI with its newest tested client and its xrdp, and publishes each set
 # once (its demo.json names what they were recorded with). Each file is
-# checked against the pre-release's SHA256SUMS. Without one (or with
-# MEDIA=pinned), from this repository's media release that media.json pins,
-# each file checked against its SHA-256 there. Either way each video gets its
-# lasting address from media.json's anchors ("id", "aliases" in demo.json).
-# Downloads are kept in
-# ~/.cache/freerdp-web/media by SHA-256, so the next run is instant. Not in
-# git: binaries this size belong to a release. GH_TOKEN, when set, is sent
-# (more API calls an hour).
+# checked against the pre-release's SHA256SUMS. Each video gets its lasting
+# address ("id", "aliases" in demo.json) from the kit's own table,
+# build/site-anchors.json, which the published site uses too: the kit
+# publishes the site, so the addresses are its (until 2026-10-27 they were
+# media.json's here). Downloads are kept in ~/.cache/freerdp-web/media by
+# SHA-256, so the next run is instant. Not in git: binaries this size belong
+# to a release. GH_TOKEN, when set, is sent (more API calls an hour).
 set -eu
 SITE=${1:?usage: $0 <site dir>}
 HERE=$(cd "$(dirname "$0")" && pwd)
 CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/freerdp-web/media
 mkdir -p "$SITE/demo" "$CACHE"
-python3 - "$HERE/media.json" "$SITE/demo" "$CACHE" "${MEDIA:-kit}" <<'PY'
+python3 - "$SITE/demo" "$CACHE" <<'PY'
 import hashlib, json, os, sys, urllib.request
-spec_file, out, cache, mode = sys.argv[1:5]
+out, cache = sys.argv[1:3]
 KIT = "congzhangzh/rdp-release-kit"
 
 
@@ -59,35 +59,31 @@ def newest_demo():
     return max(found, key=lambda r: r["published_at"])["tag_name"] if found else None
 
 
-tag = newest_demo() if mode == "kit" else None
-if tag:
-    base = f"https://github.com/{KIT}/releases/download/{tag}/"
-    sums = {}
-    for line in get(base + "SHA256SUMS").decode().splitlines():
-        sha, name = line.split(None, 1)
-        sums[name.lstrip("*")] = sha
-    demo = json.loads(fetch(base, "demo.json", sums["demo.json"]))
-    files = [os.path.basename(v[k]) for v in demo["videos"] for k in ("src", "poster")]
-    files = {name: sums[name] for name in files}
-    source = f"{tag} (the kit's newest demo videos)"
-else:
-    spec = json.load(open(spec_file))
-    base = f"https://github.com/{spec['repository']}/releases/download/{spec['release']}/"
-    demo, files = {"videos": spec["videos"]}, spec["files"]
-    source = f"{spec['release']} (media.json)"
-# each demo's lasting address (media.json's anchors): this page's, so it wins over a set's own
-anchors = {k: v for k, v in json.load(open(spec_file)).get("anchors", {}).items() if not k.startswith("_")}
+tag = newest_demo()
+if not tag:
+    sys.exit("the kit has no demo-* pre-release: NO_MEDIA=1 ./site.sh leaves the videos out")
+base = f"https://github.com/{KIT}/releases/download/{tag}/"
+sums = {}
+for line in get(base + "SHA256SUMS").decode().splitlines():
+    sha, name = line.split(None, 1)
+    sums[name.lstrip("*")] = sha
+demo = json.loads(fetch(base, "demo.json", sums["demo.json"]))
+files = [os.path.basename(v[k]) for v in demo["videos"] for k in ("src", "poster")]
+files = {name: sums[name] for name in files}
+# each demo's lasting address: the kit's table, as on the published site
+anchors = json.loads(get(f"https://raw.githubusercontent.com/{KIT}/main/build/site-anchors.json"))
+anchors = {k: v for k, v in anchors.items() if not k.startswith("_")}
 for v in demo["videos"]:
     name = os.path.splitext(os.path.basename(v["src"]))[0]
     for key, names in anchors.items():
         if name in names:
             v["id"], v["aliases"] = key, names
     if "id" not in v:
-        print(f"warning: {name} has no anchor in media.json; its address is #{name}", file=sys.stderr)
+        print(f"warning: {name} has no address in the kit's build/site-anchors.json; here it is #{name}", file=sys.stderr)
 for name, sha in files.items():
     data = fetch(base, name, sha)
     open(f"{out}/{name}", "wb").write(data)
     print(f"demo/{name}: {len(data) // 1024} KiB, checked")
 json.dump(demo, open(f"{out}/demo.json", "w"), indent=2, ensure_ascii=False)
-print(f"demo videos from {source}")
+print(f"demo videos from {tag} (the kit's newest)")
 PY

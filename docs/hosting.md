@@ -1,12 +1,12 @@
 # Hosting
 
-Decided on 2026-10-18; releases and the kit's pin changed on 2026-10-20 (below). See
-[Web UI design](webui-design.md) for the page itself.
+Decided on 2026-10-18; releases and the kit's pin changed on 2026-10-20; since 2026-10-27 the
+release kit publishes the site (below). See [Web UI design](webui-design.md) for the page
+itself.
 
 ## Where the page lives
 
-On this repository's own GitHub Pages, built and published by
-[`.github/workflows/pages.yml`](../.github/workflows/pages.yml):
+On this repository's GitHub Pages, served from its `gh-pages` branch:
 
     https://congzhangzh.github.io/freerdp-web/
 
@@ -21,54 +21,49 @@ GitHub Pages serves static files only: the page, the WebAssembly client and the 
 It never sees a session; the browser connects to a gateway the user starts (normally through
 an SSH tunnel), or, in the installed app, to the RDP server directly.
 
-## How the site is built
+## Who does what
 
-The release kit ([rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit)) builds;
-this repository publishes. Nothing is compiled here.
+One direction: this repository holds the page's source and its releases; the release kit
+([rdp-release-kit](https://github.com/congzhangzh/rdp-release-kit)) pins a release, builds,
+tests, records the demos and publishes. Nothing is compiled or published here, and nothing
+flows back from the kit.
 
 | Where | What |
 |---|---|
-| the kit, on each push | builds the WebAssembly client with the freerdp-web release pinned in its `sources.lock` (a version and its commit), logs in from a browser to xrdp over SSH and websockify, and hands the tested client over as its pre-release `web-<YYYYMMDD>.<N>-<kit commit>` (its title names the page commit), with the xrdp packages; published once, never replaced |
-| here, on each push or pull request | the page's unit tests (Node) |
-| here, on publication | takes a tested client of the kit (below), lays this commit's page over it, adds the demo videos: the kit's newest `demo-*` pre-release, recorded in its CI with its newest tested client and xrdp preview, each file checked against its `SHA256SUMS` ([`fetch-media.sh`](../fetch-media.sh); [`media.json`](../media.json)'s pinned set when the kit has none), runs `test-page.mjs` on exactly these files, logs in from them with that pre-release's kit test and xrdp packages (`kit-test.sh`; once with the Asyncify build, once with JSPI), and only then deploys; then logs in again from the published page |
+| here, on each push or pull request | the page's unit tests (Node), and `kit-release.sh`'s own test ([`.github/workflows/test.yml`](../.github/workflows/test.yml)) |
+| here, a release | a version, its tag `<YYYYMMDD>.<N>` and a GitHub Release (below); the site is untouched |
+| the kit, on each push | builds the WebAssembly client with the freerdp-web release pinned in its `sources.lock` (a version and its commit), logs in from a browser to xrdp over SSH and websockify, records the demo videos, and puts the tested client, the videos and its xrdp packages into its rolling release `<YYYYMMDD>.<N>` (and the client into its pre-release `web-<YYYYMMDD>.<N>-<kit commit>`, titled with the page commit); published once, never replaced |
+| the kit, publishing the site (by hand) | its `site` workflow takes one of its rolling releases: the client and this page from it, the demo videos with their lasting addresses (the kit's `build/site-anchors.json`), checked against the release's `SHA256SUMS`; runs this page's `test-page.mjs` at the page's commit on exactly these files; logs in from them to the release's own xrdp (Asyncify and JSPI); only then commits them to this repository's `gh-pages` branch (a deploy key that can write here and nowhere else); then logs in again from the live site |
 
-Which client:
-
-- **exact** (the default): the client the kit built and tested with this very
-  commit: the kit's newest build of it, `web-<YYYYMMDD>.<N>-<kit commit>` titled with it (before 21 October 2026 `web-<commit>-<kit commit>`; from before the kit froze
-  its pre-releases, `web-<commit>`), found by [`kit-release.sh`](../kit-release.sh),
-  SHA-256 checked; its `MANIFEST` must name the commit. The kit builds a page once it pins
-  its release; a release the kit has not built cannot be published this way.
-- **latest** (chosen by hand): the kit's newest tested client with this page laid over it, as
-  [`site.sh`](../site.sh) does locally; for a roll-back to an old page the kit never built. The
-  `MANIFEST` names the client's pre-release and, on its last line, this page commit. The login
-  before the deploy still has to pass with that pair.
+Until 2026-10-27 this repository published the site itself (a `pages.yml` job took the
+kit's client for a tag, laid the page over it and fetched the videos), pulling the kit's
+pre-releases back here: a cycle between the two repositories. Every site that went live since
+then is a commit of its own in `gh-pages`, so an older one can be served again.
 
 ## Releases, and what the kit pins
 
-The Pages belong to this repository, which publishes them itself. The release kit does not
-choose page commits; it pins **freerdp-web releases**, so the page can move fast and the kit
-follows on its own schedule:
+The release kit does not choose page commits; it pins **freerdp-web releases**, so the page
+can move fast and the kit follows on its own schedule:
 
 1. A release is a version in `web/.well-known/manifest.webmanifest`, an annotated tag of that
    version, `<YYYYMMDD>.<N>` with no prefix (until 20261024.1 the tags were `v<version>`),
    on the commit that carries it, and a GitHub Release with its notes from
-   [`CHANGELOG.md`](../CHANGELOG.md). The tag publishes nothing: it is the release the kit
-   pins (since 2026-10-25; before, a tag also published the site).
+   [`CHANGELOG.md`](../CHANGELOG.md). The tag publishes nothing.
 2. The kit's `sources.lock` names the release as version plus commit; its CI
    (`build/check-release-pins.sh`) fails unless the release's tag exists and points to exactly
    that commit. Its upstream check watches this repository's release tags and opens an update
    issue for a new one.
-3. The kit builds and tests its client with that release and hands it over as a pre-release
-   (`web-<YYYYMMDD>.<N>-<kit commit>`), titled with the page commit.
-4. Then the site is published from the tag, with that client ("exact", below).
+3. The kit builds and tests its client with that release, records the demos with it, and
+   makes a rolling release of it all.
+4. The site is published from that kit release.
 
 So a page change and a kit change that need each other go: page on main → tag (the release;
-the site is untouched) → the kit pins it, with its own change → the kit's pre-release, built and
-tested with that page → publish the tag. The site only ever gets a pair the kit tested together,
-and the login before the deploy checks that pair once more.
+the site is untouched) → the kit pins it, with its own change → the kit's release, built and
+tested with that page → publish that kit release. The site only ever gets a pair the kit
+tested together, and the login before the deploy checks that pair once more.
 
-Not every version needs a release: tag the ones the kit should carry.
+Not every version needs a release: tag the ones the kit should carry. A change to the tests
+or the docs alone needs none.
 
 ### Making a release, step by step
 
@@ -77,47 +72,30 @@ Not every version needs a release: tag the ones the kit should carry.
    1), its section at the top of [`CHANGELOG.md`](../CHANGELOG.md) (for developers) and of
    `web/release-notes.html` (for users, in plain words). Push; CI runs the unit tests.
 2. **The release**: an annotated tag on that commit and a GitHub Release with the CHANGELOG
-   section as its notes. Nothing is published yet.
+   section as its notes. Nothing is published.
 
    ```sh
-   git tag -a 20261025.2 -m "FreeRDP Web 20261025.2" && git push origin 20261025.2
-   gh release create 20261025.2 --verify-tag --latest --title 20261025.2 -F notes.md
+   git tag -a 20261027.3 -m "FreeRDP Web 20261027.3" && git push origin 20261027.3
+   gh release create 20261027.3 --verify-tag --latest --title 20261027.3 -F notes.md
    ```
 
 3. **The kit pins it**: in rdp-release-kit, the `freerdp_web` line of `sources.lock` gets the
    version and the tag's commit (with `build/pins-table.sh --readme README.md` and a CHANGELOG
-   line), pushed to its main. Its CI builds the client with this page, logs in, and publishes
-   `web-<YYYYMMDD>.<N>-<kit commit>`; `./kit-release.sh <commit>` prints it once it is out.
-4. **Publish** the tag with that client:
+   line), pushed to its main. Its CI builds the client with this page, logs in, records the
+   demos, and makes its rolling release.
+4. **Publish** that kit release, in rdp-release-kit (see its `docs/RELEASE.md`):
 
    ```sh
-   gh workflow run pages.yml --ref 20261025.2 -f publish=true
-   gh run watch "$(gh run list -w pages.yml -L 1 --json databaseId -q '.[0].databaseId')"
+   gh workflow run site.yml -R congzhangzh/rdp-release-kit -f release=<kit release> -f publish=true
    ```
-
-   `site` lays the page over the kit's client and runs `test-page.mjs`, `login` logs in from
-   exactly these files (Asyncify and JSPI), `deploy` publishes, `check` logs in from the live
-   site. If `login` fails, nothing is deployed and the site stays as it was.
 
 ## Publishing is a decision, never a side effect
 
-A push to main, a pull request or a release tag builds and tests the page, and does not
-publish it. The site changes only by hand: *Run workflow* with **Use workflow from** set to a
-release tag and **publish** ticked:
-
-```sh
-gh workflow run pages.yml --ref 20261025.1 -f publish=true              # client: exact
-gh workflow run pages.yml --ref 20261024.1 -f publish=true -f client=latest   # a roll-back
-```
-
-A run on a branch is refused: what goes live is always a release. Before the deploy, the
-`login` job logs in with the kit's test against exactly the files going live, with each build
-of the client (Asyncify, JSPI); a pair that starts but cannot log in fails there, and the site
-stays as it was. After the deploy, `check` logs in again from the published page.
-
-GitHub's `github-pages` environment allows `main` and the tag patterns `[0-9]*` (releases are
-named `<YYYYMMDD>.<N>`, no prefix, since 2026-10-25) and `v*` (the older releases, for a
-roll-back).
+A push, a pull request or a release tag here tests the page and publishes nothing; so does a
+push to the kit. The site changes only when the kit's `site` workflow is run by hand with
+**publish** ticked. Without it the workflow runs every check and stops before the deploy. A
+release whose files fail the page test or cannot log in never reaches `gh-pages`, and the site
+stays as it was. A roll-back is the same run with an older kit release.
 
 ## Paths, caching and updates
 

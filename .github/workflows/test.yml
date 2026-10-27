@@ -1,0 +1,31 @@
+name: test
+
+# The page's own tests, on each push and pull request. Nothing is built or
+# published here: this repository is the page's source and its releases.
+# The release kit (rdp-release-kit) pins a release (a tag <YYYYMMDD>.<N> with
+# a GitHub Release), builds the WebAssembly client with it, tests the pair (a
+# browser login to xrdp over SSH and websockify), records the demo videos,
+# and publishes the site, https://congzhangzh.github.io/freerdp-web/, from one
+# of its releases by hand: its site workflow pushes the tested files to this
+# repository's gh-pages branch, which the Pages serve (since 2026-10-27;
+# before, this workflow published them).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Unit tests (vault, hosts, options, keyboard, the connection bridge)
+        run: node --test web/tests/*.test.cjs
+      - name: Which kit pre-release holds the client (kit-release.sh, for site.sh)
+        run: ./test-kit-release.sh

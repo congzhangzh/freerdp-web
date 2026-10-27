@@ -41,7 +41,7 @@ kit | kit:*)
     rm -rf "${SITE:?}"; mkdir -p "$SITE"
     (cd "$SITE" && python3 -m zipfile -e "$dir/freerdp-web-page.zip" .)
     client="$tag ($(sed -n 's/^page: //p' "$SITE/MANIFEST"))"
-    echo "$tag" > "$SITE/CLIENT"   # which pre-release: the published site's check uses its kit and packages
+    echo "$tag" > "$SITE/CLIENT"   # which of the kit's pre-releases the client came from
     ;;
 *)
     [ -f "$FROM/sdl-freerdp.wasm" ] || { echo "no client in $FROM (sdl-freerdp.wasm)" >&2; exit 1; }

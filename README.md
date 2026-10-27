@@ -35,7 +35,8 @@ a browser login to a throwaway server, then Firefox on the server with web video
 </tr>
 </table>
 
-The links are the demos' lasting addresses (`media.json`'s `anchors`). The clips are 8-second
+The links are the demos' lasting addresses (the release kit's `build/site-anchors.json`; the
+kit publishes the site). The clips are 8-second
 animated WebP cuts of the videos (480px, 10 fps, about 1.1 MB each), kept in
 [`docs/media/`](docs/media). GitHub plays a video in a README only when it is uploaded to
 GitHub itself (the `user-attachments` link above); a `<video>` tag is removed and other sites
