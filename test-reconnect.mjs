@@ -5,17 +5,22 @@ import { connectTestSession } from "./test-connect.mjs";
 //      clients (2 s, 4 s…) until one gets through; xrdp logs the user in again
 //   2. Reconnect on the toolbar while the session runs: its sockets are closed and FreeRDP
 //      reconnects within the same client, or the page starts a new one
+//   3. the server ends the session (its window manager quits, xrdp logs it off): the end bar,
+//      then Reconnect from it logs in again (the client does not exit after a clean end in a
+//      browser; the page ends the session itself, and Reconnect starts a new client)
 // No reload, no passkey prompt, no typed password: the password stays in the page's memory.
 // Needs a modular client (createFreeRDP, -sMODULARIZE).
 // WebAuthn needs a domain, so the page is opened on localhost, not 127.0.0.1.
 //   PAGE=http://localhost:8181/index.html node test-reconnect.mjs
 // The published page (https) reaching this machine's loopback gateway needs Chrome's Local
 // Network Access check off: CHROME_FLAGS=--disable-features=LocalNetworkAccessChecks.
-// DUMP=1 prints the page's uncaught exceptions with their stacks.
+// DUMP=1 prints the page's uncaught exceptions with their stacks. XRDP (grd-wasm-xrdp-ci) and
+// XRDP_ADDR (127.0.0.1:13390) pick another xrdp container.
 import { spawn, execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const XRDP = process.env.XRDP || "grd-wasm-xrdp-ci", XRDP_ADDR = process.env.XRDP_ADDR || "127.0.0.1:13390";
 const base = new URL(".chrome/", import.meta.url).pathname;
 mkdirSync(base, { recursive: true });
 const profile = mkdtempSync(join(base, "rc-"));
@@ -29,7 +34,7 @@ chrome.on("exit", () => { rmSync(profile, { recursive: true, force: true });
 const GATEWAY = 6082;
 let gateway = null;
 const startGateway = async () => {
-  gateway = spawn("uvx", ["websockify", `127.0.0.1:${GATEWAY}`, "127.0.0.1:13390"], { stdio: "ignore", detached: true });
+  gateway = spawn("uvx", ["websockify", `127.0.0.1:${GATEWAY}`, XRDP_ADDR], { stdio: "ignore", detached: true });
   for (let i = 0; i < 50; i++) { await sleep(200); if (execFileSync("ss", ["-ltn"]).toString().includes(`127.0.0.1:${GATEWAY} `)) return; }
   throw new Error("the test gateway did not start");
 };
@@ -65,7 +70,7 @@ const ev = async (expression) => {
 };
 const results = {};
 // xrdp's own record of logins: the count of "logged in" lines for the test user
-const logins = () => execFileSync("docker", ["exec", "grd-wasm-xrdp-ci", "sh", "-c",
+const logins = () => execFileSync("docker", ["exec", XRDP, "sh", "-c",
   "grep -c 'login status for test : logged in' /var/log/xrdp-sesman.log || true"]).toString().trim() | 0;
 const check = (name, ok) => { results[name] = !!ok; console.log(ok ? "PASS" : "FAIL", name); };
 const url = (process.env.PAGE || "http://localhost:8080/index.html") + `?v=127.0.0.1:${GATEWAY}&u=test&extra=/gfx&fs=0`;
@@ -134,5 +139,21 @@ for (const l of logs.filter((l) => known.test(l)).slice(0, 2)) console.log("NOTE
 const errors = logs.filter((l) => /abort|program has already exited|RuntimeError/i.test(l) && !known.test(l));
 check("no runtime error from the second client", !errors.length);
 if (errors.length) { const i = logs.findIndex((l) => /RuntimeError|abort/i.test(l)); console.log(logs.slice(Math.max(0, i - 8), i + 4).join("\n")); }
+
+// 3. the server ends the session: its window manager quits, so xrdp logs it off. No reconnecting
+// on its own (the user is gone), the end bar instead; Reconnect there logs in again
+logs = []; seen.length = 0;
+execFileSync("docker", ["exec", XRDP, "sh", "-c", "kill $(pidof openbox)"]);
+const ended = await waitFor("the end bar after the logoff", async () => { const q = await state(); return q.bar && /ended/.test(q.endText); }, 20000);
+s = await state();
+console.log("after the logoff:", JSON.stringify(s), "| seen:", seen.join(" → "));
+check("a session the server ends shows the end bar", ended && !/Reconnecting/.test(s.endText));
+before = logins();
+await ev("document.getElementById('endReconnect').click(), 1");
+const back3 = await waitFor("the login after the logoff", () => logins() > before, 60000);
+await sleep(3000);
+s = await state();
+check("Reconnect from the end bar logs in again", back3 && s.session);
+check("with its picture", await picture());
 
 ws.close(); done(Object.values(results).every(Boolean) ? 0 : 1);

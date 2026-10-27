@@ -8,7 +8,9 @@ const info = { started: 0, decoder: "–", transport: "–", server: "–" };
 // start offers the log. Only the page log is kept: it never contains the password (/p:***) or
 // clipboard content.
 const CRASH_KEY = "freerdp-web-lastlog", CRASH_LINES = 300;
-const crash = { lines: [], running: false, userEnded: false, timer: 0 };
+const crash = { lines: [], running: false, userEnded: false, timer: 0, endWatch: 0 };
+// the log lines of a session that ended cleanly (clientStuck(), below)
+const CLEAN_END = /treat this as a user logoff|ERRINFO_LOGOFF_BY_(USER|SERVER)|ERRINFO_RPC_INITIATED_(DISCONNECT|LOGOFF)/;
 const connLog = [];
 function crashStore(state, reason) {
   try {
@@ -44,9 +46,10 @@ const log = (s) => {
   if (sessionPassword) s = s.split(sessionPassword).join("***");
   s = s.replace(/([/+-](?:p|gp|password):)(?:"[^"\n]*"|'[^'\n]*'|[^\s]*)/gi, "$1***");
   crash.lines.push(s); if (crash.lines.length > CRASH_LINES) crash.lines.shift();
-  // FreeRDP's disconnect hotkey: ended on purpose, so the mouse and the keys come back now, not
-  // once the client has exited (seconds later; it keeps the page busy until then)
-  if (/pressed, disconnecting RDP session/.test(s)) { crash.userEnded = true; endCapture(); }
+  // FreeRDP's disconnect hotkey: the same as the toolbar's Disconnect, at once (the mouse and the
+  // keys come back too): the client does not exit after it in a browser, see below
+  if (/pressed, disconnecting RDP session/.test(s)) { endCapture(); disconnect(); }
+  else if (CLEAN_END.test(s) && crash.running && !crash.endWatch) crash.endWatch = setTimeout(clientStuck, 5000);
   logEl.textContent += s + "\n"; logEl.scrollTop = logEl.scrollHeight; console.log(s);
   const m = /AV1 decoder: ([^,\n]+)/.exec(s);
   if (m) info.decoder = m[1].trim();
@@ -302,6 +305,7 @@ function moduleConfig() {
     if (autoconnect) { autoconnect = false; connect(); }   // the first client only
   },
   onExit(code) {
+    if (crash.abandoned === m) { log("[page] the client the page had ended exited now: " + code); return; }
     status("exited: " + code); log("[page] exit code " + code); window.__freerdpExit = code;
     if (code !== 0) $("logPanel").open = true;   // show the reason
     // exit code 0 also follows a lost connection: look at the log, not only at the code
@@ -327,8 +331,21 @@ document.addEventListener("DOMContentLoaded", () => (window.freerdpClient ?? Pro
   () => { if (modularClient()) newClient(); },
   (e) => { log("[page] " + e.message); status("the client did not load"); }));
 function crashEnd(unexpected, reason) {
-  clearInterval(crash.timer); crash.running = false;
+  clearInterval(crash.timer); clearTimeout(crash.endWatch); crash.endWatch = 0; crash.running = false;
   crashStore(unexpected ? "crashed" : "clean", reason);
+}
+// A session that ended cleanly (a logoff, or the server ending it) should end the client: in a
+// browser it often does not. FreeRDP closes its window (the canvas goes 0 x 0) and then the
+// runtime never exits (one of its threads stays, it seems), so onExit never comes, the end bar
+// never shows and Reconnect, which waits for that exit, did nothing. 5 s after such an end the
+// page ends the session itself; Reconnect then starts a new client, as after an exit.
+function clientStuck() {
+  crash.endWatch = 0;
+  if (!crash.running) return;
+  log("[page] the session ended, the client did not exit: the page ends it");
+  crash.abandoned = Module;   // should it exit after all, its onExit changes nothing
+  crashEnd(false, "");
+  sessionEnded(false);
 }
 window.addEventListener("error", (e) => { if (crash.running) log("[page] error: " + (e.message || e.error)); });
 window.addEventListener("unhandledrejection", (e) => { if (crash.running) log("[page] unhandled rejection: " + (e.reason?.message || e.reason)); });
@@ -712,7 +729,8 @@ const toolbar = $("toolbar");
 const backToCanvas = () => setTimeout(() => $("canvas").focus(), 0);
 $("tbFs").onclick = () => { toggleFullscreen(); backToCanvas(); };
 $("tbLog").onclick = () => { const d = $("logPanel"); d.open = !d.open; backToCanvas(); };
-$("tbQuit").onclick = () => { crash.userEnded = true; again.forget(); if (crash.running) crashEnd(false, ""); location.reload(); };
+function disconnect() { crash.userEnded = true; again.forget(); if (crash.running) crashEnd(false, ""); location.reload(); }
+$("tbQuit").onclick = disconnect;
 $("tbReconnect").onclick = () => { reconnect(); backToCanvas(); };
 // 📌 keeps the toolbar visible in full screen (remembered across sessions)
 const setPinned = (on) => { document.body.classList.toggle("tbpinned", on); $("tbPin").classList.toggle("on", on);

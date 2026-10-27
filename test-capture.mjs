@@ -7,18 +7,25 @@ import { connectTestSession } from "./test-connect.mjs";
 // it decodes in hardware.
 //   node test-capture.mjs [out dir]     PAGE, GATEWAY (127.0.0.1:6081), XRDP (grd-wasm-xrdp-ci)
 import { spawn, execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 const out = process.argv[2] || "out";
 mkdirSync(out, { recursive: true });
 const XRDP = process.env.XRDP || "grd-wasm-xrdp-ci", GATEWAY = process.env.GATEWAY || "127.0.0.1:6081";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const base = new URL(".chrome/", import.meta.url).pathname;
-const profile = mkdtempSync(join(base, "cap-"));
+// Chrome's own temporary files in a short directory of their own (as test-screens)
+const base = mkdtempSync(join(tmpdir(), "cap-"));
+const profile = join(base, "profile");
 const chrome = spawn("google-chrome", ["--headless=new", "--remote-debugging-port=9344", `--user-data-dir=${profile}`, "--no-first-run",
   "--window-size=1280,900", "--enable-unsafe-swiftshader", "about:blank"], { stdio: "ignore", env: { ...process.env, TMPDIR: base } });
-chrome.on("exit", () => { rmSync(profile, { recursive: true, force: true });
-  for (const n of readdirSync(base)) if (n.startsWith("com.google.Chrome.")) rmSync(join(base, n), { recursive: true, force: true }); });
+// ends the test: Chrome first, then its temporary directory, then node (an exit handler alone
+// would not run: node is gone before Chrome)
+const quit = async (code) => {
+  if (chrome.exitCode === null && chrome.signalCode === null) await new Promise((r) => { chrome.once("exit", r); chrome.kill(); setTimeout(r, 5000); });
+  rmSync(base, { recursive: true, force: true });
+  process.exit(code);
+};
 let t; for (let i = 0; i < 150 && !t; i++) { await sleep(200); try { t = (await (await fetch("http://127.0.0.1:9344/json")).json()).find((x) => x.type === "page"); } catch {} }
 const ws = new WebSocket(t.webSocketDebuggerUrl); await new Promise((r) => ws.addEventListener("open", r));
 let id = 0; const p = new Map(); const logs = [];
@@ -47,7 +54,7 @@ const check = (name, ok) => { results[name] = ok; console.log(ok ? "PASS" : "FAI
 await send("Runtime.enable");
 await send("Emulation.setFocusEmulationEnabled", { enabled: true });
 await send("Page.navigate", { url: (process.env.PAGE || "http://127.0.0.1:8080/index.html") + "?v=" + GATEWAY + "&u=test&extra=/gfx&fs=0" });
-await connectTestSession(send).catch(e => { chrome.kill(); throw e; });
+await connectTestSession(send).catch(async (e) => { console.error(e); await quit(1); });
 await sleep(15000);
 // Info: each video codec with its colour (AV1's profile, H.264's RDP codec), and whether the
 // browser decodes it in hardware or in software
@@ -124,12 +131,16 @@ const chord = async () => {
 const disconnecting = () => logs.some((l) => /pressed, disconnecting RDP session/.test(l));
 for (let n = 0; n < 3 && !disconnecting(); n++) { await chord(); for (let i = 0; i < 20 && !disconnecting(); i++) await sleep(500); }
 check("Disconnect by the hotkey disconnects", disconnecting());
-const t0 = Date.now(); for (let i = 0; i < 10; i++) { const q = await page(); if (!q.locked && !q.captured && !q.drawn) break; await sleep(500); }
-s = await page(); console.log(`after Disconnect (${Date.now() - t0} ms):`, JSON.stringify(s));
+// the page reloads (below): a read during the navigation comes back empty
+const settled = async () => { for (let i = 0; i < 20; i++) { try { const q = await page(); if (!q.locked && !q.captured && !q.drawn) return q; } catch {} await sleep(500); }
+  return page().catch(() => ({ locked: true })); };
+const t0 = Date.now(); s = await settled(); console.log(`after Disconnect (${Date.now() - t0} ms):`, JSON.stringify(s));
 check("and the mouse and the keys are released by themselves", !s.locked && !s.captured && !s.drawn);
-let exited = false; for (let i = 0; i < 60 && !exited; i++) { await sleep(500); exited = logs.some((l) => /\[page\] exit code/.test(l)); }
-console.log(exited ? "the client exited after Disconnect" : "NOTE the client had not exited 30 s after Disconnect");
+// like the toolbar's Disconnect: back to the connect form (FreeRDP's client does not exit after
+// it in a browser; the reload ends it)
+let form = false; for (let i = 0; i < 20 && !form; i++) { await sleep(500); form = await ev("!document.body.classList.contains('session') && !!document.getElementById('go')").catch(() => false); }
+check("and the page is back at the connect form", form);
 
 console.log(logs.filter((l) => /\[page\].*(captur|releas|lock|exit|session)|disconnecting|ERRINFO|ERRCONNECT/i.test(l)).join("\n"));
-ws.close(); chrome.kill();
-process.exit(Object.values(results).every(Boolean) ? 0 : 1);
+ws.close();
+await quit(Object.values(results).every(Boolean) ? 0 : 1);
