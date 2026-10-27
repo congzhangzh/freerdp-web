@@ -11,6 +11,16 @@ const CRASH_KEY = "freerdp-web-lastlog", CRASH_LINES = 300;
 const crash = { lines: [], running: false, userEnded: false, timer: 0, endWatch: 0 };
 // the log lines of a session that ended cleanly (clientStuck(), below)
 const CLEAN_END = /treat this as a user logoff|ERRINFO_LOGOFF_BY_(USER|SERVER)|ERRINFO_RPC_INITIATED_(DISCONNECT|LOGOFF)/;
+// FreeRDP's SDL client's exit codes that say the session itself is over (client/SDL/SDL3/
+// sdl_utils.hpp): the server or the user disconnected or logged it off, a timeout, another
+// connection took it over, the server refused it, licensing. Reconnecting on its own would not
+// bring it back, or would take it from the other connection. The end bar says why; any other
+// code, or a lost connection in the log, is a drop the page retries.
+const SESSION_OVER = { 1: "disconnected by the server", 2: "logged off", 3: "idle for too long", 4: "the logon took too long",
+  5: "another connection took it over", 6: "the server ran out of memory", 7: "the server refused the connection",
+  8: "the server refused the connection (FIPS)", 9: "no permission to log on", 10: "the server wants the password again",
+  11: "disconnected", 145: "cancelled" };
+for (let c = 16; c <= 26; c++) SESSION_OVER[c] = "a licensing error on the server";
 const connLog = [];
 function crashStore(state, reason) {
   try {
@@ -307,11 +317,12 @@ function moduleConfig() {
   onExit(code) {
     if (crash.abandoned === m) { log("[page] the client the page had ended exited now: " + code); return; }
     status("exited: " + code); log("[page] exit code " + code); window.__freerdpExit = code;
-    if (code !== 0) $("logPanel").open = true;   // show the reason
+    const over = SESSION_OVER[code];   // the session itself ended: no reconnecting on its own
+    if (code !== 0 && !over) $("logPanel").open = true;   // show the reason
     // exit code 0 also follows a lost connection: look at the log, not only at the code
-    const lost = connLog.some((l) => /ERRCONNECT_|Network disconnect|\[tcp-shim\].*(Error|abort)/i.test(l));
-    crashEnd(!crash.userEnded && (code !== 0 || lost), code !== 0 ? "exit code " + code : lost ? "connection lost" : "");
-    setTimeout(() => sessionEnded(lost || code !== 0), 0);   // after this client's exit is done
+    const lost = !over && connLog.some((l) => /ERRCONNECT_|Network disconnect|\[tcp-shim\].*(Error|abort)/i.test(l));
+    crashEnd(!crash.userEnded && !over && (code !== 0 || lost), over ? "" : code !== 0 ? "exit code " + code : lost ? "connection lost" : "");
+    setTimeout(() => sessionEnded(!over && (lost || code !== 0), over), 0);   // after this client's exit is done
   },
   onAbort(what) { runtimeFailed = true; resolveRuntime(false); HostsUI.lock(); log("[page] aborted: " + what); crashEnd(true, "wasm abort: " + what); },
   };
@@ -1165,7 +1176,7 @@ function showEnd(text, canReconnect) {
   $("endReconnect").textContent = modularClient() && again.has(HostsUI.selected) ? "Reconnect" : "Reload and connect";
   $("endBar").hidden = false;
 }
-function sessionEnded(unexpected) {
+function sessionEnded(unexpected, why = "") {
   if (modularClient()) connectStarted = false;   // an older client runs once
   if (crash.userEnded) { endCapture(); return; }
   if (modularClient()) newClient();   // ready for Reconnect, while the bar says what happened
@@ -1182,7 +1193,7 @@ function sessionEnded(unexpected) {
     return;
   }
   endCapture();
-  showEnd(unexpected ? "Connection lost." : "The session ended.", true);
+  showEnd(unexpected ? "Connection lost." : why ? `The session ended: ${why}.` : "The session ended.", true);
 }
 async function reconnect(automatic = false) {
   clearTimeout(retry.timer);
