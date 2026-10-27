@@ -214,7 +214,8 @@ layout at its first activation. That FreeRDP change is our pull request (not in 
 One limit, found by test-screens: after **Reconnect** the client sends the screens again, but
 xrdp 0.10.6.1 and older drop a layout whose bounding box did not change (two 640 × 480
 monitors after one 1280 × 480), so the session stays one wide monitor until the next resize.
-xrdp's devel has the fix (5376e6de), and so do the release kit's xrdp preview packages.
+xrdp's devel has the fix (5376e6de), and so do the release kit's xrdp packages (its "Latest"
+release; 0.10.80+…, which upgrade the older xrdp-preview-* ones).
 
 What it is not: screens of different sizes leave parts of the bounding box that no screen
 shows (with Separate screens the server puts no window there; with One wide desktop it may).

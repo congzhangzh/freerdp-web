@@ -12,7 +12,7 @@ open source under the Apache License 2.0.
 
 ## Demos
 
-The xrdp preview with GNOME on Wayland, sent in AV1 and decoded by the browser (unmute for sound):
+Our xrdp with GNOME on Wayland, sent in AV1 and decoded by the browser (unmute for sound):
 
 https://github.com/user-attachments/assets/cfed0bd1-1bf8-4614-9800-f35469f1d236
 
@@ -22,14 +22,14 @@ a browser login to a throwaway server, then Firefox on the server with web video
 
 <table>
 <tr>
-<td width="50%"><a href="https://congzhangzh.github.io/freerdp-web/#xrdp-gnome"><img src="docs/media/xrdp-gnome.webp" alt="xrdp preview with GNOME on Wayland, in AV1"></a><br>
-<b>xrdp preview + GNOME Wayland, AV1</b><br>sesman starts a GNOME session per user; xrdp sends it in AV1 (4:4:4)</td>
-<td width="50%"><a href="https://congzhangzh.github.io/freerdp-web/#xrdp-kde"><img src="docs/media/xrdp-kde.webp" alt="xrdp preview with KDE Plasma on Wayland, in AV1"></a><br>
-<b>xrdp preview + KDE Plasma Wayland, AV1</b><br>KWin rendering in software, no GPU on the server</td>
+<td width="50%"><a href="https://congzhangzh.github.io/freerdp-web/#xrdp-gnome"><img src="docs/media/xrdp-gnome.webp" alt="xrdp with GNOME on Wayland, in AV1"></a><br>
+<b>xrdp + GNOME Wayland, AV1</b><br>sesman starts a GNOME session per user; xrdp sends it in AV1 (4:4:4)</td>
+<td width="50%"><a href="https://congzhangzh.github.io/freerdp-web/#xrdp-kde"><img src="docs/media/xrdp-kde.webp" alt="xrdp with KDE Plasma on Wayland, in AV1"></a><br>
+<b>xrdp + KDE Plasma Wayland, AV1</b><br>KWin rendering in software, no GPU on the server</td>
 </tr>
 <tr>
-<td width="50%"><a href="https://congzhangzh.github.io/freerdp-web/#xrdp-xfce"><img src="docs/media/xrdp-xfce.webp" alt="xrdp with Xfce"></a><br>
-<b>xrdp + Xfce</b><br>xrdp on Debian 13, reached over SSH and websockify</td>
+<td width="50%"><a href="https://congzhangzh.github.io/freerdp-web/#xrdp-xfce"><img src="docs/media/xrdp-xfce.webp" alt="upstream xrdp with Xfce"></a><br>
+<b>upstream xrdp + Xfce</b><br>Debian 13's own xrdp (0.10.1), reached over SSH and websockify</td>
 <td width="50%"><a href="https://congzhangzh.github.io/freerdp-web/#gnome-remote-desktop"><img src="docs/media/gnome-remote-desktop.webp" alt="gnome-remote-desktop with GNOME on Wayland"></a><br>
 <b>gnome-remote-desktop + GNOME Wayland</b><br>GNOME's own RDP server, headless</td>
 </tr>

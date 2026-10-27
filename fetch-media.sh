@@ -4,7 +4,7 @@
 #   ./fetch-media.sh <site dir>
 #
 # From the release kit's newest demo-* pre-release: the kit records them in
-# CI with its newest tested client and xrdp preview, and publishes each set
+# CI with its newest tested client and its xrdp, and publishes each set
 # once (its demo.json names what they were recorded with). Each file is
 # checked against the pre-release's SHA256SUMS. Without one (or with
 # MEDIA=pinned), from this repository's media release that media.json pins,
