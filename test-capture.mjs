@@ -2,11 +2,15 @@ import { connectTestSession } from "./test-connect.mjs";
 // Mouse and keyboard capture against the CI xrdp session: the toolbar's Capture locks the
 // pointer; relative mouse moves move the page's cursor and the remote pointer the same way
 // (XQueryPointer in the session, test-keymap.py); Ctrl + Alt + X does not release, a Ctrl + Alt
-// tap does; in full screen a click on the remote desktop captures again.
+// tap does; in full screen a click on the remote desktop captures again. Disconnect by FreeRDP's
+// hotkey gives the mouse and the keys back by itself.
+//   node test-capture.mjs [out dir]     PAGE, GATEWAY (127.0.0.1:6081), XRDP (grd-wasm-xrdp-ci)
 import { spawn, execFileSync } from "node:child_process";
-import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 const out = process.argv[2] || "out";
+mkdirSync(out, { recursive: true });
+const XRDP = process.env.XRDP || "grd-wasm-xrdp-ci", GATEWAY = process.env.GATEWAY || "127.0.0.1:6081";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const base = new URL(".chrome/", import.meta.url).pathname;
 const profile = mkdtempSync(join(base, "cap-"));
@@ -26,11 +30,11 @@ let mouse = { x: 300, y: 300 };
 const move = async (x, y) => { mouse = { x, y }; await send("Input.dispatchMouseEvent", { type: "mouseMoved", x, y }); };
 const click = async (x, y) => { await move(x, y);
   for (const type of ["mousePressed", "mouseReleased"]) await send("Input.dispatchMouseEvent", { type, x, y, button: "left", clickCount: 1 }); };
-execFileSync("docker", ["cp", new URL("test-keymap.py", import.meta.url).pathname, "grd-wasm-xrdp-ci:/tmp/keymap.py"]);
+execFileSync("docker", ["cp", new URL("test-keymap.py", import.meta.url).pathname, XRDP + ":/tmp/keymap.py"]);
 const remote = () => {
-  const displays = execFileSync("docker", ["exec", "grd-wasm-xrdp-ci", "ls", "/tmp/.X11-unix"]).toString().split(/\s+/).filter(Boolean);
+  const displays = execFileSync("docker", ["exec", XRDP, "ls", "/tmp/.X11-unix"]).toString().split(/\s+/).filter(Boolean);
   const d = ":" + displays.map((n) => +n.slice(1)).sort((a, b) => b - a)[0];
-  const o = execFileSync("docker", ["exec", "-u", "test", "-e", "XAUTHORITY=/home/test/.Xauthority", "grd-wasm-xrdp-ci", "python3", "/tmp/keymap.py", d, "--pointer"]).toString();
+  const o = execFileSync("docker", ["exec", "-u", "test", "-e", "XAUTHORITY=/home/test/.Xauthority", XRDP, "python3", "/tmp/keymap.py", d, "--pointer"]).toString();
   return /pointer: (\d+) (\d+)/.exec(o).slice(1).map(Number);
 };
 const page = async () => JSON.parse(await ev(`JSON.stringify({ locked: document.pointerLockElement === canvas,
@@ -41,7 +45,7 @@ const check = (name, ok) => { results[name] = ok; console.log(ok ? "PASS" : "FAI
 
 await send("Runtime.enable");
 await send("Emulation.setFocusEmulationEnabled", { enabled: true });
-await send("Page.navigate", { url: (process.env.PAGE || "http://127.0.0.1:8080/index.html") + "?v=127.0.0.1:6081&u=test&extra=/gfx&fs=0" });
+await send("Page.navigate", { url: (process.env.PAGE || "http://127.0.0.1:8080/index.html") + "?v=" + GATEWAY + "&u=test&extra=/gfx&fs=0" });
 await connectTestSession(send).catch(e => { chrome.kill(); throw e; });
 await sleep(15000);
 await click(300, 300); await sleep(300);
@@ -89,6 +93,30 @@ await key("keyUp", "Alt", "AltLeft", 18, 2); await key("keyUp", "Control", "Cont
 s = await page();
 check("Ctrl + Alt releases in full screen, which stays", !s.locked && !s.captured && (await ev("!!document.fullscreenElement")));
 
-console.log(logs.filter((l) => /\[page\].*(captur|releas|lock)/i.test(l)).join("\n"));
+// captured again, then FreeRDP's Disconnect hotkey (Right Alt + Right Shift + D, the default):
+// a session ended on purpose; the mouse and the keys come back without a Ctrl + Alt
+await click(400, 300); await sleep(500);
+s = await page();
+check("captured again before Disconnect", s.locked && s.captured);
+const chord = async () => {
+  await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Alt", code: "AltRight", windowsVirtualKeyCode: 18, modifiers: 1, location: 2 });
+  await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Shift", code: "ShiftRight", windowsVirtualKeyCode: 16, modifiers: 9, location: 2 });
+  await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "D", code: "KeyD", windowsVirtualKeyCode: 68, modifiers: 9 });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "D", code: "KeyD", windowsVirtualKeyCode: 68, modifiers: 9 });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Shift", code: "ShiftRight", windowsVirtualKeyCode: 16, modifiers: 1, location: 2 });
+  await send("Input.dispatchKeyEvent", { type: "keyUp", key: "Alt", code: "AltRight", windowsVirtualKeyCode: 18, location: 2 });
+};
+// FreeRDP sees the chord on its next event loop, which a busy machine can delay; press it again
+// if it has not been seen after 10 s
+const disconnecting = () => logs.some((l) => /pressed, disconnecting RDP session/.test(l));
+for (let n = 0; n < 3 && !disconnecting(); n++) { await chord(); for (let i = 0; i < 20 && !disconnecting(); i++) await sleep(500); }
+check("Disconnect by the hotkey disconnects", disconnecting());
+const t0 = Date.now(); for (let i = 0; i < 10; i++) { const q = await page(); if (!q.locked && !q.captured && !q.drawn) break; await sleep(500); }
+s = await page(); console.log(`after Disconnect (${Date.now() - t0} ms):`, JSON.stringify(s));
+check("and the mouse and the keys are released by themselves", !s.locked && !s.captured && !s.drawn);
+let exited = false; for (let i = 0; i < 60 && !exited; i++) { await sleep(500); exited = logs.some((l) => /\[page\] exit code/.test(l)); }
+console.log(exited ? "the client exited after Disconnect" : "NOTE the client had not exited 30 s after Disconnect");
+
+console.log(logs.filter((l) => /\[page\].*(captur|releas|lock|exit|session)|disconnecting|ERRINFO|ERRCONNECT/i.test(l)).join("\n"));
 ws.close(); chrome.kill();
 process.exit(Object.values(results).every(Boolean) ? 0 : 1);

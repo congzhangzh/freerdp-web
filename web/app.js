@@ -44,7 +44,9 @@ const log = (s) => {
   if (sessionPassword) s = s.split(sessionPassword).join("***");
   s = s.replace(/([/+-](?:p|gp|password):)(?:"[^"\n]*"|'[^'\n]*'|[^\s]*)/gi, "$1***");
   crash.lines.push(s); if (crash.lines.length > CRASH_LINES) crash.lines.shift();
-  if (/pressed, disconnecting RDP session/.test(s)) crash.userEnded = true;   // FreeRDP's disconnect hotkey
+  // FreeRDP's disconnect hotkey: ended on purpose, so the mouse and the keys come back now, not
+  // once the client has exited (seconds later; it keeps the page busy until then)
+  if (/pressed, disconnecting RDP session/.test(s)) { crash.userEnded = true; endCapture(); }
   logEl.textContent += s + "\n"; logEl.scrollTop = logEl.scrollHeight; console.log(s);
   const m = /AV1 decoder: ([^,\n]+)/.exec(s);
   if (m) info.decoder = m[1].trim();
@@ -542,6 +544,15 @@ function releasePointer() { if (pointerLocked()) document.exitPointerLock(); }
 function release() {
   releasePointer(); unlockKeyboard(); showToolbar();
   log("[page] Ctrl + Alt: mouse and keyboard released");
+}
+// the session is over (ended on purpose, by the server, or no tries left): the mouse and the keys
+// come back to this computer by themselves. Not while the page is about to reconnect on its own
+function endCapture() {
+  if (!keysCaptured()) return;
+  // the page's cursor goes at once, not when pointerlockchange comes (later, while FreeRDP keeps
+  // the page busy): it would show beside the browser's own
+  releasePointer(); $("vcursor").hidden = true; unlockKeyboard(); showToolbar();
+  log("[page] the session is over: mouse and keyboard released");
 }
 function drawCursor() {
   const c = $("vcursor"), r = $("canvas").getBoundingClientRect();
@@ -1109,10 +1120,10 @@ function showEnd(text, canReconnect) {
 }
 function sessionEnded(unexpected) {
   if (modularClient()) connectStarted = false;   // an older client runs once
-  if (crash.userEnded) return;
+  if (crash.userEnded) { endCapture(); return; }
   if (modularClient()) newClient();   // ready for Reconnect, while the bar says what happened
   if (connLog.some((l) => LOGON_FAILED.test(l))) {
-    again.forget(); retry.count = 0;
+    again.forget(); retry.count = 0; endCapture();
     showEnd("The server refused the password. Connect again with the right one.", false);
     return;
   }
@@ -1123,6 +1134,7 @@ function sessionEnded(unexpected) {
     retry.timer = setTimeout(() => reconnect(true), wait * 1000);
     return;
   }
+  endCapture();
   showEnd(unexpected ? "Connection lost." : "The session ended.", true);
 }
 async function reconnect(automatic = false) {
