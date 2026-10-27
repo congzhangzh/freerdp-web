@@ -43,9 +43,19 @@ let t; for (let i = 0; i < 150 && !t; i++) { await sleep(200); try { t = (await 
 const main = await cdp(t.webSocketDebuggerUrl);
 const display = () => ":" + execFileSync(ENGINE, ["exec", XRDP, "ls", "/tmp/.X11-unix"]).toString().split(/\s+/).filter(Boolean)
   .map((n) => +n.slice(1)).sort((a, b) => b - a)[0];
+// right after login the session's display can be there before its .Xauthority lets us in: try
+// again for up to 10 s ("Authorization required", "cannot open display")
 const remote = (arg) => {
-  const d = display();
-  return execFileSync(ENGINE, ["exec", "-u", "test", "-e", "XAUTHORITY=/home/test/.Xauthority", XRDP, "python3", "/tmp/keymap.py", d, arg]).toString();
+  for (let i = 0; ; i++) {
+    try {
+      const d = display();
+      return execFileSync(ENGINE, ["exec", "-u", "test", "-e", "XAUTHORITY=/home/test/.Xauthority", XRDP, "python3", "/tmp/keymap.py", d, arg],
+        { stdio: ["ignore", "pipe", "pipe"] }).toString();
+    } catch (e) {
+      if (i >= 20 || !/Authorization required|open display|No such file/i.test(String(e.stderr) + e.message)) throw e;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500);
+    }
+  }
 };
 execFileSync(ENGINE, ["cp", new URL("test-keymap.py", import.meta.url).pathname, XRDP + ":/tmp/keymap.py"]);
 const remoteSize = () => /screen: (\d+) x (\d+)/.exec(remote("--size")).slice(1).map(Number);

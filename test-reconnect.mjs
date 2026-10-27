@@ -150,6 +150,10 @@ const ended = await waitFor("the end bar after the logoff", async () => { const 
 s = await state();
 console.log("after the logoff:", JSON.stringify(s), "| seen:", seen.join(" → "));
 check("a session the server ends shows the end bar", ended && !/Reconnecting/.test(s.endText));
+// on a failure, how the client saw the end: did a logoff (Set Error Info, the Disconnect Provider
+// Ultimatum) reach it, or only a closed connection
+if (!(ended && !/Reconnecting/.test(s.endText)))
+  console.log("the client's log at the end:\n" + logs.filter((l) => !/\[page\] (mouse|Ctrl)/.test(l)).slice(0, 40).map((l) => "    " + l.slice(0, 220)).join("\n"));
 before = logins();
 await ev("document.getElementById('endReconnect').click(), 1");
 const back3 = await waitFor("the login after the logoff", () => logins() > before, 60000);
