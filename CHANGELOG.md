@@ -15,6 +15,24 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261026.6
+
+- **The release kit tests All screens on its own servers**, as rungs above its one-monitor
+  test, so a failure says whether the basics or the multi-monitor part broke: `test-screens`
+  against its xrdp (0.10.6.1) and the xrdp preview, both modes, and `test-screens-wlup`
+  against the preview's GNOME (KDE in its CI). For that the two scripts take `ENGINE`
+  (`docker` or `podman`) and, the wlup one, `PASSWORD`; Chrome's temporary files go to a short
+  directory of their own (under a CI workspace its socket path passed the 108 bytes a Unix
+  socket allows); the second screen's xterm is white, to show on a black root with no window
+  manager; on xrdp 0.10.6.1 and older two more after-Reconnect checks in separate mode are
+  NOTEs (5376e6de); the wlup test waits for its terminal before All screens. ✅ the kit's runs
+  of 0058ea6: xrdp 0.10.6.1 separate 19 PASS and 1 NOTE, span 18; the preview separate 20,
+  span 18; GNOME 5.
+- **Demo names by the xrdp they ran against** (`media.json` anchors): `xrdp-original-xfce`,
+  `xrdp-preview-gnome`, `xrdp-preview-kde`, `grd-gnome`, and a new All screens clip,
+  `xrdp-preview-gnome-screens` (`#xrdp-gnome-screens`). The old names and addresses still
+  lead to them. The page itself is unchanged.
+
 ## 20261026.5
 
 - **All screens: the cursor on every screen while captured**: under capture (Pointer Lock,
