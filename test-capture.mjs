@@ -3,7 +3,8 @@ import { connectTestSession } from "./test-connect.mjs";
 // pointer; relative mouse moves move the page's cursor and the remote pointer the same way
 // (XQueryPointer in the session, test-keymap.py); Ctrl + Alt + X does not release, a Ctrl + Alt
 // tap does; in full screen a click on the remote desktop captures again. Disconnect by FreeRDP's
-// hotkey gives the mouse and the keys back by itself.
+// hotkey gives the mouse and the keys back by itself. Info names the codec, its colour and whether
+// it decodes in hardware.
 //   node test-capture.mjs [out dir]     PAGE, GATEWAY (127.0.0.1:6081), XRDP (grd-wasm-xrdp-ci)
 import { spawn, execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -48,6 +49,18 @@ await send("Emulation.setFocusEmulationEnabled", { enabled: true });
 await send("Page.navigate", { url: (process.env.PAGE || "http://127.0.0.1:8080/index.html") + "?v=" + GATEWAY + "&u=test&extra=/gfx&fs=0" });
 await connectTestSession(send).catch(e => { chrome.kill(); throw e; });
 await sleep(15000);
+// Info: each video codec with its colour (AV1's profile, H.264's RDP codec), and whether the
+// browser decodes it in hardware or in software
+await ev("tbInfo.click(), 1"); await sleep(2500);
+const rows = JSON.parse(await ev("JSON.stringify(Object.fromEntries([...infoTable.rows].map((r) => [r.cells[0].textContent, r.cells[1].textContent])))"));
+await ev("tbInfo.click(), 1"); await sleep(300);
+console.log("Info:", JSON.stringify({ codecs: rows["Video codecs"], av1: rows["AV1 decoder"], h264: rows["H.264 decoder"] }));
+// the per-codec counts come from the client (FreeRDP's freerdp_web_codec_stats, which the release
+// FreeRDP the kit builds does not carry yet): without them the row says "–"
+if (rows["Video codecs"] === "–") console.log("NOTE this client has no codec statistics: Info's Video codecs row is empty");
+else check("Info names the video codec with its colour", /(AV1|H\.264) 4:[24]:[04]/.test(rows["Video codecs"] ?? ""));
+check("Info says whether the video decodes in hardware or software",
+  /hardware|software/.test(rows["AV1 decoder"] ?? "") || /hardware|software/.test(rows["H.264 decoder"] ?? ""));
 await click(300, 300); await sleep(300);
 
 // Capture from the toolbar

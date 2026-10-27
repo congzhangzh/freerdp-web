@@ -905,6 +905,24 @@ window.freerdpScreens = {
 };
 
 let last = { t: performance.now(), rx: 0, tx: 0, frames: 0, ms: 0 };
+// Whether the browser has a hardware decoder for a codec string. WebCodecs never says which
+// decoder it picked; the client asks for "no-preference", which takes hardware when there is
+// one, so this is what decodes (unless the browser falls back on its own, e.g. past its size)
+const hwDecoder = {};
+function hardware(codec) {
+  if (!(codec in hwDecoder)) {
+    hwDecoder[codec] = null;
+    if (typeof VideoDecoder === "function")
+      VideoDecoder.isConfigSupported({ codec, hardwareAcceleration: "prefer-hardware" })
+        .then((r) => { hwDecoder[codec] = !!r.supported; }, () => { hwDecoder[codec] = false; });
+  }
+  return hwDecoder[codec];
+}
+const hwText = (h) => h === true ? "hardware" : h === false ? "software" : "checking…";
+// the AV1 stream's profile, from its last sequence header (av1_webcodecs.js): 0 = Main, 4:2:0;
+// 1 = High, 4:4:4
+const av1Profile = () => { let p = -1; for (const d of Module.freerdpAv1?.decoders?.values() ?? []) if (d.profile >= 0) p = d.profile; return p; };
+const AV1_CHROMA = { 0: "4:2:0", 1: "4:4:4" };
 let version = "?";
 fetch(".well-known/manifest.webmanifest").then((r) => r.json()).then((m) => { version = m.version; }).catch(() => {});
 function updateInfo() {
@@ -929,8 +947,11 @@ function updateInfo() {
       const f = Module._freerdp_web_codec_stats?.(); if (!f) return "–";
       const now = Array.from(HEAPU32.subarray(f >> 2, (f >> 2) + 32));
       const prev = last.codecs || now.map(() => 0);
-      const names = { 0: "Uncompressed", 1: "AV1", 3: "RemoteFX", 8: "ClearCodec", 9: "Progressive", 10: "Planar",
-                      11: "AVC420", 12: "Alpha", 14: "AVC444", 15: "AVC444v2" };
+      // with the colour each codec carries: AV1's from its stream, H.264's from the RDP codec
+      // (AVC444 sends two 4:2:0 streams that make one 4:4:4 picture)
+      const av1 = AV1_CHROMA[av1Profile()];
+      const names = { 0: "Uncompressed", 1: av1 ? `AV1 ${av1}` : "AV1", 3: "RemoteFX", 8: "ClearCodec", 9: "Progressive", 10: "Planar",
+                      11: "H.264 4:2:0 (AVC420)", 12: "Alpha", 14: "H.264 4:4:4 (AVC444)", 15: "H.264 4:4:4 (AVC444v2)" };
       last.codecsNext = now;
       const parts = [];
       for (let i = 0; i < 16; i++) if (now[i]) {
@@ -940,7 +961,15 @@ function updateInfo() {
       return parts.join(" · ") || "no updates yet"; })()],
     ["Screens", multiOn() ? `${multi.wins.size + 1}, ${multi.mode === "separate" ? "a monitor each" : "one wide desktop"}; the desktop spans ${multi.box.width} × ${multi.box.height} CSS px` : "this one"],
     ["Client build", window.freerdpEngine ?? "–"],
-    ["AV1 decoder", info.decoder],
+    ["AV1 decoder", (() => {
+      if (!/^WebCodecs/.test(info.decoder)) return /dav1d/.test(info.decoder) ? `${info.decoder}: software, in this page` : info.decoder;
+      const p = av1Profile();
+      if (p < 0) return info.decoder;
+      return `WebCodecs (browser), ${hwText(hardware(p === 1 ? "av01.1.13M.08" : "av01.0.13M.08"))} for AV1 ${AV1_CHROMA[p]}; dav1d as fallback`; })()],
+    ["H.264 decoder", (() => {
+      if (!Module.freerdpH264?.decoders?.size) return "–";
+      // the stream's own codec string is not kept; a High profile one (level 4.0) stands for it
+      return `WebCodecs (browser), ${hwText(hardware("avc1.640028"))}`; })()],
     ["Audio codec", (() => {
       const a = Module._freerdp_web_audio_format?.(); if (!a) return "–";
       const [tag, rate, ch] = HEAPU32.subarray(a >> 2, (a >> 2) + 3);
