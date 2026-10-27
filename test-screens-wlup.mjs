@@ -51,12 +51,17 @@ const inSession = (cmd) => execFileSync(ENGINE, ["exec", C, "su", "tester", "-c"
   "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus WAYLAND_DISPLAY=$(cd /run/user/1000 && ls wayland-? | head -1); " + cmd],
   { stdio: ["ignore", "pipe", "ignore"] }).toString();
 const byX = (a, b) => +a.split("@")[1].split(",")[0] - +b.split("@")[1].split(",")[0];
+// every output kscreen-doctor listed last time, enabled or not: a FAIL's detail on KDE shows them,
+// so a KWin that lists the outputs differently can be read from the log
+let kdeOutputs = "";
 const monitors = () => {
   try {
     if (DESKTOP === "kde") {
       // KWin's enabled outputs; the primary one has the lowest priority (a lone output has 0,
       // ordered ones count from 1). Qt may warn about the locale first
-      const s = inSession("kscreen-doctor -j"), outs = JSON.parse(s.slice(s.indexOf("{"))).outputs.filter((o) => o.enabled);
+      kdeOutputs = "none, kscreen-doctor gave no answer";
+      const s = inSession("kscreen-doctor -j"), all = JSON.parse(s.slice(s.indexOf("{"))).outputs, outs = all.filter((o) => o.enabled);
+      kdeOutputs = JSON.stringify(all.map(({ name, enabled, connected, pos, size, priority }) => ({ name, enabled, connected, pos, size, priority })));
       const first = Math.min(...outs.map((o) => o.priority));
       return outs.map((o) => `${o.name}@${o.pos.x},${o.pos.y}${o.priority === first ? "*" : ""}`).sort(byX).join(" ");
     }
@@ -71,10 +76,11 @@ const until = async (re, ms = 30000) => { let m; for (let t0 = Date.now(); Date.
 const results = {};
 const check = (name, ok, detail = "") => { results[name] = ok; console.log(ok ? "PASS" : "FAIL", name, detail); };
 const ONE = /^[^@ ]+@0,0\*$/, TWO = new RegExp(`^[^@ ]+@0,0 [^@ ]+@${W},0\\*$`);
+const why = (re, m) => re.test(m) || DESKTOP !== "kde" ? m : `${m} | kscreen-doctor's outputs: ${kdeOutputs}`;
 
 await connected(1);
 let m = await until(ONE);
-check(`connected: ${DESKTOP} has one monitor`, ONE.test(m), m);
+check(`connected: ${DESKTOP} has one monitor`, ONE.test(m), why(ONE, m));
 // a window of the session from before All screens: a maximized terminal, dark
 execFileSync(ENGINE, ["exec", "-d", C, "su", "tester", "-c", "export XDG_RUNTIME_DIR=/run/user/1000 " +
   "WAYLAND_DISPLAY=$(cd /run/user/1000 && ls wayland-? | head -1); foot --maximized"]);
@@ -97,7 +103,7 @@ for (let i = 0; i < 60 && !shown; i++) { await sleep(500); shown = dark(await ma
 await main.ev("tbScreens.click()");
 await main.ev("screensMenu.querySelector('[data-mode=separate]').click()");
 m = await until(TWO);
-check(`Separate screens: a ${DESKTOP} monitor per screen, this window's (right) one primary`, TWO.test(m), m);
+check(`Separate screens: a ${DESKTOP} monitor per screen, this window's (right) one primary`, TWO.test(m), why(TWO, m));
 // the windows that were there stay on this window's screen, the primary; the other screen is new
 await sleep(3000);
 const mid = await middles();
@@ -114,10 +120,10 @@ if (popup) {
 await main.ev("tbReconnect.click()");
 await connected(2);
 m = await until(TWO);
-check("after Reconnect: still a monitor per screen", TWO.test(m), m);
+check("after Reconnect: still a monitor per screen", TWO.test(m), why(TWO, m));
 if (popup) await (await cdp(popup.webSocketDebuggerUrl)).ev("window.close()").catch(() => {});
 m = await until(ONE);
-check("the second window closed: one monitor again", ONE.test(m), m);
+check("the second window closed: one monitor again", ONE.test(m), why(ONE, m));
 writeFileSync(join(out, `${DESKTOP}-xrdp.log`), execFileSync(ENGINE, ["exec", C, "grep", "wlup/", "/var/log/xrdp.log"]).toString());
 writeFileSync(join(out, `${DESKTOP}-page.log`), await pageLog());
 const failed = Object.entries(results).filter(([, ok]) => !ok).map(([n]) => n);
