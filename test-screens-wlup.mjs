@@ -58,9 +58,10 @@ const monitors = () => {
   try {
     if (DESKTOP === "kde") {
       // KWin's enabled outputs; the primary one has the lowest priority (a lone output has 0,
-      // ordered ones count from 1). Qt may warn about the locale first
+      // ordered ones count from 1). Qt may warn about the locale first. KWin 6.8 leaves out
+      // "enabled" for xrdp's output: on unless it says false, when it is connected with a size
       kdeOutputs = "none, kscreen-doctor gave no answer";
-      const s = inSession("kscreen-doctor -j"), all = JSON.parse(s.slice(s.indexOf("{"))).outputs, outs = all.filter((o) => o.enabled);
+      const s = inSession("kscreen-doctor -j"), all = JSON.parse(s.slice(s.indexOf("{"))).outputs, outs = all.filter((o) => o.enabled === true || (o.enabled === undefined && o.connected && o.size));
       kdeOutputs = JSON.stringify(all.map(({ name, enabled, connected, pos, size, priority }) => ({ name, enabled, connected, pos, size, priority })));
       const first = Math.min(...outs.map((o) => o.priority));
       return outs.map((o) => `${o.name}@${o.pos.x},${o.pos.y}${o.priority === first ? "*" : ""}`).sort(byX).join(" ");
@@ -100,6 +101,10 @@ for (let i = 0; i < 60 && !shown; i++) { await sleep(500); shown = dark(await ma
   const o = new OffscreenCanvas(canvas.width, canvas.height), g = o.getContext("2d");
   g.drawImage(canvas, 0, 0); return Array.from(g.getImageData(canvas.width / 2 | 0, canvas.height / 2 | 0, 1, 1).data.slice(0, 3));
 })()`)); }
+// and settled, like the windows of a session that ran a while before All screens: a window that
+// has not acked its first configure yet can follow the other monitor when GNOME rearranges them
+// (Mutter takes its monitor from the frame it has not acked; the release kit's notes)
+if (shown) await sleep(3000);
 await main.ev("tbScreens.click()");
 await main.ev("screensMenu.querySelector('[data-mode=separate]').click()");
 m = await until(TWO);
