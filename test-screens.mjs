@@ -4,23 +4,26 @@ import { connectTestSession } from "./test-connect.mjs";
 // screen's window shows its part of it, that its mouse and keys reach the server at the right
 // place, and that closing it brings the desktop back to one screen. MODE=separate (Session
 // settings' default) gives the server a monitor per screen, MODE=span one as wide as both.
-//   node test-screens.mjs [out dir]     PAGE, GATEWAY (127.0.0.1:6081), XRDP (grd-wasm-xrdp-ci), MODE
+//   node test-screens.mjs [out dir]     PAGE, GATEWAY (127.0.0.1:6081), XRDP (grd-wasm-xrdp-ci), MODE,
+//                                       ENGINE (docker; or podman)
 import { spawn, execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 const out = process.argv[2] || "out";
 mkdirSync(out, { recursive: true });
 const XRDP = process.env.XRDP || "grd-wasm-xrdp-ci", GATEWAY = process.env.GATEWAY || "127.0.0.1:6081";
 const MODE = process.env.MODE || "separate";
+const ENGINE = process.env.ENGINE || "docker";
 const W = 640, H = 480;   // each screen, CSS pixels; the second one is right of the first
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const base = new URL(".chrome/", import.meta.url).pathname;
-mkdirSync(base, { recursive: true });
-const profile = mkdtempSync(join(base, "scr-"));
+// Chrome's own temporary files in a short directory of their own: under a deep one (a CI
+// runner's workspace) its socket path passes the 108 bytes a Unix socket allows
+const base = mkdtempSync(join(tmpdir(), "scr-"));
+const profile = join(base, "profile");
 const chrome = spawn("google-chrome", ["--headless=new", "--remote-debugging-port=9347", `--user-data-dir=${profile}`, "--no-first-run",
   `--window-size=${W},${H}`, "--enable-unsafe-swiftshader", "about:blank"], { stdio: "ignore", env: { ...process.env, TMPDIR: base } });
-chrome.on("exit", () => { rmSync(profile, { recursive: true, force: true });
-  for (const n of readdirSync(base)) if (n.startsWith("com.google.Chrome.")) rmSync(join(base, n), { recursive: true, force: true }); });
+chrome.on("exit", () => rmSync(base, { recursive: true, force: true }));
 const targets = async () => (await (await fetch("http://127.0.0.1:9347/json")).json()).filter((x) => x.type === "page");
 async function cdp(url) {
   const ws = new WebSocket(url); await new Promise((r) => ws.addEventListener("open", r));
@@ -32,16 +35,16 @@ async function cdp(url) {
 }
 let t; for (let i = 0; i < 150 && !t; i++) { await sleep(200); try { t = (await targets())[0]; } catch {} }
 const main = await cdp(t.webSocketDebuggerUrl);
-const display = () => ":" + execFileSync("docker", ["exec", XRDP, "ls", "/tmp/.X11-unix"]).toString().split(/\s+/).filter(Boolean)
+const display = () => ":" + execFileSync(ENGINE, ["exec", XRDP, "ls", "/tmp/.X11-unix"]).toString().split(/\s+/).filter(Boolean)
   .map((n) => +n.slice(1)).sort((a, b) => b - a)[0];
 const remote = (arg) => {
   const d = display();
-  return execFileSync("docker", ["exec", "-u", "test", "-e", "XAUTHORITY=/home/test/.Xauthority", XRDP, "python3", "/tmp/keymap.py", d, arg]).toString();
+  return execFileSync(ENGINE, ["exec", "-u", "test", "-e", "XAUTHORITY=/home/test/.Xauthority", XRDP, "python3", "/tmp/keymap.py", d, arg]).toString();
 };
-execFileSync("docker", ["cp", new URL("test-keymap.py", import.meta.url).pathname, XRDP + ":/tmp/keymap.py"]);
+execFileSync(ENGINE, ["cp", new URL("test-keymap.py", import.meta.url).pathname, XRDP + ":/tmp/keymap.py"]);
 const remoteSize = () => /screen: (\d+) x (\d+)/.exec(remote("--size")).slice(1).map(Number);
 // the session's monitors (RandR), as the window manager sees them: "640x480+0+0" each
-const remoteMonitors = () => [...execFileSync("docker", ["exec", "-u", "test", "-e", "XAUTHORITY=/home/test/.Xauthority", "-e", "DISPLAY=" + display(), XRDP,
+const remoteMonitors = () => [...execFileSync(ENGINE, ["exec", "-u", "test", "-e", "XAUTHORITY=/home/test/.Xauthority", "-e", "DISPLAY=" + display(), XRDP,
   "xrandr", "--listmonitors"]).toString().matchAll(/(\d+)\/\d+x(\d+)\/\d+([+-]\d+)([+-]\d+)/g)].map((m) => `${m[1]}x${m[2]}${m[3]}${m[4]}`).sort();
 const remotePointer = () => /pointer: (\d+) (\d+)/.exec(remote("--pointer")).slice(1).map(Number);
 const results = {};
@@ -79,7 +82,7 @@ check(MODE === "separate" ? "the server has a monitor for each screen" : "the se
 check("the canvas spans both, from this window's left edge",
   await main.ev(`(() => { const r = canvas.getBoundingClientRect(); return r.left === 0 && r.width === ${2 * W} && canvas.width === ${2 * W}; })()`));
 // something to see on the second screen only: an xterm on the right half of the remote desktop
-execFileSync("docker", ["exec", "-d", "-u", "test", "-e", "DISPLAY=" + display(), XRDP, "xterm", "-geometry", `30x8+${W + 60}+40`, "-e", "sleep", "120"]);
+execFileSync(ENGINE, ["exec", "-d", "-u", "test", "-e", "DISPLAY=" + display(), XRDP, "xterm", "-bg", "white", "-fg", "black", "-geometry", `30x8+${W + 60}+40`, "-e", "sleep", "120"]);
 check("Info names both screens", await main.ev("(tbInfo.click(), /^2, (a monitor each|one wide desktop); the desktop spans 1280 × 480/.test([...infoTable.rows].find((r) => r.cells[0].textContent === 'Screens')?.cells[1].textContent))"));
 
 const second = await cdp(popup.webSocketDebuggerUrl);
@@ -134,26 +137,29 @@ await main.ev("delete document.pointerLockElement; readCursor(); true");
 // Reconnect while on both screens: the client starts from the settings of its first connect, so
 // it has to send the screens' layout again, also when the canvas keeps its size. xrdp 0.10.6.1
 // and older drop a layout with the same bounding box (one 1280 x 480 monitor -> two 640 x 480);
-// devel since 5376e6de applies it.
+// devel since 5376e6de applies it. In separate mode that also costs the canvas's size and the
+// second screen's keys after Reconnect: on those, those checks are NOTEs, not failures.
+const old = /xrdp 0\.(\d+)\.(\d+)/.exec(execFileSync(ENGINE, ["exec", XRDP, "xrdp", "--version"]).toString());
+const fixed = !old || +old[1] > 10 || (+old[1] === 10 && +old[2] > 6);
+const known = (name, ok, detail) => MODE === "separate" && !fixed && !ok
+  ? console.log(`NOTE xrdp 0.${old[1]}.${old[2]}: ${name}: no, ${detail} (fixed in devel, 5376e6de)`) : check(name, ok, detail);
 const layoutsBefore = ((await pageLog()).match(/NumMonitors=2/g) || []).length;
 {
   await main.ev("tbReconnect.click()");
   await connected(2);
   // the session goes on: the same canvas (FreeRDP's retry dialog no longer takes it, #13860),
   // and the second screen's keys still reach the server
-  check("after Reconnect the canvas keeps its size", await main.ev(`canvas.width === ${2 * W} && canvas.height === ${H}`), await main.ev("canvas.width + ' x ' + canvas.height"));
+  known("after Reconnect the canvas keeps its size", await main.ev(`canvas.width === ${2 * W} && canvas.height === ${H}`), await main.ev("canvas.width + ' x ' + canvas.height"));
   await second.send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Shift", code: "ShiftLeft", windowsVirtualKeyCode: 16, modifiers: 8 });
   await sleep(600);
   const held2 = remote("--size");
   await second.send("Input.dispatchKeyEvent", { type: "keyUp", key: "Shift", code: "ShiftLeft", windowsVirtualKeyCode: 16 });
   await sleep(600);
-  check("after Reconnect a key on the second screen still reaches the server", /Shift_L/.test(held2), held2.split("\n")[0]);
+  known("after Reconnect a key on the second screen still reaches the server", /Shift_L/.test(held2), held2.split("\n")[0]);
 }
 if (MODE === "separate") {
   let sent = 0; for (let i = 0; i < 20 && sent <= layoutsBefore; i++) { sent = ((await pageLog()).match(/NumMonitors=2/g) || []).length; await sleep(500); }
   check("after Reconnect the client sends a monitor for each screen again", sent > layoutsBefore, `${sent - layoutsBefore} layout(s) of 2`);
-  const old = /xrdp 0\.(\d+)\.(\d+)/.exec(execFileSync("docker", ["exec", XRDP, "xrdp", "--version"]).toString());
-  const fixed = !old || +old[1] > 10 || (+old[1] === 10 && +old[2] > 6);
   for (let i = 0; i < 20; i++) { mons = remoteMonitors(); if (mons.length === 2) break; await sleep(500); }
   if (fixed) check("and the server has them", mons.length === 2, JSON.stringify(mons));
   else console.log(`NOTE xrdp 0.${old[1]}.${old[2]} keeps ${JSON.stringify(mons)} after Reconnect (fixed in devel, 5376e6de)`);
@@ -168,7 +174,7 @@ check("and to one monitor", JSON.stringify(remoteMonitors()) === JSON.stringify(
 check("the toolbar offers All screens again, the mode kept as the host's setting",
   await main.ev(`tbScreens.textContent.startsWith('All screens') && !document.body.classList.contains('multi') && readSession().screens === '${MODE}'`));
 
-try { execFileSync("docker", ["exec", "-u", "test", XRDP, "sh", "-c", "kill $(pidof xterm)"]); } catch { /* gone already */ }
+try { execFileSync(ENGINE, ["exec", "-u", "test", XRDP, "sh", "-c", "kill $(pidof xterm)"]); } catch { /* gone already */ }
 writeFileSync(join(out, "screens-page.log"), String(await main.ev("document.getElementById('log').textContent")));
 main.ws.close(); chrome.kill();
 const failed = Object.entries(results).filter(([, ok]) => !ok).map(([n]) => n);
