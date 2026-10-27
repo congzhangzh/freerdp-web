@@ -15,6 +15,32 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261027.1
+
+- **A session that ended cleanly ends in the page too, and Reconnect works after it**: in a
+  browser FreeRDP's client does not exit after a clean end, a logoff (the server ending the
+  session, `ERRINFO_LOGOFF_BY_USER`) or its Disconnect hotkey. It closes its window (the canvas
+  goes 0 × 0) and the runtime never exits, so the page never heard of the end: the picture went
+  blank, no end bar showed, and Reconnect, which waits for that exit, did nothing. 5 s after
+  such an end the page ends the session itself (the end bar), and Reconnect starts a new
+  client. Why the client stays is not known yet (it looks like a thread that never ends).
+  test-reconnect has a third case: the server logs the session off, then Reconnect from the
+  end bar; the page before fails it.
+- **The mouse and the keys come back by themselves when the session is over** (Pointer Lock,
+  Keyboard Lock): the Disconnect hotkey, which now does what the toolbar's Disconnect does
+  (back to the connect form), a session that ended, a refused password, or the reconnect tries
+  used up. A lost connection that the page is about to retry stays captured. test-capture
+  disconnects with the hotkey while captured.
+- **Info: each codec's colour, and hardware or software decoding**: "AV1 4:4:4" or "AV1 4:2:0"
+  from the stream's profile, H.264 by its RDP codec (AVC420 4:2:0, AVC444 4:4:4), and whether
+  the browser has a hardware decoder for it (`VideoDecoder.isConfigSupported`, prefer-hardware;
+  WebCodecs itself never says which one it picked). Most GPUs decode AV1 4:2:0 but not 4:4:4.
+  The per-codec counts in *Video codecs* need `freerdp_web_codec_stats` in the client, which the
+  FreeRDP release the kit builds does not have: that row stays "–" for now.
+- Tests: `test-screens-wlup` counts KWin 6.8's xrdp output (it has no `enabled` key) and keeps
+  the GNOME windows check, which fails about 1 run in 5 from a Mutter race (the release kit's
+  notes); the screens and capture tests no longer leave Chrome's temporary directory behind.
+
 ## 20261026.6
 
 - **The release kit tests All screens on its own servers**, as rungs above its one-monitor
