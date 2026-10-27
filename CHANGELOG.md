@@ -15,6 +15,18 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261027.2
+
+- **A logoff is the end of the session, not a lost connection**: FreeRDP's SDL client exits
+  with its own codes (`client/SDL/SDL3/sdl_utils.hpp`), and the page took every code but 0 for
+  a lost connection. After a logoff from an xrdp that sends Set Error Info and the Disconnect
+  Provider Ultimatum (xrdp devel, the release kit's preview) the client exits with 2, LOGOFF,
+  and the page logged in again. The codes that say the session itself is over (disconnected
+  or logged off by the server or the user, a timeout, another connection took it over,
+  refused, licensing) now end it, and the end bar says why ("The session ended: logged off.").
+  Other codes and a lost connection are retried as before. Found by the release kit's runs of
+  test-reconnect on the preview, with its new log dump.
+
 ## 20261027.1
 
 - **A session that ended cleanly ends in the page too, and Reconnect works after it**: in a
