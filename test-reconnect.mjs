@@ -15,12 +15,14 @@ import { connectTestSession } from "./test-connect.mjs";
 // The published page (https) reaching this machine's loopback gateway needs Chrome's Local
 // Network Access check off: CHROME_FLAGS=--disable-features=LocalNetworkAccessChecks.
 // DUMP=1 prints the page's uncaught exceptions with their stacks. XRDP (grd-wasm-xrdp-ci) and
-// XRDP_ADDR (127.0.0.1:13390) pick another xrdp container.
+// XRDP_ADDR (127.0.0.1:13390) pick another xrdp container; SESSION_PROC (openbox) is the session's
+// process whose end logs it off (its window manager, or the xterm a bare ~/.xsession runs).
 import { spawn, execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const XRDP = process.env.XRDP || "grd-wasm-xrdp-ci", XRDP_ADDR = process.env.XRDP_ADDR || "127.0.0.1:13390";
+const SESSION_PROC = process.env.SESSION_PROC || "openbox";
 const base = new URL(".chrome/", import.meta.url).pathname;
 mkdirSync(base, { recursive: true });
 const profile = mkdtempSync(join(base, "rc-"));
@@ -140,10 +142,10 @@ const errors = logs.filter((l) => /abort|program has already exited|RuntimeError
 check("no runtime error from the second client", !errors.length);
 if (errors.length) { const i = logs.findIndex((l) => /RuntimeError|abort/i.test(l)); console.log(logs.slice(Math.max(0, i - 8), i + 4).join("\n")); }
 
-// 3. the server ends the session: its window manager quits, so xrdp logs it off. No reconnecting
+// 3. the server ends the session: its window manager (SESSION_PROC) quits, so xrdp logs it off. No reconnecting
 // on its own (the user is gone), the end bar instead; Reconnect there logs in again
 logs = []; seen.length = 0;
-execFileSync("docker", ["exec", XRDP, "sh", "-c", "kill $(pidof openbox)"]);
+execFileSync("docker", ["exec", XRDP, "sh", "-c", `kill $(pidof ${SESSION_PROC})`]);
 const ended = await waitFor("the end bar after the logoff", async () => { const q = await state(); return q.bar && /ended/.test(q.endText); }, 20000);
 s = await state();
 console.log("after the logoff:", JSON.stringify(s), "| seen:", seen.join(" → "));
