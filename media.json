@@ -3,11 +3,11 @@
   "release": "demo-media-2",
   "anchors": {
     "_": "each demo's address, index.html#<key>, whichever set is published: fetch-media.sh gives the video whose file is one of the names that key; the names, and earlier anchors (#<name>), lead to it too. Keep keys forever; add names when a file is renamed",
-    "xrdp-gnome": ["demo-xrdp-gnome", "xrdp-preview-gnome"],
-    "xrdp-kde": ["demo-xrdp-kde", "xrdp-preview-kde"],
+    "xrdp-gnome": ["demo-xrdp-gnome", "xrdp-preview-gnome", "xrdp-gnome"],
+    "xrdp-kde": ["demo-xrdp-kde", "xrdp-preview-kde", "xrdp-kde"],
     "xrdp-xfce": ["demo-xrdp", "demo-xfce", "xrdp-original-xfce"],
     "gnome-remote-desktop": ["demo-gnome", "grd-gnome"],
-    "xrdp-gnome-screens": ["xrdp-preview-gnome-screens"]
+    "xrdp-gnome-screens": ["xrdp-preview-gnome-screens", "xrdp-gnome-screens"]
   },
   "encoding": "720p from the 1080p recording: ffmpeg -vf scale=1280:720:flags=lanczos,format=yuv420p -c:v libx264 -crf 28 -preset slow -c:a aac -b:a 96k -movflags +faststart",
   "files": {
