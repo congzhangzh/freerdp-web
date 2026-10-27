@@ -26,6 +26,9 @@ const quit = async (code) => {
   rmSync(base, { recursive: true, force: true });
   process.exit(code);
 };
+// also when the test is stopped (timeout(1) sends SIGTERM) or throws
+for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => quit(1));
+process.on("uncaughtException", (e) => { console.error(e); quit(1); });
 let t; for (let i = 0; i < 150 && !t; i++) { await sleep(200); try { t = (await (await fetch("http://127.0.0.1:9344/json")).json()).find((x) => x.type === "page"); } catch {} }
 const ws = new WebSocket(t.webSocketDebuggerUrl); await new Promise((r) => ws.addEventListener("open", r));
 let id = 0; const p = new Map(); const logs = [];

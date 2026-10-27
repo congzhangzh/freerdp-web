@@ -30,6 +30,9 @@ const quit = async (code) => {
   rmSync(base, { recursive: true, force: true });
   process.exit(code);
 };
+// also when the test is stopped (timeout(1) sends SIGTERM) or throws
+for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => quit(1));
+process.on("uncaughtException", (e) => { console.error(e); quit(1); });
 const targets = async () => (await (await fetch("http://127.0.0.1:9347/json")).json()).filter((x) => x.type === "page");
 async function cdp(url) {
   const ws = new WebSocket(url); await new Promise((r) => ws.addEventListener("open", r));
