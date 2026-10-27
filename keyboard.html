@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Keyboard · FreeRDP Web</title>
+<link rel="icon" href="icon-256.png" type="image/png">
+<link rel="stylesheet" href="ui.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<main class="help">
+  <header class="top">
+    <a class="brand" href="index.html">FreeRDP Web</a>
+    <nav aria-label="Help">
+      <a href="index.html#intro">▶ Intro</a>
+      <a href="safety.html">Safety and tunnels</a>
+      <a href="keyboard.html" aria-current="page">Keyboard</a>
+      <a href="install.html">Install as app</a>
+      <a href="release-notes.html">Release notes</a>
+      <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener" title="The source, issues and releases">GitHub</a>
+      <label><span class="sr-only">Theme</span><select id="theme" aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+    </nav>
+  </header>
+  <h1>Keyboard shortcuts</h1>
+  <p class="lead">Pick the shortcuts your hands already know. They work while the remote desktop has focus
+    (click it first); typing in the connection form never triggers them.</p>
+
+  <label class="field"><span>Shortcuts</span>
+    <select id="keyboardProfile">
+      <option value="freerdp">FreeRDP (default)</option>
+      <option value="mstsc">mstsc (Windows Remote Desktop)</option>
+    </select></label>
+  <p class="row"><button id="resetProfile" type="button" class="small">Back to FreeRDP</button>
+    <span id="profileStatus" class="muted" role="status" aria-live="polite"></span></p>
+  <h2>FreeRDP's hotkeys</h2>
+  <p>A modifier set plus one key: full screen, disconnect, keyboard grab. FreeRDP's own default is
+    Right Shift alone, and then typing a capital D with the right hand disconnects; the recommended
+    set adds Right Alt (Right Option on a Mac), which typing never holds with Shift.</p>
+  <label class="field"><span>Modifiers</span><select id="hotkeyModifier"></select></label>
+  <div id="hotkeyKeys"></div>
+  <p class="row"><button id="resetHotkeys" type="button" class="small">Back to the recommended hotkeys</button>
+    <span id="hotkeyStatus" class="muted" role="status" aria-live="polite"></span></p>
+  <h2>The shortcuts now</h2>
+  <dl class="keys" id="keyList"></dl>
+
+  <h2>Keys the browser keeps</h2>
+  <p>Some combinations never reach a web page: the operating system takes them first. Ctrl + Alt + Delete on
+    Windows is one, which is why the mstsc profile sends it as Ctrl + Alt + End. Ctrl + W, Ctrl + T and Alt + Tab
+    belong to the browser while the page is in a window.</p>
+  <p>In full screen the page asks for Keyboard Lock (Chrome and Edge), and then Esc and the Windows key go to
+    the remote desktop too. To leave full screen, <b>hold Esc</b>, or use the toolbar at the top of the screen:
+    move the pointer to the top edge to show it, and pin it with 📌 to keep it there.</p>
+  <p>Full screen and Disconnect are on the toolbar as well, so neither depends on a key the browser may keep.</p>
+
+  <p><a href="index.html">Back to FreeRDP Web</a></p>
+</main>
+<script src="keyboard.js"></script>
+</body>
+</html>

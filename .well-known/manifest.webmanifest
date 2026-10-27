@@ -1,0 +1,45 @@
+{
+  "name": "FreeRDP Web",
+  "short_name": "FreeRDP",
+  "id": "/",
+  "start_url": "/",
+  "display": "standalone",
+  "version": "20261027.2",
+  "description": "Lightning-fast remote desktop in your browser: FreeRDP SDL3 client compiled to WebAssembly",
+  "icons": [
+    {
+      "src": "../icon-256.png",
+      "sizes": "256x256",
+      "type": "image/png"
+    }
+  ],
+  "permissions_policy": {
+    "cross-origin-isolated": [
+      "self"
+    ],
+    "direct-sockets": [
+      "self"
+    ],
+    "loopback-network": [
+      "self"
+    ],
+    "local-network": [
+      "self"
+    ],
+    "fullscreen": [
+      "self"
+    ],
+    "window-management": [
+      "self"
+    ],
+    "autoplay": [
+      "self"
+    ],
+    "clipboard-read": [
+      "self"
+    ],
+    "clipboard-write": [
+      "self"
+    ]
+  }
+}

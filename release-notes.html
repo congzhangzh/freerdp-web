@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Release notes · FreeRDP Web</title>
+<link rel="icon" href="icon-256.png" type="image/png">
+<link rel="stylesheet" href="ui.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<main class="help">
+  <header class="top">
+    <a class="brand" href="index.html">FreeRDP Web</a>
+    <nav aria-label="Help">
+      <a href="index.html#intro">▶ Intro</a>
+      <a href="safety.html">Safety and tunnels</a>
+      <a href="keyboard.html">Keyboard</a>
+      <a href="install.html">Install as app</a>
+      <a href="release-notes.html" aria-current="page">Release notes</a>
+      <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener" title="The source, issues and releases">GitHub</a>
+      <label><span class="sr-only">Theme</span><select id="theme" aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+    </nav>
+  </header>
+  <h1>Release notes</h1>
+  <p class="lead">What changed for you, newest first. The version you are running is shown in a session's
+    <b>Info</b> panel, on the <b>Client</b> line. A new version arrives the next time you load the page; a session
+    that is already open keeps going.</p>
+
+  <h2>20261027.2 <span class="muted">· 27 October 2026</span></h2>
+  <ul>
+    <li><b>A logoff ends the session</b>: with some servers (the xrdp preview among them) the page took a logoff for a
+      lost connection and logged in again, a new session you had just left. It now says the session ended and why,
+      such as "logged off", with Reconnect there if you want it.</li>
+  </ul>
+
+  <h2>20261027.1 <span class="muted">· 27 October 2026</span></h2>
+  <ul>
+    <li><b>Reconnect after a logoff</b>: when the server ended the session (a log out, for example), the page went
+      blank and Reconnect did nothing. It now says the session ended, and Reconnect brings it back.</li>
+    <li><b>The mouse and the keys come back by themselves</b> when the session is over, with no Ctrl + Alt; FreeRDP's
+      Disconnect hotkey now goes back to the connect form, like the toolbar's Disconnect. A dropped connection that
+      the page reconnects on its own stays captured.</li>
+    <li><b>Info</b> names each video codec with its colour (AV1 4:4:4 or 4:2:0, H.264 4:2:0 or 4:4:4) and says whether
+      the browser decodes it in hardware or in software.</li>
+  </ul>
+
+  <h2>20261026.6 <span class="muted">· 26 October 2026</span></h2>
+  <ul>
+    <li><b>Demo videos</b>: a new one shows <b>All screens</b> with GNOME, two screens side by side; the videos'
+      addresses from before keep working.</li>
+  </ul>
+
+  <h2>20261026.5 <span class="muted">· 26 October 2026</span></h2>
+  <ul>
+    <li><b>All screens</b>: when the mouse is captured, the pointer now shows on every screen, not only on the
+      one with the page.</li>
+  </ul>
+
+  <h2>20261026.4 <span class="muted">· 26 October 2026</span></h2>
+  <ul>
+    <li><b>Reconnect</b> no longer leaves you with a frozen picture and a keyboard that does nothing: the session
+      goes on as before, on one screen or on all of them.</li>
+    <li><b>All screens ▾</b> now asks how: <b>Separate screens</b> (a monitor each) or <b>One wide desktop</b>. The
+      choice is remembered for the host.</li>
+  </ul>
+
+  <h2>20261026.3 <span class="muted">· 26 October 2026</span></h2>
+  <ul>
+    <li><b>All screens</b> now makes each screen a monitor of its own for the remote computer, like physical
+      screens: a window maximizes on one screen, and you drag it to the next. <b>Session settings</b>,
+      <b>All screens</b>, still offers the old way, one wide desktop.</li>
+    <li>Known: after <b>Reconnect</b> on several screens, close the other screens' windows and click
+      <b>All screens</b> again.</li>
+  </ul>
+
+  <h2>20261026.2 <span class="muted">· 26 October 2026</span></h2>
+  <ul>
+    <li>A newer client, which waits for the browser in a much quicker way when it has to pause. Today's sessions
+      do not pause there, so you will not notice a difference yet.</li>
+  </ul>
+
+  <h2>20261026.1 <span class="muted">· 26 October 2026</span></h2>
+  <ul>
+    <li><b>All screens</b>: with more than one screen, the new toolbar button spreads the remote desktop over all of
+      them, as one wide desktop. The page goes full screen on its screen and opens a window on each other one; a
+      click in such a window fills its screen. <b>One screen</b> goes back. It needs Chrome or Edge, which ask once
+      for permission to manage your windows (and may ask to allow pop-ups). The remote computer sees one large
+      screen, so a maximized window covers them all.</li>
+  </ul>
+
+  <h2>20261025.2 <span class="muted">· 25 October 2026</span></h2>
+  <ul>
+    <li>The client moves to the newest FreeRDP (23 October), which now includes most of what this page needed from it:
+      sound, H.264 video through the browser's decoder, and their fixes.</li>
+    <li>Each new version of the site is now tried with a real login before it goes live, so a version that cannot
+      connect never replaces the one you use.</li>
+  </ul>
+
+  <h2>20261025.1 <span class="muted">· 25 October 2026</span></h2>
+  <ul>
+    <li>A smaller, faster client in Chrome: where the browser supports JSPI, the page loads a build made for it
+      (6.9 MB instead of 10.6 MB). In our measurements it connects about 30 % sooner and uses half the
+      processor time or less while the remote desktop is idle; under heavy screen traffic it was as fast or faster.
+      Other browsers keep the build they had. The session's <b>Info</b> panel shows which one runs, on the
+      <b>Client build</b> line.
+      <table>
+        <tr><th></th><th>Before (Asyncify)</th><th>JSPI</th><th>Change</th></tr>
+        <tr><td>Download</td><td>10.6 MB</td><td>6.9 MB</td><td>35 % smaller</td></tr>
+        <tr><td>Connect</td><td>0.51 to 0.57 s</td><td>0.36 to 0.38 s</td><td>about 30 % sooner</td></tr>
+        <tr><td>Processor, desktop idle</td><td>2.7 to 4.2 %</td><td>1.1 to 2.3 %</td><td>half or less</td></tr>
+      </table>
+      Measured with the same FreeRDP built both ways, four sets of 6 to 12 connections each.</li>
+    <li><b>Capture</b> moves the remote pointer again with the new client (SDL 3.4).</li>
+  </ul>
+
+  <h2>20261024.1 <span class="muted">· 24 October 2026</span></h2>
+  <ul>
+    <li>One passkey vault, several passkeys: <b>Add a passkey</b> on this device (Windows Hello, Touch ID, Google Password
+      Manager, iCloud Keychain), on a phone or on a security key. Connect lets you pick any of them.</li>
+    <li>A <b>recovery code</b>, shown once, opens the vault without any passkey. <b>Remove</b> drops a passkey or the code.</li>
+    <li><b>Reconnect</b> without a passkey or a password: a dropped connection comes back in the same page, and
+      <b>Reconnect</b> on the toolbar does it by hand. It needs the kit's next web client; until then the end bar
+      offers <i>Reload and connect</i>.</li>
+  </ul>
+
+  <h2>20261023.2 <span class="muted">· 23 October 2026</span></h2>
+  <ul>
+    <li>FreeRDP's hotkeys are yours to choose on the <a href="keyboard.html">Keyboard</a> page. The new default,
+      Right Alt + Right Shift + Enter, D or G, means a capital D typed with the right hand no longer disconnects.</li>
+    <li>The hotkeys are shown under <b>Shortcuts</b>, on the toolbar's buttons, and once in the session after they change.</li>
+    <li><b>Delete the vault</b>, for a passkey that is gone or on another device. To move the vault to a new passkey,
+      export with the passwords, delete, create, import.</li>
+  </ul>
+
+  <h2>20261023.1 <span class="muted">· 23 October 2026</span></h2>
+  <ul>
+    <li>The SSH lines end a dead tunnel within about 90 seconds and stop at once when the local port is taken.</li>
+    <li><a href="safety.html">Safety and tunnels</a> shows the normal port forward first, and in <b>Advanced</b> two
+      ways with Unix sockets on the server, so the server's other users cannot reach your gateway or xrdp.</li>
+  </ul>
+
+  <h2>20261022.4 <span class="muted">· 22 October 2026</span></h2>
+  <ul>
+    <li>The page says what it is and who it is for, under the header, and every page's header links
+      to the project on <b>GitHub</b>.</li>
+  </ul>
+
+  <h2>20261022.3 <span class="muted">· 22 October 2026</span></h2>
+  <ul>
+    <li>Each demo's link is shown under it, with <b>Copy link</b>, and is kept for good:
+      <code>#xrdp-gnome</code>, <code>#xrdp-kde</code>, <code>#xrdp-xfce</code>, <code>#gnome-remote-desktop</code>.
+      The links of 20261022.2 still work, and a link to a demo that is gone opens the first.</li>
+  </ul>
+
+  <h2>20261022.2 <span class="muted">· 22 October 2026</span></h2>
+  <ul>
+    <li>Every demo under ▶ Intro has its own link to share, such as <code>index.html#demo-xrdp-kde</code>;
+      <code>index.html#intro</code> opens the first. The demos now play with their sound (after your first click,
+      as browsers require; until then a <b>🔊 Sound on</b> button).</li>
+    <li>A host's link: <b>Copy link</b> in the host bar gives <code>index.html?v=&lt;host:port&gt;</code>, which opens
+      the page with that host selected, or adds it. The link carries the address only, never a user or password.</li>
+  </ul>
+
+  <h2>20261022.1 <span class="muted">· 22 October 2026</span></h2>
+  <ul>
+    <li>Four demo videos under ▶ Intro, now with their sound in time: GNOME and KDE Plasma on Wayland
+      through the xrdp preview, sent in AV1, then Xfce and GNOME's own remote desktop. They are recorded
+      afresh with every tested build.</li>
+  </ul>
+
+  <h2>20261021.3 <span class="muted">· 21 October 2026</span></h2>
+  <ul>
+    <li>A new demo video, first under ▶ Intro: GNOME 51 on Wayland through the xrdp preview, sent in AV1
+      and decoded by your browser, with web video, WebGL and sound in the session.</li>
+  </ul>
+
+  <h2>20261021.1 <span class="muted">· 21 October 2026</span></h2>
+  <ul>
+    <li>Microphone: switch it on under Session settings to talk in the remote session. The browser asks for
+      permission when the remote computer starts listening. It needs the newer client; with an older one the
+      switch stays off.</li>
+  </ul>
+
+  <h2>0.4.13 <span class="muted">· 20 October 2026</span></h2>
+  <ul>
+    <li>The FreeRDP Web icon shows in the browser tab and when you install the site as an app.</li>
+  </ul>
+
+  <h2>0.4.12 <span class="muted">· 20 October 2026</span></h2>
+  <ul>
+    <li>After you connect with a typed password, the page offers to save it with your passkey, as a phone
+      does after a sign-in: one Touch ID (or Windows Hello) and the next connection fills it for you.
+      Choose Not now, or Never for this host, to skip it.</li>
+    <li>Setting up the passkey vault takes one passkey prompt instead of two, with passkeys that support it.</li>
+  </ul>
+
+  <h2>0.4.11 <span class="muted">· 20 October 2026</span></h2>
+  <ul>
+    <li>New Session setting, Remote scale: keep your screen's scale (Automatic) or choose 100, 125, 150 or
+      200 %. The choice stays the same when you resize the window or switch to full screen. Windows
+      follows it; GNOME does from version 50 on.</li>
+    <li>With "Full screen" checked, a session on a Mac starts at the full size of the screen instead of a
+      little smaller.</li>
+  </ul>
+
+  <h2>0.4.10 <span class="muted">· 20 October 2026</span></h2>
+  <ul>
+    <li>Capture the mouse and keyboard for the remote desktop: in full screen, click the remote desktop;
+      in a window, use the toolbar's Capture button. The mouse then stays with the remote desktop, as in a
+      virtual machine. Press and release <kbd>Ctrl</kbd> + <kbd>Alt</kbd> to get them back.</li>
+  </ul>
+
+  <h2>0.4.9 <span class="muted">· 20 October 2026</span></h2>
+  <ul>
+    <li>On a Mac, switching apps with Cmd + Tab during a session no longer opens the remote desktop's
+      Activities overview or Start menu, and no key stays pressed on the remote side afterwards. Cmd + C
+      and other Cmd shortcuts no longer leave the letter repeating.</li>
+  </ul>
+
+  <h2>0.4.8 <span class="muted">· 20 October 2026</span></h2>
+  <ul>
+    <li>In full screen, the session toolbar no longer drops down whenever the mouse touches the top of the
+      screen. Rest the mouse for a moment at the small grip in the top centre to bring it back; the
+      corners are left to the remote desktop's own buttons and menus. It hides again when you move away.</li>
+  </ul>
+
+  <h2>0.4.7 <span class="muted">· 19 October 2026</span></h2>
+  <ul>
+    <li>On a high-resolution screen (a Retina Mac, a laptop at 150 % or 200 %), the remote desktop starts at
+      your screen's scale. Servers that follow it, such as GNOME or Windows, no longer start small and then
+      jump to the larger size.</li>
+  </ul>
+
+  <h2>0.4.6 <span class="muted">· 18 October 2026</span></h2>
+  <ul>
+    <li>Full screen during a session shows the whole remote desktop again. On a Mac, switching to full screen
+      after connecting could leave the picture shifted and cut off.</li>
+  </ul>
+
+  <h2>0.4.5 <span class="muted">· 18 October 2026</span></h2>
+  <ul>
+    <li>The same header on every page: FreeRDP Web as the title, then ▶ Intro, the help pages, Release notes
+      and the theme, in one row. ▶ Intro on a help page takes you to the demo videos.</li>
+  </ul>
+
+  <h2>0.4.4 <span class="muted">· 18 October 2026</span></h2>
+  <ul>
+    <li>This page: what changed for you in each version, linked at the top of every page.</li>
+    <li>The header's items (▶ Intro, the help pages, Release notes, the theme) share one style.</li>
+  </ul>
+
+  <h2>0.4.3 <span class="muted">· 18 October 2026</span></h2>
+  <ul>
+    <li>The SSH line in the safety notice and on <a href="safety.html">Safety and tunnels</a> now starts with
+      <code>ssh -tt</code>. The gateway on your server then stops by itself when you close the tunnel, even if
+      you started ssh from a script or a shortcut.</li>
+  </ul>
+
+  <h2>0.4.2 <span class="muted">· 18 October 2026</span></h2>
+  <ul>
+    <li>The SSH line now sends your local gateway port to the server's port 3390, where websockify runs next to
+      RDP. If you use another port on your computer, copy the line again.</li>
+    <li>If you never changed a host's gateway, it moves from 127.0.0.1:6080 to the new default 127.0.0.1:3390 by
+      itself. Gateways you typed yourself stay as they are.</li>
+    <li><b>▶ Intro</b> in the header shows the demo videos again.</li>
+  </ul>
+
+  <h2>0.4.1 <span class="muted">· 18 October 2026</span></h2>
+  <ul>
+    <li>The default gateway is 127.0.0.1:3390, next to RDP's 3389, in the page, the help and
+      <code>rdp-gateway.sh</code>.</li>
+  </ul>
+
+  <h2>0.4.0 <span class="muted">· 18 October 2026</span></h2>
+  <ul>
+    <li><b>Two one-minute demos</b> on your first visit: Xfce through xrdp, and GNOME on Wayland through
+      gnome-remote-desktop, with web video, WebGL and sound on the remote desktop. Skip them if you like; they
+      download only when they play.</li>
+    <li><b>Theme</b>: System, Light or Dark, at the top of every page.</li>
+    <li><b>A new address</b>: <a href="https://congzhangzh.github.io/freerdp-web/">congzhangzh.github.io/freerdp-web</a>.
+      The old one forwards here.</li>
+  </ul>
+
+  <h2>0.3.0 <span class="muted">· 18 October 2026</span></h2>
+  <ul>
+    <li><b>Hosts</b>: keep several servers in the bar under the safety notice. Each remembers its gateway, user,
+      session settings and advanced options; the form edits the selected one as you type. Your earlier settings
+      became the first host.</li>
+    <li><b>The passkey vault, per host</b> (Advanced): keep a host's password encrypted in this browser and unlock it
+      with a passkey when you connect. Otherwise your browser's password manager keeps it.</li>
+    <li><b>Export and import</b> your hosts as a file to move them to another browser, with the vault's passwords
+      only if you tick it, and encrypted with a passphrase if you tick that.</li>
+  </ul>
+
+  <h2>0.2.0 <span class="muted">· 18 October 2026</span></h2>
+  <ul>
+    <li><b>A simpler start</b>: gateway, user, password, Connect. The browser's password manager offers to save
+      the password.</li>
+    <li><b>The route at the top</b>: how the page reaches your desktop, with the one SSH line that sets it up.</li>
+    <li><b>Session settings</b>: sound, clipboard, full screen, the video codec, and a priority: save bandwidth,
+      or reduce the server's load.</li>
+    <li><b>Advanced</b>: Direct TCP in the installed app, the passkey vault, extra FreeRDP options.</li>
+    <li><b>Keyboard</b>: Windows Remote Desktop (mstsc) shortcuts if your hands know those:
+      <a href="keyboard.html">Keyboard</a>.</li>
+    <li>The remote desktop now fills the window; before, it was drawn at 800 × 600.</li>
+  </ul>
+
+  <h2>0.1 <span class="muted">· October 2026</span></h2>
+  <ul>
+    <li>The first version: FreeRDP's client in your browser through a WebSocket gateway, or with Direct TCP in the
+      installed app; clipboard text and images, full screen with the keyboard captured, sound, the session toolbar
+      and Info panel, and a saved log when a session ends unexpectedly.</li>
+  </ul>
+
+  <p class="muted">For developers: the detailed changes are in
+    <a href="https://github.com/congzhangzh/freerdp-web/blob/main/CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG.md</a>.</p>
+  <p><a href="index.html">Back to FreeRDP Web</a></p>
+</main>
+</body>
+</html>

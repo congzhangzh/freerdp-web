@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- threads need cross-origin isolation (COOP/COEP); on hosts that cannot send those headers,
+     such as GitHub Pages, this service worker adds them (it does nothing where the server does) -->
+<script src="coi-serviceworker.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FreeRDP Web</title>
+<meta name="description" content="Lightning-fast remote desktop in your browser: FreeRDP in WebAssembly, AV1, multi-user sessions with xrdp, no client to install.">
+<meta property="og:title" content="FreeRDP Web">
+<meta property="og:description" content="Lightning-fast remote desktop in your browser: AV1, multi-user sessions with xrdp, no client to install. Free and open source.">
+<meta property="og:image" content="https://raw.githubusercontent.com/congzhangzh/freerdp-web/main/docs/media/xrdp-gnome.jpg">
+<link rel="manifest" href=".well-known/manifest.webmanifest">
+<link rel="icon" href="icon-256.png" type="image/png">
+<link rel="stylesheet" href="ui.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<!-- the first visit's demo videos (splash.js); only where the site has them -->
+<div id="splash" class="splash" role="dialog" aria-modal="true" aria-labelledby="splashTitle" hidden>
+  <div class="splash-box">
+    <div class="splash-head">
+      <h2 id="splashTitle">FreeRDP Web in a minute</h2>
+      <div class="row">
+        <button id="splashSound" type="button" class="small" hidden>🔊 Sound on</button>
+        <button id="splashSkip" type="button" class="small">Skip</button>
+      </div>
+    </div>
+    <div id="splashTabs" class="splash-tabs" role="tablist" aria-label="Demo"></div>
+    <video id="splashVideo" controls playsinline preload="none"></video>
+    <p id="splashCaption" class="hint"></p>
+    <div class="row splash-foot">
+      <p class="splash-link hint">🔗 <a id="splashLink" href="#intro"></a>
+        <button id="splashCopy" type="button" class="small">Copy link</button></p>
+      <button id="splashStart" type="button" class="primary">Start</button>
+    </div>
+  </div>
+</div>
+<div class="shell">
+<h1 class="sr-only">FreeRDP Web</h1>
+<header class="top">
+  <a class="brand" href="index.html" aria-current="page">FreeRDP Web</a>
+  <nav aria-label="Help">
+    <button id="demoOpen" type="button" hidden>▶ Intro</button>
+    <a href="safety.html">Safety and tunnels</a>
+    <a href="keyboard.html">Keyboard</a>
+    <a href="install.html">Install as app</a>
+    <a href="release-notes.html">Release notes</a>
+    <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener" title="The source, issues and releases">GitHub</a>
+    <label><span class="sr-only">Theme</span><select id="theme" aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+  </nav>
+</header>
+<!-- what this is, in one line, and who it is for -->
+<p class="tagline"><b>Lightning-fast remote desktop in your browser:</b> AV1 decoded by the browser,
+  multi-user sessions with xrdp, no client to install.</p>
+<p class="tagline hint">A gift from a hobby to the world, for VDI, HPC, AI, VPS, research and the community:
+  free and open source on <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener">GitHub</a>.</p>
+
+<!-- standing safety notice: who this is from, and the route a session takes -->
+<section class="route" id="route" aria-label="Safety">
+  <p>An unofficial community client, not written by security professionals. Keep the RDP server
+    on 127.0.0.1, reach it through SSH and stop the gateway after the session.</p>
+  <ol class="hops" aria-label="Connection route">
+    <li><b>This browser</b><span>page</span></li>
+    <li class="via" aria-hidden="true">→</li>
+    <li><b>Gateway</b><span id="hopGateway">127.0.0.1:3390</span></li>
+    <li class="via">SSH</li>
+    <li><b>RDP server</b><span>127.0.0.1:3389</span></li>
+  </ol>
+  <div class="cmd">
+    <code id="sshCmd"></code>
+    <button id="copyCmd" type="button" class="small">Copy</button>
+  </div>
+  <p class="hint">Run it in a terminal on this computer and replace <code>server</code>; Ctrl-C ends
+    the gateway. Other ways, and why: <a href="safety.html">Safety and tunnels</a>.</p>
+</section>
+
+<!-- the saved hosts: the form below shows and edits the selected one -->
+<section class="hosts" aria-label="Hosts">
+  <div class="host-list" id="hostList" role="radiogroup" aria-label="Saved hosts"></div>
+  <div class="host-actions">
+    <button id="hostNew" type="button" class="small">New host</button>
+    <button id="hostDuplicate" type="button" class="small">Duplicate</button>
+    <button id="hostDelete" type="button" class="small">Delete</button>
+    <button id="hostExport" type="button" class="small">Export…</button>
+    <button id="hostImport" type="button" class="small">Import…</button>
+    <button id="hostLink" type="button" class="small" title="A link that opens this page with this host">Copy link</button>
+    <input id="hostImportFile" type="file" accept="application/json,.json" hidden>
+  </div>
+  <p id="hostStatus" class="hint" role="status" aria-live="polite"></p>
+</section>
+
+<div id="lastlog" role="alert" hidden><span id="lastlogText"></span>
+  <button id="lastlogCopy" class="small" type="button">Copy log</button> <button id="lastlogShow" class="small" type="button">Show</button>
+  <button id="lastlogDismiss" class="small" type="button">Dismiss</button></div>
+
+<!-- a real form with name/autocomplete, so the browser's password manager offers to save and fill -->
+<form class="connect" id="connectForm" action="#" autocomplete="on">
+  <label class="field"><span>Name</span>
+    <input id="hostName" autocomplete="off" spellcheck="false" maxlength="60"></label>
+  <label class="field"><span id="hostLabel">Gateway</span>
+    <input id="host" name="gateway" placeholder="127.0.0.1:3390" autocomplete="off" spellcheck="false"></label>
+  <label class="field"><span>User</span>
+    <input id="user" name="username" autocomplete="username" spellcheck="false" autocapitalize="off"></label>
+  <label class="field"><span>Password</span>
+    <input id="pass" name="password" type="password" autocomplete="current-password"></label>
+  <div class="actions">
+    <button id="go" class="primary" type="submit" disabled>Loading…</button>
+    <span id="status" role="status" aria-live="polite"></span>
+  </div>
+  <p id="summary"></p>
+
+  <details class="panel" id="sessionPanel">
+    <summary>Session settings <small id="sessionSummary"></small></summary>
+    <fieldset>
+      <legend>Devices</legend>
+      <div class="checks">
+        <label><input id="optAudio" type="checkbox" checked> Sound</label>
+        <label title="This build of the client has no microphone support"><input id="optMic" type="checkbox" disabled>
+          Microphone <small class="muted" id="micNote">(not in this build)</small></label>
+        <label><input id="optClipboard" type="checkbox" checked> Clipboard</label>
+        <label><input id="fs" type="checkbox"> Full screen</label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Video</legend>
+      <div class="choice" role="radiogroup" aria-label="Video">
+        <label><input type="radio" name="codec" value="auto" checked> Automatic</label>
+        <label><input type="radio" name="codec" value="av1-420"> AV1 4:2:0</label>
+        <label><input type="radio" name="codec" value="av1-444"> AV1 4:4:4</label>
+      </div>
+      <p class="hint" id="codecHint"></p>
+    </fieldset>
+    <fieldset>
+      <legend>Remote scale</legend>
+      <div class="choice" role="radiogroup" aria-label="Remote scale">
+        <label><input type="radio" name="scale" value="auto" checked> Automatic</label>
+        <label><input type="radio" name="scale" value="100"> 100 %</label>
+        <label><input type="radio" name="scale" value="125"> 125 %</label>
+        <label><input type="radio" name="scale" value="150"> 150 %</label>
+        <label><input type="radio" name="scale" value="200"> 200 %</label>
+      </div>
+      <p class="hint" id="scaleHint"></p>
+    </fieldset>
+    <fieldset>
+      <legend>All screens</legend>
+      <div class="choice" role="radiogroup" aria-label="All screens">
+        <label><input type="radio" name="screens" value="separate" checked> Separate screens</label>
+        <label><input type="radio" name="screens" value="span"> One wide desktop</label>
+      </div>
+      <p class="hint" id="screensHint"></p>
+    </fieldset>
+    <fieldset>
+      <legend>Priority</legend>
+      <div class="choice" role="radiogroup" aria-label="Priority">
+        <label><input type="radio" name="strategy" value="recommended" checked> Recommended</label>
+        <label><input type="radio" name="strategy" value="bandwidth"> Save bandwidth</label>
+        <label><input type="radio" name="strategy" value="server"> Reduce server load</label>
+      </div>
+      <p class="hint" id="strategyHint"></p>
+    </fieldset>
+    <fieldset>
+      <legend>Shortcuts</legend>
+      <div class="row">
+        <div class="choice" role="radiogroup" aria-label="Shortcuts">
+          <label><input type="radio" name="keys" value="freerdp" checked> FreeRDP</label>
+          <label><input type="radio" name="keys" value="mstsc"> mstsc</label>
+        </div>
+        <a href="keyboard.html">Which keys?</a>
+      </div>
+      <p class="hint" id="hotkeyHint"></p>
+    </fieldset>
+    <p class="note" id="customNote" hidden><span id="customText"></span>
+      <button id="restoreDefaults" type="button" class="small">Restore recommended settings</button></p>
+  </details>
+
+  <details class="panel" id="advancedPanel">
+    <summary>Advanced <small>direct TCP, passkey vault, extra options</small></summary>
+    <fieldset>
+      <legend>Connection</legend>
+      <label id="directLabel" class="check"><input id="direct" type="checkbox"> Direct TCP to the RDP server, no gateway</label>
+      <p class="hint" id="directHint"></p>
+    </fieldset>
+    <fieldset>
+      <legend>Password</legend>
+      <label class="check"><input id="vaultKeep" type="checkbox"> Keep this host's password in the passkey vault</label>
+      <p class="hint">Off: your browser's password manager saves and fills it. On: it is encrypted in this browser
+        and unlocked with a passkey when you connect
+        (<a href="https://github.com/congzhangzh/freerdp-web/blob/main/web/VAULT.md" target="_blank" rel="noopener">how it works</a>).</p>
+      <div id="vaultPanel" hidden>
+        <p id="vaultStatus" class="hint" role="status" aria-live="polite"></p>
+        <div class="row">
+          <button id="vaultCreate" type="button" class="small">Create vault</button>
+          <button id="vaultUnlock" type="button" class="small">Unlock with passkey</button>
+          <button id="vaultSave" type="button" class="small">Save the password</button>
+          <button id="vaultForget" type="button" class="small">Forget the saved password</button>
+          <button id="vaultLock" type="button" class="small">Lock</button>
+          <button id="vaultDelete" type="button" class="small">Delete the vault</button>
+        </div>
+        <div id="vaultRecover" class="row" hidden>
+          <input id="vaultCodeInput" placeholder="Recovery code" spellcheck="false" autocomplete="off" aria-label="Recovery code">
+          <button id="vaultCodeUnlock" type="button" class="small">Unlock with the recovery code</button>
+        </div>
+        <div id="vaultKeys" hidden>
+          <p class="hint">What opens this vault, kept in this browser: each passkey below (this device's, a phone's, a security key…), or the recovery code.</p>
+          <ul id="vaultKeyList"></ul>
+          <div class="row">
+            <input id="vaultKeyName" placeholder="Name: Phone, Windows Hello…" maxlength="40" spellcheck="false" autocomplete="off" aria-label="Name of the new passkey">
+            <button id="vaultAddKey" type="button" class="small">Add a passkey</button>
+            <button id="vaultNewCode" type="button" class="small">Create a recovery code</button>
+          </div>
+          <p id="vaultCodeBox" class="hint" hidden>The recovery code, shown this once: <code id="vaultCodeText"></code>
+            <button id="vaultCodeCopy" type="button" class="small">Copy</button>
+            Keep it on paper or in a password manager: it opens the vault without a passkey.</p>
+        </div>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Extra options</legend>
+      <input id="extra" placeholder="/bpp:16" spellcheck="false" autocomplete="off" aria-label="Extra options">
+      <p class="hint">FreeRDP command line options; they win over the session settings of the same kind.
+        The client gets: <code id="preview"></code></p>
+    </fieldset>
+  </details>
+</form>
+
+<!-- export and import of the hosts (outside the form: forms do not nest) -->
+<dialog id="exportDialog" aria-labelledby="exportTitle">
+  <form method="dialog" class="dialog">
+    <h2 id="exportTitle">Export hosts</h2>
+    <p class="hint">Every host and its settings, as a file to import in another browser.</p>
+    <label class="check"><input id="exportPasswords" type="checkbox"> Include the passwords kept in the passkey vault</label>
+    <p class="hint">The browser's password manager does not show its passwords to web pages; it can export them itself.</p>
+    <label class="check"><input id="exportEncrypt" type="checkbox"> Encrypt the file with a passphrase</label>
+    <input id="exportPassphrase" type="password" placeholder="Passphrase, 8 characters or more" autocomplete="new-password" hidden>
+    <p id="exportWarn" class="note" hidden>Without encryption, anyone who gets the file can read these passwords.</p>
+    <div class="row"><button value="cancel" class="small">Cancel</button><button value="ok" class="primary">Export</button></div>
+  </form>
+</dialog>
+<dialog id="importDialog" aria-labelledby="importTitle">
+  <form method="dialog" class="dialog">
+    <h2 id="importTitle">Import hosts</h2>
+    <p id="importInfo" class="hint"></p>
+    <input id="importPassphrase" type="password" placeholder="Passphrase" autocomplete="off">
+    <div class="row"><button value="cancel" class="small">Cancel</button><button value="ok" class="primary">Import</button></div>
+  </form>
+</dialog>
+
+<div id="toolbar" role="toolbar" aria-label="Session">
+  <button id="tbPin" aria-label="Pin toolbar">📌</button>
+  <button id="tbFs">Full screen</button>
+  <button id="tbScreens" title="The remote desktop on every screen: a window on each other screen shows its part" hidden>All screens</button>
+  <button id="tbCapture" title="Capture the mouse and keyboard; Ctrl + Alt releases them">Capture</button>
+  <button id="tbInfo">Info</button>
+  <button id="tbLog">Log</button>
+  <button id="tbReconnect" title="Connect again, with the same password (no passkey, no typing)">Reconnect</button>
+  <button id="tbQuit">Disconnect</button>
+</div>
+<div id="screensMenu" role="menu" aria-label="All screens" hidden>
+  <button role="menuitem" data-mode="separate">Separate screens<small>a monitor each, as on physical screens</small></button>
+  <button role="menuitem" data-mode="span">One wide desktop<small>one monitor across all of them</small></button>
+</div>
+<div id="tbGrip" aria-hidden="true"></div>
+<div id="info" hidden><table id="infoTable"></table></div>
+<canvas id="canvas" tabindex="-1"></canvas>
+<img id="vcursor" alt="" hidden>
+<div id="saveBar" role="dialog" aria-labelledby="saveText" hidden>
+  <span id="saveText"></span>
+  <span class="row"><button id="saveYes" class="small primary">Save with passkey</button>
+    <button id="saveLater" class="small">Not now</button><button id="saveNever" class="small">Never for this host</button></span>
+</div>
+<div id="endBar" role="alert" hidden>
+  <span id="endText"></span>
+  <span class="row"><button id="endReconnect" class="small primary">Reconnect</button><button id="endClose" class="small">Close</button></span>
+</div>
+<div id="hotkeyToast" role="status" hidden></div>
+<div id="screensToast" role="status" hidden></div>
+<div id="captureToast" role="status" hidden>Mouse and keyboard captured · <kbd>Ctrl</kbd> + <kbd>Alt</kbd> releases them</div>
+<details id="logPanel"><summary>Log</summary><pre id="log"></pre></details>
+</div>
+<script src="tt-policy.js"></script>
+<script src="tcp-shim.js"></script>
+<script src="vault.js"></script>
+<script src="options.js"></script>
+<script src="keyboard.js"></script>
+<script src="screens.js"></script>
+<script src="hosts.js"></script>
+<script src="hosts-ui.js"></script>
+<script src="app.js"></script>
+<script src="splash.js"></script>
+<script src="engine.js"></script>
+</body>
+</html>

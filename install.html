@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install FreeRDP Web</title>
+<link rel="icon" href="icon-256.png" type="image/png">
+<link rel="stylesheet" href="ui.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<main class="help">
+  <header class="top">
+    <a class="brand" href="index.html">FreeRDP Web</a>
+    <nav aria-label="Help">
+      <a href="index.html#intro">▶ Intro</a>
+      <a href="safety.html">Safety and tunnels</a>
+      <a href="keyboard.html">Keyboard</a>
+      <a href="install.html" aria-current="page">Install as app</a>
+      <a href="release-notes.html">Release notes</a>
+      <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener" title="The source, issues and releases">GitHub</a>
+      <label><span class="sr-only">Theme</span><select id="theme" aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+    </nav>
+  </header>
+  <h1>Install FreeRDP Web as an app</h1>
+  <p class="lead">Installed as an <b>Isolated Web App</b> (IWA), FreeRDP connects to your RDP server with a direct TCP connection: no gateway, no plugin. You do not need it: as a normal web page the client works too, through a WebSocket gateway (<a href="safety.html">Safety and tunnels</a>).</p>
+
+  <h2>Your browser right now</h2>
+  <table id="checks"></table>
+
+  <h2>1. Use Chrome or Edge on Windows, macOS, Linux or ChromeOS</h2>
+  <p>Isolated Web Apps are a Chromium feature. Firefox and Safari can use the web version through a gateway, but not the app.</p>
+
+  <h2>2. Turn on Isolated Web Apps (one time)</h2>
+  <p>Copy each address into the address bar, set the option to <b>Enabled</b>, then click <b>Relaunch</b>. (Web pages are not allowed to open <code>chrome://</code> links themselves.)</p>
+  <div class="copyable"><pre>chrome://flags/#enable-isolated-web-apps</pre><button class="small" data-copy="chrome://flags/#enable-isolated-web-apps">Copy</button></div>
+  <div class="copyable"><pre>chrome://flags/#enable-isolated-web-app-dev-mode</pre><button class="small" data-copy="chrome://flags/#enable-isolated-web-app-dev-mode">Copy</button></div>
+  <p class="warn">Developer mode lets Chrome install unsigned apps from a URL. Only install apps from servers you trust; you can turn the flags off again afterwards (installed apps keep working until you remove them).</p>
+
+  <h2>3. Install the app</h2>
+  <ol>
+    <li>Open <code>chrome://web-app-internals</code> <button class="small" data-copy="chrome://web-app-internals">Copy</button></li>
+    <li>Under <b>Isolated Web Apps</b>, find <b>Install IWA via Dev Mode Proxy</b> and enter this address:
+      <div class="copyable"><pre id="origin"></pre><button class="small" id="copyOrigin">Copy</button></div></li>
+    <li>Click <b>Install</b>. Chrome adds <b>FreeRDP Web</b> to the Start menu / Launchpad / app list and, on Windows, to the desktop.</li>
+  </ol>
+  <p>Updating: when this site changes, open <code>chrome://web-app-internals</code> again and click <b>Update</b> next to FreeRDP Web.</p>
+
+  <h2>4. Connect</h2>
+  <ol>
+    <li>Start <b>FreeRDP Web</b> from the desktop or Start menu, <i>not</i> from a browser tab. The first field then reads <b>RDP server</b>, and <b>Advanced</b> shows <b>Direct TCP</b> ticked.</li>
+    <li>Enter the RDP server as <code>host:port</code> (usually port 3389), your user name and password. The password is never stored.</li>
+    <li>Optional: tick <b>Full screen</b>. Hold <b>Esc</b> to leave full screen.</li>
+  </ol>
+
+  <h2>Good to know</h2>
+  <ul>
+    <li><b>Servers on your own PC or LAN</b> (<code>localhost</code>, <code>192.168.x.x</code>) need extra permissions, which the app requests in its manifest; Chrome may ask you to allow them.</li>
+    <li><b>Without developer mode</b>, Chrome on Windows, macOS and Linux only installs IWAs pushed by an administrator through enterprise policy (from an allowlist since Chrome 143). On ChromeOS IWAs are fully supported.</li>
+    <li>The web version (no install) is at <a href="index.html">index.html</a> and needs a WebSocket-to-TCP gateway such as <code>websockify</code> next to the RDP server.</li>
+  </ul>
+  <p><a href="index.html">Back to FreeRDP Web</a></p>
+</main>
+<script src="install.js"></script>
+</body>
+</html>
