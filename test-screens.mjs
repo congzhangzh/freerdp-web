@@ -23,7 +23,13 @@ const base = mkdtempSync(join(tmpdir(), "scr-"));
 const profile = join(base, "profile");
 const chrome = spawn("google-chrome", ["--headless=new", "--remote-debugging-port=9347", `--user-data-dir=${profile}`, "--no-first-run",
   `--window-size=${W},${H}`, "--enable-unsafe-swiftshader", "about:blank"], { stdio: "ignore", env: { ...process.env, TMPDIR: base } });
-chrome.on("exit", () => rmSync(base, { recursive: true, force: true }));
+// ends the test: Chrome first, then its temporary directory, then node (an exit handler alone
+// would not run: node is gone before Chrome)
+const quit = async (code) => {
+  if (chrome.exitCode === null && chrome.signalCode === null) await new Promise((r) => { chrome.once("exit", r); chrome.kill(); setTimeout(r, 5000); });
+  rmSync(base, { recursive: true, force: true });
+  process.exit(code);
+};
 const targets = async () => (await (await fetch("http://127.0.0.1:9347/json")).json()).filter((x) => x.type === "page");
 async function cdp(url) {
   const ws = new WebSocket(url); await new Promise((r) => ws.addEventListener("open", r));
@@ -58,7 +64,7 @@ const page = process.env.PAGE || "http://127.0.0.1:8080/index.html";
 const url = new URL(page);   // PAGE may carry its own query, e.g. ?engine=asyncify
 for (const [k, v] of Object.entries({ v: GATEWAY, u: "test", extra: "/gfx /log-filters:com.freerdp.channels.disp.client:DEBUG", fs: "1", screens: `${W}x${H}+0+0,${W}x${H}+${W}+0` })) url.searchParams.set(k, v);
 await main.send("Page.navigate", { url: url.href });
-await connectTestSession(main.send).catch((e) => { chrome.kill(); throw e; });
+await connectTestSession(main.send).catch(async (e) => { console.error(e); await quit(1); });
 console.log("client build:", await main.ev("window.freerdpEngine"));
 // connected: the display channel is up (the X session's size may be left from an earlier run)
 const pageLog = () => main.ev("document.getElementById('log').textContent");
@@ -73,7 +79,7 @@ check("All screens asks for the mode", await main.ev(`!screensMenu.hidden && !!s
 await main.ev(`screensMenu.querySelector('[data-mode=${MODE}]').click()`);
 let popup; for (let i = 0; i < 50 && !popup; i++) { await sleep(200); popup = (await targets()).find((x) => x.url.includes("screen.html")); }
 check("a window opens for the second screen", !!popup, popup?.url ?? "");
-if (!popup) { chrome.kill(); process.exit(1); }
+if (!popup) await quit(1);
 size = await settle([2 * W, H]);
 check("the remote desktop spans both screens", size[0] === 2 * W && size[1] === H, size.join(" x "));
 let mons = []; for (let i = 0; i < 20; i++) { mons = remoteMonitors(); if (mons.length === (MODE === "separate" ? 2 : 1)) break; await sleep(500); }
@@ -176,7 +182,7 @@ check("the toolbar offers All screens again, the mode kept as the host's setting
 
 try { execFileSync(ENGINE, ["exec", "-u", "test", XRDP, "sh", "-c", "kill $(pidof xterm)"]); } catch { /* gone already */ }
 writeFileSync(join(out, "screens-page.log"), String(await main.ev("document.getElementById('log').textContent")));
-main.ws.close(); chrome.kill();
+main.ws.close();
 const failed = Object.entries(results).filter(([, ok]) => !ok).map(([n]) => n);
 console.log(failed.length ? `FAILED: ${failed.join("; ")}` : "all passed");
-process.exit(failed.length ? 1 : 0);
+await quit(failed.length ? 1 : 0);

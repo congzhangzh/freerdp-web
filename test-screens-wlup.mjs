@@ -25,7 +25,13 @@ const base = mkdtempSync(join(tmpdir(), "wlup-"));
 const profile = join(base, "profile");
 const chrome = spawn("google-chrome", ["--headless=new", "--remote-debugging-port=9348", `--user-data-dir=${profile}`, "--no-first-run",
   `--window-size=${W},${H}`, "--enable-unsafe-swiftshader", "about:blank"], { stdio: "ignore", env: { ...process.env, TMPDIR: base } });
-chrome.on("exit", () => rmSync(base, { recursive: true, force: true }));
+// ends the test: Chrome first, then its temporary directory, then node (an exit handler alone
+// would not run: node is gone before Chrome)
+const quit = async (code) => {
+  if (chrome.exitCode === null && chrome.signalCode === null) await new Promise((r) => { chrome.once("exit", r); chrome.kill(); setTimeout(r, 5000); });
+  rmSync(base, { recursive: true, force: true });
+  process.exit(code);
+};
 const targets = async () => (await (await fetch("http://127.0.0.1:9348/json")).json()).filter((x) => x.type === "page");
 async function cdp(url) {
   const ws = new WebSocket(url); await new Promise((r) => ws.addEventListener("open", r));
@@ -43,7 +49,7 @@ await main.send("Emulation.setDeviceMetricsOverride", { width: W, height: H, dev
 const url = new URL(process.env.PAGE || "http://127.0.0.1:8080/index.html");
 for (const [k, v] of Object.entries({ v: GATEWAY, u: "tester", extra: "/gfx", fs: "1", screens: `${W}x${H}+${W}+0,${W}x${H}+0+0` })) url.searchParams.set(k, v);
 await main.send("Page.navigate", { url: url.href });
-await connectTestSession(main.send, { password: PASSWORD }).catch((e) => { chrome.kill(); throw e; });
+await connectTestSession(main.send, { password: PASSWORD }).catch(async (e) => { console.error(e); await quit(1); });
 const pageLog = () => main.ev("document.getElementById('log').textContent");
 const connected = async (n) => { for (let i = 0; i < 180; i++) { if (((await pageLog()).match(/Loading Dynamic Virtual Channel disp/g) || []).length >= n) break; await sleep(500); } await sleep(3000); };
 // the desktop's monitors, left to right: name@x,y, * for the primary one
@@ -101,10 +107,6 @@ for (let i = 0; i < 60 && !shown; i++) { await sleep(500); shown = dark(await ma
   const o = new OffscreenCanvas(canvas.width, canvas.height), g = o.getContext("2d");
   g.drawImage(canvas, 0, 0); return Array.from(g.getImageData(canvas.width / 2 | 0, canvas.height / 2 | 0, 1, 1).data.slice(0, 3));
 })()`)); }
-// and settled, like the windows of a session that ran a while before All screens: a window that
-// has not acked its first configure yet can follow the other monitor when GNOME rearranges them
-// (Mutter takes its monitor from the frame it has not acked; the release kit's notes)
-if (shown) await sleep(3000);
 await main.ev("tbScreens.click()");
 await main.ev("screensMenu.querySelector('[data-mode=separate]').click()");
 m = await until(TWO);
@@ -112,6 +114,8 @@ check(`Separate screens: a ${DESKTOP} monitor per screen, this window's (right) 
 // the windows that were there stay on this window's screen, the primary; the other screen is new
 await sleep(3000);
 const mid = await middles();
+// On GNOME this fails about 1 run in 5, a Mutter race (the release kit's notes): a window can
+// follow the other monitor when GNOME rearranges them, however long it has been open
 check("the session's windows stay on this window's screen", shown && dark(mid?.mine) && !dark(mid?.other),
   shown ? JSON.stringify(mid) : "foot never showed before Separate screens (30 s)");
 let popup; for (let i = 0; i < 25 && !popup; i++) { popup = (await targets()).find((x) => x.url.includes("screen.html")); if (!popup) await sleep(200); }
@@ -133,5 +137,4 @@ writeFileSync(join(out, `${DESKTOP}-xrdp.log`), execFileSync(ENGINE, ["exec", C,
 writeFileSync(join(out, `${DESKTOP}-page.log`), await pageLog());
 const failed = Object.entries(results).filter(([, ok]) => !ok).map(([n]) => n);
 console.log(failed.length ? "FAILED: " + failed.join("; ") : "all passed");
-chrome.kill();
-process.exit(failed.length ? 1 : 0);
+await quit(failed.length ? 1 : 0);
