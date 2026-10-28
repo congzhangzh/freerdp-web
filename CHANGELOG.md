@@ -15,6 +15,14 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261028.6
+
+- **The slogan and the mascot take turns** (聪哥's design): the card beside the tagline shows
+  "You here, you in the cloud: one desktop." (你在这里，也在云端。) for 4 s, then the chosen
+  mascot plays once, then the slogan again. Twins or 蛮蛮 under it picks the mascot, which then
+  plays at once. The video plays for everyone, reduced motion too (his choice); 蛮蛮's still
+  picture is its poster while the video loads, and the frame poster it replaced goes.
+
 ## 20261028.5
 
 - **蛮蛮's still picture for reduced motion**: with `prefers-reduced-motion`, the 蛮蛮 card shows
