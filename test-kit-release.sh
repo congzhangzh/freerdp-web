@@ -56,6 +56,17 @@ check "dated names: the newest published, not withdrawn, not a draft" "web-20261
 check "dated names: a page commit, found by the title" "web-20261021.2-777777777777" "$R"
 check "dated names: newer than an older name of the same page" "web-20261021.1-666666666666" "$P"
 check "dated names: a title that names no page is not a web client" "(fails)" 555555555555
+# since 28 October 2026 the key is a line in the notes, and the title ends with the tag
+S=dddddddddddd4444
+cat > "$TMP/releases.json" << EOF
+[
+ {"tag_name": "web-20261028.3-444444444444", "name": "Web client web-20261028.3-444444444444", "draft": false, "published_at": "2026-10-28T12:00:00Z", "body": "built\n\n<!-- kit-key: Web client for freerdp-web ${S%????} (kit 444444444444) -->"},
+ {"tag_name": "web-20261028.2-333333333333", "name": "Web client web-20261028.2-333333333333", "draft": false, "published_at": "2026-10-28T13:00:00Z", "body": "WITHDRAWN: no\n\n<!-- kit-key: Web client for freerdp-web ${S%????} (kit 333333333333) -->"},
+ {"tag_name": "web-20261028.1-222222222222", "name": "Web client web-20261028.1-222222222222", "draft": false, "published_at": "2026-10-28T10:00:00Z", "body": "built"}
+]
+EOF
+check "keyed notes: a page commit, found by the key in the notes" "web-20261028.3-444444444444" "$S"
+check "keyed notes: no key, no page" "(fails)" 222222222222
 echo '[]' > "$TMP/releases.json"
 check "no releases at all" "(fails)"
 

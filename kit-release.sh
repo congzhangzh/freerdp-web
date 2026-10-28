@@ -5,9 +5,11 @@
 #   ./kit-release.sh <commit>     the newest the kit built for this page commit (7 or more
 #                                 hex digits)
 #
-# Names: web-<YYYYMMDD>.<N>-<kit commit, 12> since 21 October 2026, titled "Web client for
-# freerdp-web <page commit, 12> (kit <kit commit, 12>)"; before, web-<page commit,
-# 12>-<kit commit, 12> and web-<page commit, 12>, which name the page commit themselves.
+# Names: web-<YYYYMMDD>.<N>-<kit commit, 12> since 21 October 2026, keyed "Web client for
+# freerdp-web <page commit, 12> (kit <kit commit, 12>)": until 27 October the key is the
+# title; from 28 October it is a line "<!-- kit-key: <key> -->" in the notes, and the title
+# "Web client <tag>". Before, web-<page commit, 12>-<kit commit, 12> and web-<page commit,
+# 12>, which name the page commit themselves.
 #
 # The kit publishes each pre-release once and never replaces its files (its
 # docs/RELEASE.md, "Frozen releases"); a new build of the same page is a new tag, so the
@@ -48,7 +50,9 @@ def page(r):
     """the page commit (12) a web pre-release was built for, or None"""
     tag = r.get("tag_name") or ""
     if re.fullmatch(r"web-[0-9]{8}\.[0-9]+-[0-9a-f]{12}", tag):
-        m = re.fullmatch(r"Web client for freerdp-web ([0-9a-f]{12}) \(kit [0-9a-f]{12}\)", r.get("name") or "")
+        key = r"Web client for freerdp-web ([0-9a-f]{12}) \(kit [0-9a-f]{12}\)"
+        m = (re.fullmatch(key, r.get("name") or "")
+             or re.search(r"<!-- kit-key: " + key + r" -->", r.get("body") or ""))
         return m and m.group(1)
     m = re.fullmatch(r"web-([0-9a-f]{12})(-[0-9a-f]{12})?", tag)
     return m and m.group(1)
