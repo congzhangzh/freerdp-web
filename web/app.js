@@ -1,9 +1,28 @@
 // Hosts and settings live in localStorage (hosts.js); the password never does.
 const $ = (id) => document.getElementById(id);
-// the mascot stays still for people who ask for less motion (its poster frame)
-if (globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-  const v = document.querySelector?.("#mascot video");
-  if (v) { v.removeAttribute("autoplay"); v.pause(); }
+// the mascots, one at a time (the choice is remembered): only the one shown plays, and none
+// for people who ask for less motion (each shows its poster frame)
+{
+  const fig = document.getElementById?.("mascot");
+  const still = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  const show = (name) => {
+    for (const el of fig.querySelectorAll("[data-mascot]")) el.hidden = el.dataset.mascot !== name;
+    for (const b of fig.querySelectorAll("[data-pick]")) b.setAttribute("aria-pressed", String(b.dataset.pick === name));
+    for (const v of fig.querySelectorAll("video")) {
+      if (v.hidden || still) { v.removeAttribute("autoplay"); v.pause(); } else v.play()?.catch(() => {});
+    }
+  };
+  if (fig?.querySelectorAll) {
+    let pick = "twins";
+    try { pick = localStorage.getItem("freerdp-web-mascot") || pick; } catch (e) {}
+    show(fig.querySelector(`[data-pick="${pick}"]`) ? pick : "twins");
+    fig.addEventListener("click", (e) => {
+      const b = e.target.closest?.("[data-pick]");
+      if (!b) return;
+      show(b.dataset.pick);
+      try { localStorage.setItem("freerdp-web-mascot", b.dataset.pick); } catch (e) {}
+    });
+  }
 }
 const logEl = $("log");
 const info = { started: 0, decoder: "–", transport: "–", server: "–" };
