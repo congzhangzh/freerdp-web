@@ -1,8 +1,8 @@
 // Hosts and settings live in localStorage (hosts.js); the password never does.
 const $ = (id) => document.getElementById(id);
-// in turn, like a marquee: the slogan for 3 s, then 蛮蛮 and then the twins, each playing its
-// clip once; a clip that cannot play moves on after 12 s. Played for everyone, reduced motion
-// too (聪哥's choice)
+// in turn, like a marquee: the slogan, then 蛮蛮, then the twins; each clip plays to its end,
+// and each turn then holds 3 s (on the clip's last frame) before the next. A clip that cannot
+// play moves on after 15 s. Played for everyone, reduced motion too (聪哥's choice)
 {
   const fig = document.getElementById?.("mascot");
   if (fig?.querySelectorAll) {
@@ -18,9 +18,10 @@ const $ = (id) => document.getElementById(id);
       if (t === slogan) { timer = setTimeout(next, 3000); return; }
       t.currentTime = 0;
       t.play()?.catch(() => {});
-      timer = setTimeout(next, 12000);
+      timer = setTimeout(next, 15000);
     };
-    for (const v of turns.slice(1)) v.addEventListener("ended", next);
+    // its last frame stays for 3 s
+    for (const v of turns.slice(1)) v.addEventListener("ended", () => { clearTimeout(timer); timer = setTimeout(next, 3000); });
     next();
   }
 }
