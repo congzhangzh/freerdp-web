@@ -19,6 +19,8 @@ const DESKTOP = process.env.DESKTOP || "gnome";
 const ENGINE = process.env.ENGINE || "docker", PASSWORD = process.env.PASSWORD || "wlup-test-pw";
 const W = 640, H = 480;   // each screen, CSS pixels; this window's screen is the right one
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// a page that closes itself may never answer (nor open its DevTools socket): wait ms at most
+const within = (p, ms) => Promise.race([p.catch(() => {}), sleep(ms)]);
 // Chrome's own temporary files in a short directory of their own: under a deep one (a CI
 // runner's workspace) its socket path passes the 108 bytes a Unix socket allows
 const base = mkdtempSync(join(tmpdir(), "wlup-"));
@@ -91,9 +93,13 @@ const why = (re, m) => re.test(m) || DESKTOP !== "kde" ? m : `${m} | kscreen-doc
 await connected(1);
 let m = await until(ONE);
 check(`connected: ${DESKTOP} has one monitor`, ONE.test(m), why(ONE, m));
-// a window of the session from before All screens: a maximized terminal, dark
+// a window of the session from before All screens: a maximized terminal in a colour of its own
+// (foot 1.28's section; "colors" before 1.24). Dark alone was not enough: GNOME's overview
+// right after login is dark too, and the test went on before foot had opened
+const FOOT = [0xb4, 0x14, 0x6e];
 execFileSync(ENGINE, ["exec", "-d", C, "su", "tester", "-c", "export XDG_RUNTIME_DIR=/run/user/1000 " +
-  "WAYLAND_DISPLAY=$(cd /run/user/1000 && ls wayland-? | head -1); foot --maximized"]);
+  "WAYLAND_DISPLAY=$(cd /run/user/1000 && ls wayland-? | head -1); " +
+  `foot --maximized -o colors-dark.background=${FOOT.map((v) => v.toString(16).padStart(2, "0")).join("")}`]);
 // the colour at the middle of each screen's part of the canvas (canvas pixels): this window's
 // screen is the right half, the other one the left half
 const middles = () => main.ev(`(() => {
@@ -102,11 +108,12 @@ const middles = () => main.ev(`(() => {
   const at = (x, y) => Array.from(g.getImageData(x, y, 1, 1).data.slice(0, 3));
   return { mine: at(c.width * 3 / 4 | 0, c.height / 2 | 0), other: at(c.width / 4 | 0, c.height / 2 | 0) };
 })()`);
-const dark = (p) => p && Math.max(...p) < 60;
-// wait for it (slow right after login): the middle of the one screen's canvas turns dark; without
-// it the check below could not tell "no window" from "the window moved"
+// foot's colour, give or take the video codec's error
+const isFoot = (p) => p && p.every((v, i) => Math.abs(v - FOOT[i]) < 40);
+// wait for it (slow right after login): the middle of the one screen's canvas turns foot's colour;
+// without it the check below could not tell "no window" from "the window moved"
 let shown = false;
-for (let i = 0; i < 60 && !shown; i++) { await sleep(500); shown = dark(await main.ev(`(() => {
+for (let i = 0; i < 60 && !shown; i++) { await sleep(500); shown = isFoot(await main.ev(`(() => {
   const o = new OffscreenCanvas(canvas.width, canvas.height), g = o.getContext("2d");
   g.drawImage(canvas, 0, 0); return Array.from(g.getImageData(canvas.width / 2 | 0, canvas.height / 2 | 0, 1, 1).data.slice(0, 3));
 })()`)); }
@@ -117,9 +124,9 @@ check(`Separate screens: a ${DESKTOP} monitor per screen, this window's (right) 
 // the windows that were there stay on this window's screen, the primary; the other screen is new
 await sleep(3000);
 const mid = await middles();
-// On GNOME this fails about 1 run in 5, a Mutter race (the release kit's notes): a window can
+// On GNOME this fails about half the runs on a CI runner, a Mutter race (the release kit's notes): a window can
 // follow the other monitor when GNOME rearranges them, however long it has been open
-check("the session's windows stay on this window's screen", shown && dark(mid?.mine) && !dark(mid?.other),
+check("the session's windows stay on this window's screen", shown && isFoot(mid?.mine) && !isFoot(mid?.other),
   shown ? JSON.stringify(mid) : "foot never showed before Separate screens (30 s)");
 let popup; for (let i = 0; i < 25 && !popup; i++) { popup = (await targets()).find((x) => x.url.includes("screen.html")); if (!popup) await sleep(200); }
 if (popup) {
@@ -133,7 +140,7 @@ await main.ev("tbReconnect.click()");
 await connected(2);
 m = await until(TWO);
 check("after Reconnect: still a monitor per screen", TWO.test(m), why(TWO, m));
-if (popup) await (await cdp(popup.webSocketDebuggerUrl)).ev("window.close()").catch(() => {});
+if (popup) await within(cdp(popup.webSocketDebuggerUrl).then((s) => s.ev("window.close()")), 5000);
 m = await until(ONE);
 check("the second window closed: one monitor again", ONE.test(m), why(ONE, m));
 writeFileSync(join(out, `${DESKTOP}-xrdp.log`), execFileSync(ENGINE, ["exec", C, "grep", "wlup/", "/var/log/xrdp.log"]).toString());

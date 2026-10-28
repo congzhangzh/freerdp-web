@@ -17,6 +17,8 @@ const MODE = process.env.MODE || "separate";
 const ENGINE = process.env.ENGINE || "docker";
 const W = 640, H = 480;   // each screen, CSS pixels; the second one is right of the first
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// a page that closes itself may never answer: wait ms at most
+const within = (p, ms) => Promise.race([p.catch(() => {}), sleep(ms)]);
 // Chrome's own temporary files in a short directory of their own: under a deep one (a CI
 // runner's workspace) its socket path passes the 108 bytes a Unix socket allows
 const base = mkdtempSync(join(tmpdir(), "scr-"));
@@ -185,7 +187,7 @@ if (MODE === "separate") {
 }
 
 // closing the second window: one screen again
-await second.ev("window.close()").catch(() => {});
+await within(second.ev("window.close()"), 5000);
 size = await settle([W, H]);
 check("closing it brings the desktop back to one screen", size[0] === W && size[1] === H, size.join(" x "));
 for (let i = 0; i < 20 && remoteMonitors().length !== 1; i++) await sleep(500);
