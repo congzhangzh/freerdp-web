@@ -86,8 +86,11 @@ check("grouped by family, with a link to each", JSON.stringify(await ev("[...doc
   === JSON.stringify(["server-debian:Debian", "server-ubuntu:Ubuntu", "server-fedora:Fedora"])
   && JSON.stringify(await ev("[...document.querySelectorAll('#kit .families a')].map((a) => a.hash)")) === JSON.stringify(["#server-debian", "#server-ubuntu", "#server-fedora"]));
 const first = await ev("document.querySelector('#kit .distro')?.innerText") || "";
-check("a card shows its sessions and its more commands", first.includes("Sessions: " + want.server[0].sessions)
-  && first.includes(want.server[0].more[0].what + ":"), first.split("\n").slice(0, 3).join(" | "));
+check("a card shows its sessions, a line per kind, and its more commands",
+  first.replace(/\n+/g, "\n").includes("Wayland: GNOME, KDE Plasma, sway\nXorg: the default session") && first.includes(want.server[0].more[0].what + ":"),
+  first.split("\n").slice(0, 3).join(" | "));
+const old = await ev("document.querySelectorAll('#kit .distro')[1]?.innerText") || "";
+check("an older install.json's sessions stay one line", old.includes("Sessions: " + want.server[1].sessions), old.split("\n").slice(0, 2).join(" | "));
 const pres = await ev("[...document.querySelectorAll('#kit .copyable')].map((c) => [c.querySelector('pre').textContent, !!c.querySelector('button[data-copy]')])");
 const commands = [want.server[0].command, want.server[0].more[0].command, want.server[1].command, want.server[2].command, want.server[3].command, want.start];
 check("every command, the more ones and the start one, has a Copy button", JSON.stringify(pres) === JSON.stringify(commands.map((c) => [c, true])),

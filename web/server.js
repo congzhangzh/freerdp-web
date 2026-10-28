@@ -47,6 +47,18 @@
   const copyable = (command) => el("div", { class: "copyable" },
     el("pre", { class: "wrap", text: command }), el("button", { class: "small", type: "button", "data-copy": "", text: "Copy" }));
 
+  // "Wayland: GNOME, KDE Plasma, sway; Xorg: the default session": a line per kind, its label in
+  // bold; an older install.json's one line ("GNOME, KDE, sway; Xorg with xorgxrdp") stays one
+  const sessions = (v) => {
+    if (!v) return [];
+    const parts = v.split(/;\s*/).filter(Boolean);
+    if (!parts.every((p) => /^[A-Z][\w ]*: /.test(p))) return [el("p", { class: "hint", text: "Sessions: " + v })];
+    return parts.map((p) => {
+      const i = p.indexOf(": ");
+      return el("p", { class: "hint" }, el("b", { text: p.slice(0, i + 1) }), p.slice(i + 1));
+    });
+  };
+
   function render(k, into) {
     const out = document.createDocumentFragment();
     out.append(el("p", { class: "muted" }, "From the release kit's release ",
@@ -62,7 +74,7 @@
       const list = el("div", { class: "distros" });
       for (const s of f.servers) {
         const card = el("section", { class: "distro", "aria-label": s.name }, el("h4", { text: s.name }),
-          s.sessions && el("p", { class: "hint", text: "Sessions: " + s.sessions }), copyable(s.command));
+          ...sessions(s.sessions), copyable(s.command));
         for (const m of s.more) card.append(el("p", { class: "hint", text: (m.what || "Also") + ":" }), copyable(m.command));
         list.append(card);
       }

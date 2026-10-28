@@ -14,7 +14,7 @@ test("install.json: distributions grouped by the name's first word, in their ord
     ["Ubuntu", "server-ubuntu", ["Ubuntu 26.04"]],
     ["Fedora", "server-fedora", ["Fedora 45", "Fedora 44"]]]);
   const debian = k.families[0].servers[0];
-  assert.equal(debian.sessions, "GNOME, KDE, sway; Xorg with xorgxrdp");
+  assert.equal(debian.sessions, "Wayland: GNOME, KDE Plasma, sway; Xorg: the default session");
   assert.deepEqual(debian.more.map((m) => m.what), ["Xorg session"]);
   assert.deepEqual(k.families[2].servers[1].more, []);   // "more" absent
   assert.equal(k.start, "sudo systemctl enable --now xrdp");
