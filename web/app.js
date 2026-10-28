@@ -1,7 +1,7 @@
 // Hosts and settings live in localStorage (hosts.js); the password never does.
 const $ = (id) => document.getElementById(id);
 // the mascots, one at a time (the choice is remembered): only the one shown plays, and none
-// for people who ask for less motion (each shows its poster frame)
+// for people who ask for less motion (each shows its poster, or its still picture: data-still)
 {
   const fig = document.getElementById?.("mascot");
   const still = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -13,6 +13,7 @@ const $ = (id) => document.getElementById(id);
     }
   };
   if (fig?.querySelectorAll) {
+    if (still) for (const v of fig.querySelectorAll("video[data-still]")) v.poster = v.dataset.still;
     let pick = "twins";
     try { pick = localStorage.getItem("freerdp-web-mascot") || pick; } catch (e) {}
     show(fig.querySelector(`[data-pick="${pick}"]`) ? pick : "twins");
