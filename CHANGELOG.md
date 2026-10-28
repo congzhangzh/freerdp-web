@@ -15,6 +15,16 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261028.3
+
+- **A mascot**: two twins, one at your laptop and one in the cloud, joined by a wave, waving
+  at the same moment: "Entangled twins: you here, you in the cloud. Real entanglement carries
+  no message; these two carry every key you press." A muted 10 s loop beside the tagline
+  (`mascot.mp4`, H.264 560 x 240, 66 KB, with its poster `mascot-poster.webp`, 6 KB), above it
+  on a phone, gone during a session, and still for people who ask for less motion
+  (`prefers-reduced-motion`). Made with Google Gemini (Veo), cropped and re-encoded without
+  sound with ffmpeg.
+
 ## 20261028.2
 
 - **Get a server** (`server.html`, a new page in every page's header): how to get an RDP
