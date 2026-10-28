@@ -15,25 +15,26 @@
 <link rel="icon" href="icon-256.png" type="image/png">
 <link rel="stylesheet" href="ui.css">
 <script src="theme.js"></script>
+<script src="i18n.js"></script>
 </head>
 <body>
 <!-- the first visit's demo videos (splash.js); only where the site has them -->
 <div id="splash" class="splash" role="dialog" aria-modal="true" aria-labelledby="splashTitle" hidden>
   <div class="splash-box">
     <div class="splash-head">
-      <h2 id="splashTitle">FreeRDP Web in a minute</h2>
+      <h2 id="splashTitle" data-i18n="splash.title">FreeRDP Web in a minute</h2>
       <div class="row">
-        <button id="splashSound" type="button" class="small" hidden>🔊 Sound on</button>
-        <button id="splashSkip" type="button" class="small">Skip</button>
+        <button id="splashSound" type="button" class="small" data-i18n="splash.sound" hidden>🔊 Sound on</button>
+        <button id="splashSkip" type="button" class="small" data-i18n="splash.skip">Skip</button>
       </div>
     </div>
-    <div id="splashTabs" class="splash-tabs" role="tablist" aria-label="Demo"></div>
+    <div id="splashTabs" class="splash-tabs" role="tablist" aria-label="Demo" data-i18n-attr="aria-label:splash.demo"></div>
     <video id="splashVideo" controls playsinline preload="none"></video>
     <p id="splashCaption" class="hint"></p>
     <div class="row splash-foot">
       <p class="splash-link hint">🔗 <a id="splashLink" href="#intro"></a>
         <button id="splashCopy" type="button" class="small">Copy link</button></p>
-      <button id="splashStart" type="button" class="primary">Start</button>
+      <button id="splashStart" type="button" class="primary" data-i18n="splash.start">Start</button>
     </div>
   </div>
 </div>
@@ -41,82 +42,83 @@
 <h1 class="sr-only">FreeRDP Web</h1>
 <header class="top">
   <a class="brand" href="index.html" aria-current="page">FreeRDP Web</a>
-  <nav aria-label="Help">
-    <button id="demoOpen" type="button" hidden>▶ Intro</button>
-    <a href="safety.html">Safety and tunnels</a>
-    <a href="keyboard.html">Keyboard</a>
-    <a href="server.html">Get a server</a>
-    <a href="install.html">Install as app</a>
-    <a href="release-notes.html">Release notes</a>
-    <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener" title="The source, issues and releases">GitHub</a>
-    <label><span class="sr-only">Theme</span><select id="theme" aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+  <nav aria-label="Help" data-i18n-attr="aria-label:nav.help">
+    <button id="demoOpen" type="button" data-i18n="nav.intro" hidden>▶ Intro</button>
+    <a href="safety.html" data-i18n="nav.safety">Safety and tunnels</a>
+    <a href="keyboard.html" data-i18n="nav.keyboard">Keyboard</a>
+    <a href="server.html" data-i18n="nav.server">Get a server</a>
+    <a href="install.html" data-i18n="nav.install">Install as app</a>
+    <a href="release-notes.html" data-i18n="nav.notes">Release notes</a>
+    <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener" title="The source, issues and releases" data-i18n-attr="title:nav.githubTitle">GitHub</a>
+    <label class="lang-pick"><span class="lang-label" aria-hidden="true">🌐 <span data-i18n="nav.language">Language</span></span><select id="lang" aria-label="Language" data-i18n-attr="aria-label:nav.language"><option value="auto" data-i18n="lang.auto">Auto</option><option value="en" lang="en">English</option><option value="zh" lang="zh-Hans">中文</option></select></label>
+    <label><span class="sr-only" data-i18n="nav.theme">Theme</span><select id="theme" aria-label="Theme" data-i18n-attr="aria-label:nav.theme"><option value="system" data-i18n="theme.system">System</option><option value="light" data-i18n="theme.light">Light</option><option value="dark" data-i18n="theme.dark">Dark</option></select></label>
   </nav>
 </header>
 <!-- in turn, like a marquee: the slogan, 蛮蛮 (the paired bird of the Classic of Mountains and
      Seas) and the entangled twins (you here and you in the cloud); app.js runs the turns -->
 <figure id="mascot" class="mascot">
   <div class="mascot-stage">
-    <p class="mascot-slogan">You here, you in the cloud:<b>one desktop.</b><span lang="zh">你在这里，也在云端。</span></p>
+    <p class="mascot-slogan"><span data-i18n="mascot.here">You here, you in the cloud:</span><b data-i18n="mascot.one">one desktop.</b><span class="alt" lang="zh" data-i18n="mascot.alt" data-i18n-attr="lang:mascot.altLang">你在这里，也在云端。</span></p>
     <video data-mascot="manman" src="mascot-manman.mp4" poster="mascot-manman-still.webp" muted playsinline preload="metadata" aria-hidden="true" hidden></video>
     <video data-mascot="twins" src="mascot.mp4" poster="mascot-poster.webp" muted playsinline preload="metadata" aria-hidden="true" hidden></video>
   </div>
-  <figcaption class="sr-only">The page's mascots in turn: 蛮蛮, the paired bird of the Classic of Mountains and Seas
+  <figcaption class="sr-only" data-i18n="mascot.caption">The page's mascots in turn: 蛮蛮, the paired bird of the Classic of Mountains and Seas
     (山海经), with one wing and one eye each, which flies only together (相得乃飞); and the entangled twins, you
     here and you in the cloud.</figcaption>
 </figure>
 <!-- what this is, in one line, and who it is for -->
-<p class="tagline"><b>Lightning-fast remote desktop in your browser:</b> AV1 decoded by the browser,
-  multi-user sessions with xrdp, no client to install.</p>
-<p class="tagline hint">A gift from a hobby to the world, for VDI, HPC, AI, VPS, research and the community:
-  free and open source on <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener">GitHub</a>.</p>
+<p class="tagline"><b data-i18n="tag.lead">Lightning-fast remote desktop in your browser:</b><span data-i18n="tag.rest"> AV1 decoded by the browser,
+  multi-user sessions with xrdp, no client to install.</span></p>
+<p class="tagline hint"><span data-i18n="tag.gift">A gift from a hobby to the world, for VDI, HPC, AI, VPS, research and the community:
+  free and open source on </span><a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener">GitHub</a><span data-i18n="tag.giftEnd">.</span></p>
 
 <!-- standing safety notice: who this is from, and the route a session takes -->
-<section class="route" id="route" aria-label="Safety">
-  <p>An unofficial community client, not written by security professionals. Keep the RDP server
+<section class="route" id="route" aria-label="Safety" data-i18n-attr="aria-label:route.label">
+  <p data-i18n="route.notice">An unofficial community client, not written by security professionals. Keep the RDP server
     on 127.0.0.1, reach it through SSH and stop the gateway after the session.</p>
-  <ol class="hops" aria-label="Connection route">
-    <li><b>This browser</b><span>page</span></li>
+  <ol class="hops" aria-label="Connection route" data-i18n-attr="aria-label:route.hops">
+    <li><b data-i18n="hop.browser">This browser</b><span data-i18n="hop.page">page</span></li>
     <li class="via" aria-hidden="true">→</li>
-    <li><b>Gateway</b><span id="hopGateway">127.0.0.1:3390</span></li>
+    <li><b data-i18n="hop.gateway">Gateway</b><span id="hopGateway">127.0.0.1:3390</span></li>
     <li class="via">SSH</li>
-    <li><b>RDP server</b><span>127.0.0.1:3389</span></li>
+    <li><b data-i18n="hop.rdp">RDP server</b><span>127.0.0.1:3389</span></li>
   </ol>
   <div class="cmd">
     <code id="sshCmd"></code>
-    <button id="copyCmd" type="button" class="small">Copy</button>
+    <button id="copyCmd" type="button" class="small" data-i18n="copy">Copy</button>
   </div>
-  <p class="hint">Run it in a terminal on this computer and replace <code>server</code>; Ctrl-C ends
-    the gateway. Other ways, and why: <a href="safety.html">Safety and tunnels</a>.</p>
+  <p class="hint"><span data-i18n="route.run">Run it in a terminal on this computer and replace </span><code>server</code><span data-i18n="route.ctrlc">; Ctrl-C ends
+    the gateway. Other ways, and why: </span><a href="safety.html" data-i18n="nav.safety">Safety and tunnels</a><span data-i18n="punct.period">.</span></p>
 </section>
 
 <!-- the saved hosts: the form below shows and edits the selected one -->
-<section class="hosts" aria-label="Hosts">
-  <div class="host-list" id="hostList" role="radiogroup" aria-label="Saved hosts"></div>
+<section class="hosts" aria-label="Hosts" data-i18n-attr="aria-label:hosts.label">
+  <div class="host-list" id="hostList" role="radiogroup" aria-label="Saved hosts" data-i18n-attr="aria-label:hosts.saved"></div>
   <div class="host-actions">
-    <button id="hostNew" type="button" class="small">New host</button>
-    <button id="hostDuplicate" type="button" class="small">Duplicate</button>
-    <button id="hostDelete" type="button" class="small">Delete</button>
-    <button id="hostExport" type="button" class="small">Export…</button>
-    <button id="hostImport" type="button" class="small">Import…</button>
-    <button id="hostLink" type="button" class="small" title="A link that opens this page with this host">Copy link</button>
+    <button id="hostNew" type="button" class="small" data-i18n="hosts.new">New host</button>
+    <button id="hostDuplicate" type="button" class="small" data-i18n="hosts.duplicate">Duplicate</button>
+    <button id="hostDelete" type="button" class="small" data-i18n="hosts.delete">Delete</button>
+    <button id="hostExport" type="button" class="small" data-i18n="hosts.export">Export…</button>
+    <button id="hostImport" type="button" class="small" data-i18n="hosts.import">Import…</button>
+    <button id="hostLink" type="button" class="small" title="A link that opens this page with this host" data-i18n="hosts.link" data-i18n-attr="title:hosts.linkTitle">Copy link</button>
     <input id="hostImportFile" type="file" accept="application/json,.json" hidden>
   </div>
   <p id="hostStatus" class="hint" role="status" aria-live="polite"></p>
 </section>
 
 <div id="lastlog" role="alert" hidden><span id="lastlogText"></span>
-  <button id="lastlogCopy" class="small" type="button">Copy log</button> <button id="lastlogShow" class="small" type="button">Show</button>
-  <button id="lastlogDismiss" class="small" type="button">Dismiss</button></div>
+  <button id="lastlogCopy" class="small" type="button" data-i18n="lastlog.copy">Copy log</button> <button id="lastlogShow" class="small" type="button" data-i18n="lastlog.show">Show</button>
+  <button id="lastlogDismiss" class="small" type="button" data-i18n="lastlog.dismiss">Dismiss</button></div>
 
 <!-- a real form with name/autocomplete, so the browser's password manager offers to save and fill -->
 <form class="connect" id="connectForm" action="#" autocomplete="on">
-  <label class="field"><span>Name</span>
+  <label class="field"><span data-i18n="form.name">Name</span>
     <input id="hostName" autocomplete="off" spellcheck="false" maxlength="60"></label>
   <label class="field"><span id="hostLabel">Gateway</span>
     <input id="host" name="gateway" placeholder="127.0.0.1:3390" autocomplete="off" spellcheck="false"></label>
-  <label class="field"><span>User</span>
+  <label class="field"><span data-i18n="form.user">User</span>
     <input id="user" name="username" autocomplete="username" spellcheck="false" autocapitalize="off"></label>
-  <label class="field"><span>Password</span>
+  <label class="field"><span data-i18n="form.password">Password</span>
     <input id="pass" name="password" type="password" autocomplete="current-password"></label>
   <div class="actions">
     <button id="go" class="primary" type="submit" disabled>Loading…</button>
@@ -125,30 +127,30 @@
   <p id="summary"></p>
 
   <details class="panel" id="sessionPanel">
-    <summary>Session settings <small id="sessionSummary"></small></summary>
+    <summary><span data-i18n="set.title">Session settings</span> <small id="sessionSummary"></small></summary>
     <fieldset>
-      <legend>Devices</legend>
+      <legend data-i18n="set.devices">Devices</legend>
       <div class="checks">
-        <label><input id="optAudio" type="checkbox" checked> Sound</label>
+        <label><input id="optAudio" type="checkbox" checked> <span data-i18n="set.sound">Sound</span></label>
         <label title="This build of the client has no microphone support"><input id="optMic" type="checkbox" disabled>
-          Microphone <small class="muted" id="micNote">(not in this build)</small></label>
-        <label><input id="optClipboard" type="checkbox" checked> Clipboard</label>
-        <label><input id="fs" type="checkbox"> Full screen</label>
+          <span data-i18n="set.mic">Microphone</span> <small class="muted" id="micNote" data-i18n="set.micNote">(not in this build)</small></label>
+        <label><input id="optClipboard" type="checkbox" checked> <span data-i18n="set.clipboard">Clipboard</span></label>
+        <label><input id="fs" type="checkbox"> <span data-i18n="set.fullscreen">Full screen</span></label>
       </div>
     </fieldset>
     <fieldset>
-      <legend>Video</legend>
-      <div class="choice" role="radiogroup" aria-label="Video">
-        <label><input type="radio" name="codec" value="auto" checked> Automatic</label>
+      <legend data-i18n="set.video">Video</legend>
+      <div class="choice" role="radiogroup" aria-label="Video" data-i18n-attr="aria-label:set.video">
+        <label><input type="radio" name="codec" value="auto" checked> <span data-i18n="set.auto">Automatic</span></label>
         <label><input type="radio" name="codec" value="av1-420"> AV1 4:2:0</label>
         <label><input type="radio" name="codec" value="av1-444"> AV1 4:4:4</label>
       </div>
       <p class="hint" id="codecHint"></p>
     </fieldset>
     <fieldset>
-      <legend>Remote scale</legend>
-      <div class="choice" role="radiogroup" aria-label="Remote scale">
-        <label><input type="radio" name="scale" value="auto" checked> Automatic</label>
+      <legend data-i18n="set.scale">Remote scale</legend>
+      <div class="choice" role="radiogroup" aria-label="Remote scale" data-i18n-attr="aria-label:set.scale">
+        <label><input type="radio" name="scale" value="auto" checked> <span data-i18n="set.auto">Automatic</span></label>
         <label><input type="radio" name="scale" value="100"> 100 %</label>
         <label><input type="radio" name="scale" value="125"> 125 %</label>
         <label><input type="radio" name="scale" value="150"> 150 %</label>
@@ -157,83 +159,83 @@
       <p class="hint" id="scaleHint"></p>
     </fieldset>
     <fieldset>
-      <legend>All screens</legend>
-      <div class="choice" role="radiogroup" aria-label="All screens">
-        <label><input type="radio" name="screens" value="separate" checked> Separate screens</label>
-        <label><input type="radio" name="screens" value="span"> One wide desktop</label>
+      <legend data-i18n="set.screens">All screens</legend>
+      <div class="choice" role="radiogroup" aria-label="All screens" data-i18n-attr="aria-label:set.screens">
+        <label><input type="radio" name="screens" value="separate" checked> <span data-i18n="screens.separate">Separate screens</span></label>
+        <label><input type="radio" name="screens" value="span"> <span data-i18n="screens.span">One wide desktop</span></label>
       </div>
       <p class="hint" id="screensHint"></p>
     </fieldset>
     <fieldset>
-      <legend>Priority</legend>
-      <div class="choice" role="radiogroup" aria-label="Priority">
-        <label><input type="radio" name="strategy" value="recommended" checked> Recommended</label>
-        <label><input type="radio" name="strategy" value="bandwidth"> Save bandwidth</label>
-        <label><input type="radio" name="strategy" value="server"> Reduce server load</label>
+      <legend data-i18n="set.priority">Priority</legend>
+      <div class="choice" role="radiogroup" aria-label="Priority" data-i18n-attr="aria-label:set.priority">
+        <label><input type="radio" name="strategy" value="recommended" checked> <span data-i18n="set.recommended">Recommended</span></label>
+        <label><input type="radio" name="strategy" value="bandwidth"> <span data-i18n="set.bandwidth">Save bandwidth</span></label>
+        <label><input type="radio" name="strategy" value="server"> <span data-i18n="set.serverLoad">Reduce server load</span></label>
       </div>
       <p class="hint" id="strategyHint"></p>
     </fieldset>
     <fieldset>
-      <legend>Shortcuts</legend>
+      <legend data-i18n="set.shortcuts">Shortcuts</legend>
       <div class="row">
-        <div class="choice" role="radiogroup" aria-label="Shortcuts">
+        <div class="choice" role="radiogroup" aria-label="Shortcuts" data-i18n-attr="aria-label:set.shortcuts">
           <label><input type="radio" name="keys" value="freerdp" checked> FreeRDP</label>
           <label><input type="radio" name="keys" value="mstsc"> mstsc</label>
         </div>
-        <a href="keyboard.html">Which keys?</a>
+        <a href="keyboard.html" data-i18n="set.whichKeys">Which keys?</a>
       </div>
       <p class="hint" id="hotkeyHint"></p>
     </fieldset>
     <p class="note" id="customNote" hidden><span id="customText"></span>
-      <button id="restoreDefaults" type="button" class="small">Restore recommended settings</button></p>
+      <button id="restoreDefaults" type="button" class="small" data-i18n="set.restore">Restore recommended settings</button></p>
   </details>
 
   <details class="panel" id="advancedPanel">
-    <summary>Advanced <small>direct TCP, passkey vault, extra options</small></summary>
+    <summary><span data-i18n="adv.title">Advanced</span> <small data-i18n="adv.sub">direct TCP, passkey vault, extra options</small></summary>
     <fieldset>
-      <legend>Connection</legend>
-      <label id="directLabel" class="check"><input id="direct" type="checkbox"> Direct TCP to the RDP server, no gateway</label>
+      <legend data-i18n="adv.connection">Connection</legend>
+      <label id="directLabel" class="check"><input id="direct" type="checkbox"> <span data-i18n="adv.direct">Direct TCP to the RDP server, no gateway</span></label>
       <p class="hint" id="directHint"></p>
     </fieldset>
     <fieldset>
-      <legend>Password</legend>
-      <label class="check"><input id="vaultKeep" type="checkbox"> Keep this host's password in the passkey vault</label>
-      <p class="hint">Off: your browser's password manager saves and fills it. On: it is encrypted in this browser
+      <legend data-i18n="adv.password">Password</legend>
+      <label class="check"><input id="vaultKeep" type="checkbox"> <span data-i18n="adv.vaultKeep">Keep this host's password in the passkey vault</span></label>
+      <p class="hint"><span data-i18n="adv.vaultHint">Off: your browser's password manager saves and fills it. On: it is encrypted in this browser
         and unlocked with a passkey when you connect
-        (<a href="https://github.com/congzhangzh/freerdp-web/blob/main/web/VAULT.md" target="_blank" rel="noopener">how it works</a>).</p>
+        (</span><a href="https://github.com/congzhangzh/freerdp-web/blob/main/web/VAULT.md" target="_blank" rel="noopener" data-i18n="adv.vaultHow">how it works</a><span data-i18n="adv.vaultHintEnd">).</span></p>
       <div id="vaultPanel" hidden>
         <p id="vaultStatus" class="hint" role="status" aria-live="polite"></p>
         <div class="row">
-          <button id="vaultCreate" type="button" class="small">Create vault</button>
-          <button id="vaultUnlock" type="button" class="small">Unlock with passkey</button>
-          <button id="vaultSave" type="button" class="small">Save the password</button>
-          <button id="vaultForget" type="button" class="small">Forget the saved password</button>
-          <button id="vaultLock" type="button" class="small">Lock</button>
-          <button id="vaultDelete" type="button" class="small">Delete the vault</button>
+          <button id="vaultCreate" type="button" class="small" data-i18n="vault.create">Create vault</button>
+          <button id="vaultUnlock" type="button" class="small" data-i18n="vault.unlock">Unlock with passkey</button>
+          <button id="vaultSave" type="button" class="small" data-i18n="vault.save">Save the password</button>
+          <button id="vaultForget" type="button" class="small" data-i18n="vault.forget">Forget the saved password</button>
+          <button id="vaultLock" type="button" class="small" data-i18n="vault.lock">Lock</button>
+          <button id="vaultDelete" type="button" class="small" data-i18n="vault.delete">Delete the vault</button>
         </div>
         <div id="vaultRecover" class="row" hidden>
-          <input id="vaultCodeInput" placeholder="Recovery code" spellcheck="false" autocomplete="off" aria-label="Recovery code">
-          <button id="vaultCodeUnlock" type="button" class="small">Unlock with the recovery code</button>
+          <input id="vaultCodeInput" placeholder="Recovery code" spellcheck="false" autocomplete="off" aria-label="Recovery code" data-i18n-attr="placeholder:vault.code,aria-label:vault.code">
+          <button id="vaultCodeUnlock" type="button" class="small" data-i18n="vault.codeUnlock">Unlock with the recovery code</button>
         </div>
         <div id="vaultKeys" hidden>
-          <p class="hint">What opens this vault, kept in this browser: each passkey below (this device's, a phone's, a security key…), or the recovery code.</p>
+          <p class="hint" data-i18n="vault.keysHint">What opens this vault, kept in this browser: each passkey below (this device's, a phone's, a security key…), or the recovery code.</p>
           <ul id="vaultKeyList"></ul>
           <div class="row">
-            <input id="vaultKeyName" placeholder="Name: Phone, Windows Hello…" maxlength="40" spellcheck="false" autocomplete="off" aria-label="Name of the new passkey">
-            <button id="vaultAddKey" type="button" class="small">Add a passkey</button>
+            <input id="vaultKeyName" placeholder="Name: Phone, Windows Hello…" maxlength="40" spellcheck="false" autocomplete="off" aria-label="Name of the new passkey" data-i18n-attr="placeholder:vault.keyName,aria-label:vault.keyNameLabel">
+            <button id="vaultAddKey" type="button" class="small" data-i18n="vault.addKey">Add a passkey</button>
             <button id="vaultNewCode" type="button" class="small">Create a recovery code</button>
           </div>
-          <p id="vaultCodeBox" class="hint" hidden>The recovery code, shown this once: <code id="vaultCodeText"></code>
-            <button id="vaultCodeCopy" type="button" class="small">Copy</button>
-            Keep it on paper or in a password manager: it opens the vault without a passkey.</p>
+          <p id="vaultCodeBox" class="hint" hidden><span data-i18n="vault.codeShown">The recovery code, shown this once: </span><code id="vaultCodeText"></code>
+            <button id="vaultCodeCopy" type="button" class="small" data-i18n="copy">Copy</button>
+            <span data-i18n="vault.codeKeep">Keep it on paper or in a password manager: it opens the vault without a passkey.</span></p>
         </div>
       </div>
     </fieldset>
     <fieldset>
-      <legend>Extra options</legend>
-      <input id="extra" placeholder="/bpp:16" spellcheck="false" autocomplete="off" aria-label="Extra options">
-      <p class="hint">FreeRDP command line options; they win over the session settings of the same kind.
-        The client gets: <code id="preview"></code></p>
+      <legend data-i18n="adv.extra">Extra options</legend>
+      <input id="extra" placeholder="/bpp:16" spellcheck="false" autocomplete="off" aria-label="Extra options" data-i18n-attr="aria-label:adv.extra">
+      <p class="hint"><span data-i18n="adv.extraHint">FreeRDP command line options; they win over the session settings of the same kind.
+        The client gets: </span><code id="preview"></code></p>
     </fieldset>
   </details>
 </form>
@@ -241,39 +243,39 @@
 <!-- export and import of the hosts (outside the form: forms do not nest) -->
 <dialog id="exportDialog" aria-labelledby="exportTitle">
   <form method="dialog" class="dialog">
-    <h2 id="exportTitle">Export hosts</h2>
-    <p class="hint">Every host and its settings, as a file to import in another browser.</p>
-    <label class="check"><input id="exportPasswords" type="checkbox"> Include the passwords kept in the passkey vault</label>
-    <p class="hint">The browser's password manager does not show its passwords to web pages; it can export them itself.</p>
-    <label class="check"><input id="exportEncrypt" type="checkbox"> Encrypt the file with a passphrase</label>
-    <input id="exportPassphrase" type="password" placeholder="Passphrase, 8 characters or more" autocomplete="new-password" hidden>
-    <p id="exportWarn" class="note" hidden>Without encryption, anyone who gets the file can read these passwords.</p>
-    <div class="row"><button value="cancel" class="small">Cancel</button><button value="ok" class="primary">Export</button></div>
+    <h2 id="exportTitle" data-i18n="export.title">Export hosts</h2>
+    <p class="hint" data-i18n="export.hint">Every host and its settings, as a file to import in another browser.</p>
+    <label class="check"><input id="exportPasswords" type="checkbox"> <span data-i18n="export.passwords">Include the passwords kept in the passkey vault</span></label>
+    <p class="hint" data-i18n="export.manager">The browser's password manager does not show its passwords to web pages; it can export them itself.</p>
+    <label class="check"><input id="exportEncrypt" type="checkbox"> <span data-i18n="export.encrypt">Encrypt the file with a passphrase</span></label>
+    <input id="exportPassphrase" type="password" placeholder="Passphrase, 8 characters or more" autocomplete="new-password" data-i18n-attr="placeholder:export.passphrase" hidden>
+    <p id="exportWarn" class="note" data-i18n="export.warn" hidden>Without encryption, anyone who gets the file can read these passwords.</p>
+    <div class="row"><button value="cancel" class="small" data-i18n="dialog.cancel">Cancel</button><button value="ok" class="primary" data-i18n="export.ok">Export</button></div>
   </form>
 </dialog>
 <dialog id="importDialog" aria-labelledby="importTitle">
   <form method="dialog" class="dialog">
-    <h2 id="importTitle">Import hosts</h2>
+    <h2 id="importTitle" data-i18n="import.title">Import hosts</h2>
     <p id="importInfo" class="hint"></p>
-    <input id="importPassphrase" type="password" placeholder="Passphrase" autocomplete="off">
-    <div class="row"><button value="cancel" class="small">Cancel</button><button value="ok" class="primary">Import</button></div>
+    <input id="importPassphrase" type="password" placeholder="Passphrase" autocomplete="off" data-i18n-attr="placeholder:import.passphrase">
+    <div class="row"><button value="cancel" class="small" data-i18n="dialog.cancel">Cancel</button><button value="ok" class="primary" data-i18n="import.ok">Import</button></div>
   </form>
 </dialog>
 
-<div id="toolbar" role="toolbar" aria-label="Session">
-  <button id="tbPin" aria-label="Pin toolbar">📌</button>
+<div id="toolbar" role="toolbar" aria-label="Session" data-i18n-attr="aria-label:tb.label">
+  <button id="tbPin" aria-label="Pin toolbar" data-i18n-attr="aria-label:tb.pin">📌</button>
   <button id="tbFs">Full screen</button>
-  <button id="tbScreens" title="The remote desktop on every screen: a window on each other screen shows its part" hidden>All screens</button>
-  <button id="tbCapture" title="Capture the mouse and keyboard; Ctrl + Alt releases them">Capture</button>
-  <button id="tbInfo" title="This session: the server, the codecs in use, decoding, frame rate, network">Info</button>
-  <button id="tbAbout" title="This client: its version and what it was built with">About</button>
-  <button id="tbLog">Log</button>
-  <button id="tbReconnect" title="Connect again, with the same password (no passkey, no typing)">Reconnect</button>
-  <button id="tbQuit">Disconnect</button>
+  <button id="tbScreens" title="The remote desktop on every screen: a window on each other screen shows its part" data-i18n-attr="title:tb.screensTitle" hidden>All screens</button>
+  <button id="tbCapture" title="Capture the mouse and keyboard; Ctrl + Alt releases them" data-i18n="tb.capture" data-i18n-attr="title:tb.captureTitle">Capture</button>
+  <button id="tbInfo" title="This session: the server, the codecs in use, decoding, frame rate, network" data-i18n="tb.info" data-i18n-attr="title:tb.infoTitle">Info</button>
+  <button id="tbAbout" title="This client: its version and what it was built with" data-i18n="tb.about" data-i18n-attr="title:tb.aboutTitle">About</button>
+  <button id="tbLog" data-i18n="tb.log">Log</button>
+  <button id="tbReconnect" title="Connect again, with the same password (no passkey, no typing)" data-i18n="tb.reconnect" data-i18n-attr="title:tb.reconnectTitle">Reconnect</button>
+  <button id="tbQuit" data-i18n="tb.quit">Disconnect</button>
 </div>
-<div id="screensMenu" role="menu" aria-label="All screens" hidden>
-  <button role="menuitem" data-mode="separate">Separate screens<small>a monitor each, as on physical screens</small></button>
-  <button role="menuitem" data-mode="span">One wide desktop<small>one monitor across all of them</small></button>
+<div id="screensMenu" role="menu" aria-label="All screens" data-i18n-attr="aria-label:set.screens" hidden>
+  <button role="menuitem" data-mode="separate"><span data-i18n="screens.separate">Separate screens</span><small data-i18n="screens.separateSub">a monitor each, as on physical screens</small></button>
+  <button role="menuitem" data-mode="span"><span data-i18n="screens.span">One wide desktop</span><small data-i18n="screens.spanSub">one monitor across all of them</small></button>
 </div>
 <div id="tbGrip" aria-hidden="true"></div>
 <div id="info" hidden><table id="infoTable"></table></div>
@@ -282,18 +284,18 @@
 <div id="saveBar" role="dialog" aria-labelledby="saveText" hidden>
   <span id="saveText"></span>
   <span class="row"><button id="saveYes" class="small primary">Save with passkey</button>
-    <button id="saveLater" class="small">Not now</button><button id="saveNever" class="small">Never for this host</button></span>
+    <button id="saveLater" class="small" data-i18n="save.later">Not now</button><button id="saveNever" class="small" data-i18n="save.never">Never for this host</button></span>
 </div>
 <div id="endBar" role="alert" hidden>
   <span id="endText"></span>
-  <span class="row"><button id="endReconnect" class="small primary">Reconnect</button><button id="endClose" class="small">Close</button></span>
+  <span class="row"><button id="endReconnect" class="small primary">Reconnect</button><button id="endClose" class="small" data-i18n="end.close">Close</button></span>
 </div>
 <div id="hotkeyToast" role="status" hidden></div>
 <div id="screensToast" role="status" hidden></div>
-<div id="captureToast" role="status" hidden>Mouse and keyboard captured · <kbd>Ctrl</kbd> + <kbd>Alt</kbd> releases them</div>
+<div id="captureToast" role="status" hidden><span data-i18n="cap.toast">Mouse and keyboard captured · </span><kbd>Ctrl</kbd> + <kbd>Alt</kbd><span data-i18n="cap.toastEnd"> releases them</span></div>
 <!-- what this client was built with (about.js); the toolbar's Info shows the live session -->
-<details id="aboutPanel"><summary>About this client</summary><table id="aboutTable"></table></details>
-<details id="logPanel"><summary>Log</summary><pre id="log"></pre></details>
+<details id="aboutPanel"><summary data-i18n="about.title">About this client</summary><table id="aboutTable"></table></details>
+<details id="logPanel"><summary data-i18n="tb.log">Log</summary><pre id="log"></pre></details>
 </div>
 <script src="tt-policy.js"></script>
 <script src="tcp-shim.js"></script>

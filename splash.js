@@ -13,6 +13,7 @@
 (function () {
   "use strict";
   const $ = (id) => document.getElementById(id);
+  const t = (key, text) => globalThis.FreeRDPi18n?.t(key, text) ?? text;   // i18n.js; the demos' own titles stay English
   const KEY = "freerdp-web-splash", SOUND_KEY = "freerdp-web-splash-sound";
   let videos = [], current = 0, opener = null;
   // the demos' sound is part of the show: on, unless the viewer turned it off once
@@ -57,7 +58,7 @@
     // the demo's address in full, also where there is no address bar (the installed app)
     $("splashLink").href = location.href;
     $("splashLink").textContent = location.host + location.pathname + location.hash;
-    $("splashCopy").textContent = "Copy link";
+    $("splashCopy").textContent = t("hosts.link", "Copy link");
     play();
   }
   function open(i = current) {
@@ -84,7 +85,7 @@
   $("splashSound").onclick = soundOn;
   $("splashCopy").onclick = () => {
     const done = (text) => { $("splashCopy").textContent = text; };
-    navigator.clipboard.writeText($("splashLink").href).then(() => done("Copied"), () => done("Copy: select the link"));
+    navigator.clipboard.writeText($("splashLink").href).then(() => done(t("copied", "Copied")), () => done(t("splash.select", "Copy: select the link")));
   };
   // the link itself opens this demo here, not a second page
   $("splashLink").onclick = (e) => { if (!(e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey)) e.preventDefault(); };

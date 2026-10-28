@@ -1,5 +1,8 @@
 // Hosts and settings live in localStorage (hosts.js); the password never does.
 const $ = (id) => document.getElementById(id);
+// the page's words in the visitor's language (i18n.js): the English given here, or its Chinese.
+// Log lines, options and technical values stay English.
+const t = (key, text, vars) => globalThis.FreeRDPi18n?.t(key, text, vars) ?? text;
 // in turn, like a marquee: the slogan, then 蛮蛮, then the twins; each clip plays to its end,
 // and each turn then holds 3 s (on the clip's last frame) before the next. A clip that cannot
 // play moves on after 15 s. Played for everyone, reduced motion too (聪哥's choice)
@@ -41,11 +44,14 @@ const CLEAN_END = /treat this as a user logoff|ERRINFO_LOGOFF_BY_(USER|SERVER)|E
 // connection took it over, the server refused it, licensing. Reconnecting on its own would not
 // bring it back, or would take it from the other connection. The end bar says why; any other
 // code, or a lost connection in the log, is a drop the page retries.
-const SESSION_OVER = { 1: "disconnected by the server", 2: "logged off", 3: "idle for too long", 4: "the logon took too long",
-  5: "another connection took it over", 6: "the server ran out of memory", 7: "the server refused the connection",
-  8: "the server refused the connection (FIPS)", 9: "no permission to log on", 10: "the server wants the password again",
-  11: "disconnected", 145: "cancelled" };
-for (let c = 16; c <= 26; c++) SESSION_OVER[c] = "a licensing error on the server";
+const SESSION_OVER = { 1: { i18n: "over.server", text: "disconnected by the server" }, 2: { i18n: "over.logoff", text: "logged off" },
+  3: { i18n: "over.idle", text: "idle for too long" }, 4: { i18n: "over.logonTime", text: "the logon took too long" },
+  5: { i18n: "over.other", text: "another connection took it over" }, 6: { i18n: "over.memory", text: "the server ran out of memory" },
+  7: { i18n: "over.refused", text: "the server refused the connection" },
+  8: { i18n: "over.fips", text: "the server refused the connection (FIPS)" }, 9: { i18n: "over.denied", text: "no permission to log on" },
+  10: { i18n: "over.password", text: "the server wants the password again" }, 11: { i18n: "over.disconnected", text: "disconnected" },
+  145: { i18n: "over.cancelled", text: "cancelled" } };
+for (let c = 16; c <= 26; c++) SESSION_OVER[c] = { i18n: "over.licensing", text: "a licensing error on the server" };
 const connLog = [];
 function crashStore(state, reason) {
   try {
@@ -101,10 +107,11 @@ const saveOffer = { due: false, failed: false, timer: 0 };
 function offerSave() {
   const o = !saveOffer.failed && crash.running && HostsUI.saveOffer();
   if (!o) return;
-  $("saveText").textContent = (o.update ? `Update the saved password of “${o.name}”?` : `Save the password of “${o.name}”?`) +
-    " Next time your passkey unlocks it (Touch ID, Windows Hello…)." + (document.pointerLockElement ? " Ctrl + Alt frees the mouse." : "");
+  $("saveText").textContent = (o.update ? t("save.update", `Update the saved password of “${o.name}”?`, { name: o.name })
+    : t("save.ask", `Save the password of “${o.name}”?`, { name: o.name })) +
+    t("save.next", " Next time your passkey unlocks it (Touch ID, Windows Hello…).") + (document.pointerLockElement ? t("save.mouse", " Ctrl + Alt frees the mouse.") : "");
   for (const id of ["saveYes", "saveLater", "saveNever"]) $(id).disabled = false;
-  $("saveYes").textContent = o.update ? "Update with passkey" : "Save with passkey";
+  $("saveYes").textContent = o.update ? t("save.yesUpdate", "Update with passkey") : t("save.yes", "Save with passkey");
   $("saveBar").hidden = false;
   clearTimeout(saveOffer.timer); saveOffer.timer = setTimeout(() => answerSave(false), 30000);
 }
@@ -118,15 +125,18 @@ $("saveNever").onclick = () => answerSave(true);
 $("saveYes").onclick = async () => {
   clearTimeout(saveOffer.timer);
   for (const id of ["saveYes", "saveLater", "saveNever"]) $(id).disabled = true;
-  $("saveText").textContent = "Waiting for the passkey…";
-  try { await HostsUI.acceptSave(); $("saveText").textContent = "Saved in the passkey vault."; closeSaveBar(2500); }
+  $("saveText").textContent = t("vault.waiting", "Waiting for the passkey…");
+  try { await HostsUI.acceptSave(); $("saveText").textContent = t("save.saved", "Saved in the passkey vault."); closeSaveBar(2500); }
   catch (e) {
-    $("saveText").textContent = e.name === "AbortError" || e.name === "NotAllowedError" ? "Not saved: the passkey prompt was cancelled." : "Not saved: " + e.message;
+    $("saveText").textContent = e.name === "AbortError" || e.name === "NotAllowedError" ? t("save.cancelled", "Not saved: the passkey prompt was cancelled.")
+      : t("save.failed", "Not saved: " + e.message, { why: e.message });
     closeSaveBar(6000);
   }
   $("canvas").focus();
 };
-const status = (s) => { $("status").textContent = s; };
+// key and vars: the line in the visitor's language, again when it changes (retext, below)
+let statusLine = ["", ""];
+const status = (s, key = "", vars) => { statusLine = [s, key, vars]; $("status").textContent = key ? t(key, s, vars) : s; };
 
 // ---- the selected host (hosts-ui.js) fills the form; the form's edits go back into it
 const HostsUI = window.FreeRDPHostsUI;
@@ -134,10 +144,11 @@ const HostsUI = window.FreeRDPHostsUI;
 // different addresses, kept apart in the host
 function showTarget(h) {
   const direct = $("direct").checked;
-  $("hostLabel").textContent = direct ? "RDP server" : "Gateway";
+  showTargetLabel();
   $("host").placeholder = direct ? "rdp-server:3389" : "127.0.0.1:3390";
   $("host").value = direct ? h.directHost : h.host;
 }
+function showTargetLabel() { $("hostLabel").textContent = $("direct").checked ? t("hop.rdp", "RDP server") : t("hop.gateway", "Gateway"); }
 function showHost(h) {
   $("hostName").value = h.name;
   $("direct").checked = !!window.directSocketsAvailable && h.direct;
@@ -196,55 +207,62 @@ function showSession(session) {
   setRadio("keys", FreeRDPKeyboard.get());
   updateSessionText();
 }
+// each with its key in i18n.js; said() gives the text in the visitor's language
+const said = (m) => t(m.i18n, m.text);
 const CODEC_HINTS = {
-  auto: "The server picks from every codec the client offers (AV1 4:4:4 included).",
-  "av1-420": "AV1 with half-resolution colour: less data, slightly soft coloured text.",
-  "av1-444": "AV1 with full colour: sharp text in every colour, more data.",
+  auto: { i18n: "hint.codecAuto", text: "The server picks from every codec the client offers (AV1 4:4:4 included)." },
+  "av1-420": { i18n: "hint.codec420", text: "AV1 with half-resolution colour: less data, slightly soft coloured text." },
+  "av1-444": { i18n: "hint.codec444", text: "AV1 with full colour: sharp text in every colour, more data." },
 };
 const STRATEGY_HINTS = {
-  recommended: "The client and the server choose.",
-  bandwidth: "For slow links: the server sends less (no wallpaper or animations) and compresses more, which costs it more CPU.",
-  server: "For a busy server: it compresses less and sends more data instead.",
+  recommended: { i18n: "hint.strategyRecommended", text: "The client and the server choose." },
+  bandwidth: { i18n: "hint.strategyBandwidth", text: "For slow links: the server sends less (no wallpaper or animations) and compresses more, which costs it more CPU." },
+  server: { i18n: "hint.strategyServer", text: "For a busy server: it compresses less and sends more data instead." },
 };
 // with the toolbar's All screens, on a computer with more than one screen
 const SCREENS_HINTS = {
-  separate: "Each screen is a monitor of its own for the remote desktop, as on physical screens: a window maximizes on one, and you drag it to the next.",
-  span: "One desktop as wide as all the screens: a maximized window covers every one of them.",
+  separate: { i18n: "hint.screensSeparate", text: "Each screen is a monitor of its own for the remote desktop, as on physical screens: a window maximizes on one, and you drag it to the next." },
+  span: { i18n: "hint.screensSpan", text: "One desktop as wide as all the screens: a maximized window covers every one of them." },
 };
-const KIND_NAMES = { video: "Video", audio: "Sound", mic: "Microphone", clipboard: "Clipboard", network: "Priority", compression: "Priority", scale: "Remote scale" };
+const KIND_NAMES = { video: { i18n: "set.video", text: "Video" }, audio: { i18n: "set.sound", text: "Sound" }, mic: { i18n: "set.mic", text: "Microphone" },
+  clipboard: { i18n: "set.clipboard", text: "Clipboard" }, network: { i18n: "set.priority", text: "Priority" },
+  compression: { i18n: "set.priority", text: "Priority" }, scale: { i18n: "set.scale", text: "Remote scale" } };
 // what Automatic sends: the screen's scale, above 100 % (vault.js connectionArgs)
 function scaleHint(scale) {
   const screen = Math.min(500, Math.round((window.devicePixelRatio || 1) * 100));
-  return (scale === "auto" ? `Automatic: your screen's scale, now ${screen} %. ` : `Always ${scale} %, also after a resize or full screen. `) +
-    "Windows follows it; GNOME from gnome-remote-desktop 50 on (older versions keep their own setting).";
+  return (scale === "auto" ? t("hint.scaleAuto", `Automatic: your screen's scale, now ${screen} %. `, { screen })
+    : t("hint.scaleFixed", `Always ${scale} %, also after a resize or full screen. `, { scale })) +
+    t("hint.scaleWho", "Windows follows it; GNOME from gnome-remote-desktop 50 on (older versions keep their own setting).");
 }
 function updateSessionText() {
   const s = readSession(), extra = $("extra").value;
-  $("codecHint").textContent = CODEC_HINTS[s.codec];
-  $("strategyHint").textContent = STRATEGY_HINTS[s.strategy];
+  $("codecHint").textContent = said(CODEC_HINTS[s.codec]);
+  $("strategyHint").textContent = said(STRATEGY_HINTS[s.strategy]);
   $("scaleHint").textContent = scaleHint(s.scale);
-  $("screensHint").textContent = SCREENS_HINTS[s.screens];
+  $("screensHint").textContent = said(SCREENS_HINTS[s.screens]);
   // Extra options of the same kind win: say which settings they override
-  const over = [...new Set(FreeRDPOptions.overridden(extra).map((k) => KIND_NAMES[k]))];
+  const over = [...new Set(FreeRDPOptions.overridden(extra).map((k) => said(KIND_NAMES[k])))];
   const changed = !FreeRDPOptions.isDefault(s);
+  const list = (items) => items.join(t("list.sep", ", "));
   $("customNote").hidden = !over.length && !changed;
-  $("customText").textContent = over.length ? `Extra options set ${over.join(", ")}: they win over the choice here. `
-    : "Changed from the recommended settings. ";
+  $("customText").textContent = over.length ? t("set.overridden", `Extra options set ${over.join(", ")}: they win over the choice here. `, { kinds: list(over) })
+    : t("set.changed", "Changed from the recommended settings. ");
   const label = (name, value) => document.querySelector(`input[name=${name}][value="${value}"]`).parentElement.textContent.trim();
-  $("sessionSummary").textContent = over.length ? "custom" : !changed ? "recommended" :
-    [s.codec !== "auto" && label("codec", s.codec), s.strategy !== "recommended" && label("strategy", s.strategy),
-     s.scale !== "auto" && "scale " + label("scale", s.scale), s.screens !== "separate" && label("screens", s.screens),
-     !s.audio && "no sound", s.mic && "microphone", !s.clipboard && "no clipboard"].filter(Boolean).join(", ");
+  $("sessionSummary").textContent = over.length ? t("set.custom", "custom") : !changed ? t("set.recommendedSummary", "recommended") :
+    list([s.codec !== "auto" && label("codec", s.codec), s.strategy !== "recommended" && label("strategy", s.strategy),
+     s.scale !== "auto" && t("set.scaleSummary", "scale " + label("scale", s.scale), { scale: label("scale", s.scale) }),
+     s.screens !== "separate" && label("screens", s.screens),
+     !s.audio && t("set.noSound", "no sound"), s.mic && t("set.micSummary", "microphone"), !s.clipboard && t("set.noClipboard", "no clipboard")].filter(Boolean));
   $("preview").textContent = FreeRDPOptions.resolve(s, extra).join(" ");
   updateSummary();
 }
 // the advanced choices in effect, shown under Connect even while Advanced is closed
 function updateSummary() {
   const parts = [];
-  if ($("direct").checked) parts.push("Direct TCP (installed app), no gateway");
+  if ($("direct").checked) parts.push(t("summary.direct", "Direct TCP (installed app), no gateway"));
   const h = HostsUI.current();
-  if (h.vault) parts.push(h.vaultSaved ? "Password from the passkey vault" : "Passkey vault on, no password saved yet");
-  if ($("extra").value.trim()) parts.push("Extra options: " + $("extra").value.trim());
+  if (h.vault) parts.push(h.vaultSaved ? t("summary.vaultSaved", "Password from the passkey vault") : t("summary.vaultOn", "Passkey vault on, no password saved yet"));
+  if ($("extra").value.trim()) parts.push(t("summary.extra", "Extra options: " + $("extra").value.trim(), { extra: $("extra").value.trim() }));
   $("summary").textContent = parts.join(" · ");
 }
 document.querySelectorAll("#sessionPanel input").forEach((el) => el.addEventListener("change", () => {
@@ -269,8 +287,9 @@ window.addEventListener("storage", (e) => {
 function showHotkeys() {
   const h = FreeRDPKeyboard.getHotkeys(), text = (a) => FreeRDPKeyboard.hotkeyText(h, a);
   $("hotkeyHint").textContent = FreeRDPKeyboard.MODIFIERS[h.modifier].codes
-    ? `FreeRDP's hotkeys: ${text("fullscreen")} full screen, ${text("disconnect")} disconnect, ${text("grab")} keyboard grab.`
-    : "FreeRDP's hotkeys are off; full screen and Disconnect are on the toolbar.";
+    ? t("hint.hotkeys", `FreeRDP's hotkeys: ${text("fullscreen")} full screen, ${text("disconnect")} disconnect, ${text("grab")} keyboard grab.`,
+      { fullscreen: text("fullscreen"), disconnect: text("disconnect"), grab: text("grab") })
+    : t("hint.hotkeysOff", "FreeRDP's hotkeys are off; full screen and Disconnect are on the toolbar.");
   $("tbFs").title = FreeRDPKeyboard.MODIFIERS[h.modifier].codes ? text("fullscreen") : "";
   $("tbQuit").title = FreeRDPKeyboard.MODIFIERS[h.modifier].codes ? text("disconnect") : "";
 }
@@ -281,22 +300,25 @@ showHotkeys();
 function updateRoute() {
   const m = /^(?:127\.0\.0\.1|localhost|\[::1\]):(\d{1,5})$/.exec($("host").value.trim());
   const port = m ? m[1] : "3390";
-  $("hopGateway").textContent = $("direct").checked ? "none (direct TCP)" : $("host").value.trim() || "127.0.0.1:3390";
+  $("hopGateway").textContent = $("direct").checked ? t("hop.none", "none (direct TCP)") : $("host").value.trim() || "127.0.0.1:3390";
   $("sshCmd").textContent = `ssh -tt -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -L 127.0.0.1:${port}:127.0.0.1:3390 ${$("user").value.trim() || "user"}@server websockify 127.0.0.1:3390 127.0.0.1:3389`;
 }
 $("host").addEventListener("input", updateRoute); $("user").addEventListener("input", updateRoute);
 $("copyCmd").onclick = () => navigator.clipboard.writeText($("sshCmd").textContent).then(
-  () => { $("copyCmd").textContent = "Copied"; setTimeout(() => { $("copyCmd").textContent = "Copy"; }, 1500); },
-  () => { getSelection().selectAllChildren($("sshCmd")); $("copyCmd").textContent = "Press Ctrl+C"; });
+  () => { $("copyCmd").textContent = t("copied", "Copied"); setTimeout(() => { $("copyCmd").textContent = t("copy", "Copy"); }, 1500); },
+  () => { getSelection().selectAllChildren($("sshCmd")); $("copyCmd").textContent = t("copyPress", "Press Ctrl+C"); });
 
 // ---- Advanced: direct TCP and the passkey vault
-if (window.directSocketsAvailable) $("directHint").textContent = "This installed app can open TCP itself: enter the RDP server, usually host:3389.";
-else {
-  $("direct").disabled = true;
-  // DOM calls, not innerHTML: the installed app enforces Trusted Types and would refuse a string
-  const how = Object.assign(document.createElement("a"), { href: "install.html", textContent: "How to install it" });
-  $("directHint").replaceChildren("Only in the installed app (Isolated Web App). ", how, ".");
+function showDirectHint() {
+  if (window.directSocketsAvailable) $("directHint").textContent = t("adv.directHint", "This installed app can open TCP itself: enter the RDP server, usually host:3389.");
+  else {
+    // DOM calls, not innerHTML: the installed app enforces Trusted Types and would refuse a string
+    const how = Object.assign(document.createElement("a"), { href: "install.html", textContent: t("adv.directHow", "How to install it") });
+    $("directHint").replaceChildren(t("adv.directOnly", "Only in the installed app (Isolated Web App). "), how, t("punct.period", "."));
+  }
 }
+if (!window.directSocketsAvailable) $("direct").disabled = true;
+showDirectHint();
 $("direct").addEventListener("change", () => {
   storeFields(); showTarget(HostsUI.current());
   updateRoute(); updateSummary();
@@ -331,17 +353,16 @@ function moduleConfig() {
   freerdpMonitors: () => screensMonitors(),
   onRuntimeInitialized() {
     runtimeReady = true; resolveRuntime(true);
-    $("go").disabled = false; $("go").textContent = "Connect"; status("ready");
+    $("go").disabled = false; goReady = true; showGo(); status("ready", "status.ready");
     // a client built with the Web Audio microphone backend (FreeRDP's audin "emscripten")
     if (typeof Module._audin_emscripten_release === "function") {
-      $("optMic").disabled = false; $("micNote").hidden = true;
-      $("optMic").parentElement.title = "Send this browser's microphone to the remote session (the browser asks first)";
+      $("optMic").disabled = false; $("micNote").hidden = true; micReady = true; showMicTitle();
     }
     if (autoconnect) { autoconnect = false; connect(); }   // the first client only
   },
   onExit(code) {
     if (crash.abandoned === m) { log("[page] the client the page had ended exited now: " + code); return; }
-    status("exited: " + code); log("[page] exit code " + code); window.__freerdpExit = code;
+    status("exited: " + code, "status.exited", { code }); log("[page] exit code " + code); window.__freerdpExit = code;
     const over = SESSION_OVER[code];   // the session itself ended: no reconnecting on its own
     if (code !== 0 && !over) $("logPanel").open = true;   // show the reason
     // exit code 0 also follows a lost connection: look at the log, not only at the code
@@ -365,7 +386,7 @@ function newClient() {
 // engine.js loads the client (the build this browser runs best) once the page's scripts have run
 document.addEventListener("DOMContentLoaded", () => (window.freerdpClient ?? Promise.resolve()).then(
   () => { if (modularClient()) newClient(); },
-  (e) => { log("[page] " + e.message); status("the client did not load"); }));
+  (e) => { log("[page] " + e.message); status("the client did not load", "status.noClient"); }));
 function crashEnd(unexpected, reason) {
   clearInterval(crash.timer); clearTimeout(crash.endWatch); crash.endWatch = 0; crash.running = false;
   crashStore(unexpected ? "crashed" : "clean", reason);
@@ -434,7 +455,7 @@ function onFullscreenChange() {
     document.body.classList.remove("fs"); kbLocked = false; syncCaptured(); log("[page] left full screen");
     if (multiOn() && !screensSpec) screensOff();   // the canvas spans the screens from this one's full screen
   }
-  $("tbFs").textContent = document.fullscreenElement ? "Window" : "Full screen";
+  showFsButton();
   document.body.classList.toggle("tbhide", !!document.fullscreenElement);
   // The browser fires "resize" before or after "fullscreenchange" (macOS: after), so measure
   // again once the new layout is in place; SDL's handler reads the current sizes, not the event.
@@ -486,7 +507,7 @@ function writeHotkeys() {
   let told = null; try { told = localStorage.getItem("freerdp-web-hotkeys-told"); } catch (e) { /* not stored: told every time */ }
   if (told === seen) return;
   try { localStorage.setItem("freerdp-web-hotkeys-told", seen); } catch (e) { /* ignored */ }
-  $("hotkeyToast").textContent = $("hotkeyHint").textContent + " Change them on the Keyboard page.";
+  $("hotkeyToast").textContent = $("hotkeyHint").textContent + t("hint.hotkeysChange", " Change them on the Keyboard page.");
   $("hotkeyToast").hidden = false;
   setTimeout(() => { $("hotkeyToast").hidden = true; }, 8000);
 }
@@ -769,8 +790,10 @@ function disconnect() { crash.userEnded = true; again.forget(); if (crash.runnin
 $("tbQuit").onclick = disconnect;
 $("tbReconnect").onclick = () => { reconnect(); backToCanvas(); };
 // 📌 keeps the toolbar visible in full screen (remembered across sessions)
+const showPinTitle = () => { $("tbPin").title = document.body.classList.contains("tbpinned")
+  ? t("tb.unpinTitle", "Unpin toolbar (auto-hide in full screen)") : t("tb.pinTitle", "Pin toolbar (always visible)"); };
 const setPinned = (on) => { document.body.classList.toggle("tbpinned", on); $("tbPin").classList.toggle("on", on);
-  $("tbPin").title = on ? "Unpin toolbar (auto-hide in full screen)" : "Pin toolbar (always visible)";
+  showPinTitle();
   try { localStorage.setItem("freerdp-web-tbpinned", on ? "1" : "0"); } catch (e) {} };
 let pinned0 = false; try { pinned0 = localStorage.getItem("freerdp-web-tbpinned") === "1"; } catch (e) {}
 setPinned(pinned0);
@@ -807,12 +830,13 @@ if (screensReadable) {
 const screensWaiting = () => multiOn() && multi.screens.some((s, i) => i !== multi.cur && !multi.wins.has(i));
 function showScreensButton() {
   $("tbScreens").hidden = !screensSpec && !(window.screen.isExtended && "getScreenDetails" in window) && !multiOn();
-  $("tbScreens").textContent = !multiOn() ? "All screens ▾" : screensWaiting() ? "Next screen" : "One screen";
+  $("tbScreens").textContent = !multiOn() ? t("tb.screens", "All screens ▾") : screensWaiting() ? t("tb.nextScreen", "Next screen") : t("tb.oneScreen", "One screen");
 }
 window.screen.addEventListener?.("change", showScreensButton); showScreensButton();
-function screensSay(text) {
+// the log keeps the English; the toast says it in the visitor's language (key and vars: i18n.js)
+function screensSay(text, key, vars) {
   log("[page] " + text);
-  clearTimeout(multi.toast); $("screensToast").textContent = text; $("screensToast").hidden = false;
+  clearTimeout(multi.toast); $("screensToast").textContent = t(key, text, vars); $("screensToast").hidden = false;
   multi.toast = setTimeout(() => { $("screensToast").hidden = true; }, 6000);
 }
 async function screensOn() {
@@ -821,31 +845,33 @@ async function screensOn() {
     if (screensSpec) multi.screens = screensSpec;
     else {
       try { multi.details ??= await window.getScreenDetails(); }
-      catch (e) { screensSay("The other screens are not available: " + e.message); return; }
+      catch (e) { screensSay("The other screens are not available: " + e.message, "screens.unavailable", { why: e.message }); return; }
       const d = multi.details;
-      multi.screens = d.screens.map((s) => ({ left: s.left, top: s.top, width: s.width, height: s.height, label: s.label || "Screen", screen: s }));
+      multi.screens = d.screens.map((s) => ({ left: s.left, top: s.top, width: s.width, height: s.height, label: s.label || t("screens.screen", "Screen"), screen: s }));
       multi.cur = d.screens.indexOf(d.currentScreen);
-      d.onscreenschange = () => { if (multiOn()) { screensOff(); screensSay("The screens changed: the remote desktop is back on this one."); } };
+      d.onscreenschange = () => { if (multiOn()) { screensOff(); screensSay("The screens changed: the remote desktop is back on this one.", "screens.changed"); } };
     }
-    if (multi.screens.length < 2) { multi.screens = null; screensSay("Only one screen is connected."); return; }
+    if (multi.screens.length < 2) { multi.screens = null; screensSay("Only one screen is connected.", "screens.one"); return; }
   }
   // the permission prompt may have used up the click: full screen then asks for another one
   if (!screensSpec && !document.fullscreenElement && !await enterFullscreen(multi.screens[multi.cur].screen)) {
-    multi.screens = null; screensSay("Full screen needs a click: click All screens again."); return;
+    multi.screens = null; screensSay("Full screen needs a click: click All screens again.", "screens.click"); return;
   }
   const s = multi.screens.find((x, i) => i !== multi.cur && !multi.wins.has(i)), i = multi.screens.indexOf(s);
   if (!s) return;
   const at = s.screen ? [s.screen.availLeft, s.screen.availTop, s.screen.availWidth, s.screen.availHeight] : [s.left, s.top, s.width, s.height];
   const w = window.open("screen.html#" + i, "freerdp-screen-" + i, `popup,left=${at[0]},top=${at[1]},width=${at[2]},height=${at[3]}`);
   if (!w) {   // the click went to the permission prompt or to full screen, or pop-ups are blocked
-    screensSay(`The browser did not open the window for ${s.label}: click ${multiOn() ? "Next screen" : "All screens"} again, or allow pop-ups for this site.`);
+    screensSay(`The browser did not open the window for ${s.label}: click ${multiOn() ? "Next screen" : "All screens"} again, or allow pop-ups for this site.`,
+      "screens.blocked", { label: s.label, button: multiOn() ? t("tb.nextScreen", "Next screen") : t("set.screens", "All screens") });
     if (!multiOn()) multi.screens = null;
     return;
   }
   multi.wins.set(i, w);
   clearInterval(multi.poll); multi.poll = setInterval(screensCheck, 500);
   screensLayout();
-  screensSay(screensWaiting() ? `${s.label}: click it to fill it. Click Next screen for the next one.` : `${s.label}: click it to fill it with the remote desktop.`);
+  if (screensWaiting()) screensSay(`${s.label}: click it to fill it. Click Next screen for the next one.`, "screens.fillNext", { label: s.label });
+  else screensSay(`${s.label}: click it to fill it with the remote desktop.`, "screens.fill", { label: s.label });
 }
 // A window closed: the desktop shrinks to the rest. SDL takes the canvas's size only once FreeRDP
 // made its window resizable (when the display channel is up), and a resize event before that is
@@ -973,7 +999,7 @@ function hardware(codec) {
   }
   return hwDecoder[codec];
 }
-const hwText = (h) => h === true ? "hardware" : h === false ? "software" : "checking…";
+const hwText = (h) => h === true ? t("info.hardware", "hardware") : h === false ? t("info.software", "software") : t("info.checking", "checking…");
 // the AV1 stream's profile, from its last sequence header (av1_webcodecs.js): 0 = Main, 4:2:0;
 // 1 = High, 4:4:4
 const av1Profile = () => { let p = -1; for (const d of Module.freerdpAv1?.decoders?.values() ?? []) if (d.profile >= 0) p = d.profile; return p; };
@@ -989,16 +1015,18 @@ function updateInfo() {
   const dms = av1.frames > last.frames ? (av1.decodeMs - last.ms) / (av1.frames - last.frames) : 0;
   const kbit = (b) => (b * 8 / 1000 / dt).toFixed(0) + " kbit/s";
   const mb = (b) => (b / 1e6).toFixed(1) + " MB";
+  const net2 = (rate, total) => t("info.net", `${rate}, ${total} total`, { rate, total });
   const dur = info.started ? Math.floor((Date.now() - info.started) / 1000) : 0;
   const rows = [
-    ["Server", info.server], ["Transport", info.transport],
-    ["Resolution", `${$("canvas").width} × ${$("canvas").height}`],
-    ["Canvas", (() => { const c = $("canvas"), b = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    [t("info.server", "Server"), info.server], [t("info.transport", "Transport"), info.transport],
+    [t("info.resolution", "Resolution"), `${$("canvas").width} × ${$("canvas").height}`],
+    [t("info.canvas", "Canvas"), (() => { const c = $("canvas"), b = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
       const bw = Math.round(b.width * dpr), bh = Math.round(b.height * dpr);
       const same = Math.abs(bw - c.width) <= 2 && Math.abs(bh - c.height) <= 2;
-      return same ? `${bw} × ${bh} on screen, matches` :
-        `⚠ ${bw} × ${bh} on screen, aspect ${(bw / bh).toFixed(2)} vs picture ${(c.width / c.height).toFixed(2)}`; })()],
-    ["Video codecs", (() => {
+      const aspect = (bw / bh).toFixed(2), picture = (c.width / c.height).toFixed(2);
+      return same ? t("info.canvasSame", `${bw} × ${bh} on screen, matches`, { w: bw, h: bh }) :
+        t("info.canvasOff", `⚠ ${bw} × ${bh} on screen, aspect ${aspect} vs picture ${picture}`, { w: bw, h: bh, aspect, picture }); })()],
+    [t("info.codecs", "Video codecs"), (() => {
       const f = Module._freerdp_web_codec_stats?.(); if (!f) return "–";
       const now = Array.from(HEAPU32.subarray(f >> 2, (f >> 2) + 32));
       const prev = last.codecs || now.map(() => 0);
@@ -1013,32 +1041,40 @@ function updateInfo() {
         const rate = (now[i] - prev[i]) / dt, kb = (now[16 + i] - prev[16 + i]) * 8 / 1000 / dt;
         parts.push(`${names[i] ?? "codec " + i} ${rate.toFixed(0)}/s ${kb.toFixed(0)} kbit/s`);
       }
-      return parts.join(" · ") || "no updates yet"; })()],
-    ["Screens", multiOn() ? `${multi.wins.size + 1}, ${multi.mode === "separate" ? "a monitor each" : "one wide desktop"}; the desktop spans ${multi.box.width} × ${multi.box.height} CSS px` : "this one"],
-    ["AV1 decoder", (() => {
-      if (!/^WebCodecs/.test(info.decoder)) return /dav1d/.test(info.decoder) ? `${info.decoder}: software, in this page` : info.decoder;
+      return parts.join(" · ") || t("info.noUpdates", "no updates yet"); })()],
+    [t("info.screens", "Screens"), (() => {
+      if (!multiOn()) return t("info.thisScreen", "this one");
+      const n = multi.wins.size + 1, w = multi.box.width, h = multi.box.height;
+      const mode = multi.mode === "separate" ? t("info.monitorEach", "a monitor each") : t("screens.span", "one wide desktop");
+      return t("info.screensSpan", `${n}, ${multi.mode === "separate" ? "a monitor each" : "one wide desktop"}; the desktop spans ${w} × ${h} CSS px`, { n, mode, w, h }); })()],
+    [t("info.av1", "AV1 decoder"), (() => {
+      if (!/^WebCodecs/.test(info.decoder)) return /dav1d/.test(info.decoder) ? t("info.dav1d", `${info.decoder}: software, in this page`, { decoder: info.decoder }) : info.decoder;
       const p = av1Profile();
       if (p < 0) return info.decoder;
-      return `WebCodecs (browser), ${hwText(hardware(p === 1 ? "av01.1.13M.08" : "av01.0.13M.08"))} for AV1 ${AV1_CHROMA[p]}`; })()],
-    ["H.264 decoder", (() => {
+      const hw = hwText(hardware(p === 1 ? "av01.1.13M.08" : "av01.0.13M.08"));
+      return t("info.av1WebCodecs", `WebCodecs (browser), ${hw} for AV1 ${AV1_CHROMA[p]}`, { hw, chroma: AV1_CHROMA[p] }); })()],
+    [t("info.h264", "H.264 decoder"), (() => {
       if (!Module.freerdpH264?.decoders?.size) return "–";
       // the stream's own codec string is not kept; a High profile one (level 4.0) stands for it
-      return `WebCodecs (browser), ${hwText(hardware("avc1.640028"))}`; })()],
-    ["Audio codec", (() => {
+      const hw = hwText(hardware("avc1.640028"));
+      return t("info.h264WebCodecs", `WebCodecs (browser), ${hw}`, { hw }); })()],
+    [t("info.audioCodec", "Audio codec"), (() => {
       const a = Module._freerdp_web_audio_format?.(); if (!a) return "–";
       const [tag, rate, ch] = HEAPU32.subarray(a >> 2, (a >> 2) + 3);
-      if (!tag) return "no audio yet";
+      if (!tag) return t("info.noAudio", "no audio yet");
       const name = { 0x0001: "PCM", 0x704F: "Opus", 0xA106: "AAC", 0x0002: "ADPCM", 0x0011: "IMA ADPCM" }[tag] ?? "0x" + tag.toString(16);
-      return `${name}, ${rate / 1000} kHz, ${ch === 2 ? "stereo" : ch === 1 ? "mono" : ch + " ch"}`; })()],
-    ["AV1 frames", `${fps.toFixed(1)} /s, ${av1.frames} total (${av1.keyFrames} key)`],
-    ["AV1 decode", av1.frames ? `${dms.toFixed(1)} ms/frame (avg ${(av1.decodeMs / av1.frames).toFixed(1)})` : "–"],
-    ["Audio", (() => { const c = Module.freerdpAudioContext, a = Module.freerdpAudio;
+      return `${name}, ${rate / 1000} kHz, ${ch === 2 ? t("info.stereo", "stereo") : ch === 1 ? t("info.mono", "mono") : t("info.channels", ch + " ch", { n: ch })}`; })()],
+    [t("info.av1Frames", "AV1 frames"), t("info.frames", `${fps.toFixed(1)} /s, ${av1.frames} total (${av1.keyFrames} key)`,
+      { fps: fps.toFixed(1), n: av1.frames, key: av1.keyFrames })],
+    [t("info.av1Decode", "AV1 decode"), av1.frames ? t("info.decodeMs", `${dms.toFixed(1)} ms/frame (avg ${(av1.decodeMs / av1.frames).toFixed(1)})`,
+      { ms: dms.toFixed(1), avg: (av1.decodeMs / av1.frames).toFixed(1) }) : "–"],
+    [t("info.audio", "Audio"), (() => { const c = Module.freerdpAudioContext, a = Module.freerdpAudio;
       if (!c) return "–";
       const q = a ? Math.max(0, Math.round((a.next - c.currentTime) * 1000)) : 0;
-      return `${c.state}, ${a ? q + " ms queued" : "no data yet"}`; })()],
-    ["Network in", `${kbit(net.rx - last.rx)}, ${mb(net.rx)} total`],
-    ["Network out", `${kbit(net.tx - last.tx)}, ${mb(net.tx)} total`],
-    ["Session", `${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, "0")}`],
+      return `${c.state}, ${a ? t("info.queued", q + " ms queued", { ms: q }) : t("info.noData", "no data yet")}`; })()],
+    [t("info.netIn", "Network in"), net2(kbit(net.rx - last.rx), mb(net.rx))],
+    [t("info.netOut", "Network out"), net2(kbit(net.tx - last.tx), mb(net.tx))],
+    [t("info.session", "Session"), `${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, "0")}`],
   ];
   const tbl = $("infoTable"); tbl.textContent = "";
   for (const [k, v] of rows) { const tr = tbl.insertRow(); tr.insertCell().textContent = k; tr.insertCell().textContent = v; }
@@ -1088,16 +1124,16 @@ let audioContext = null;
 async function connect(againPassword = null) {
   if (connectStarted || runtimeFailed) return;
   try { HostsUI.check(); } catch (e) { status(e.message); return; }
-  if (!storeFields()) { status("Fix the host's settings first."); return; }
+  if (!storeFields()) { status("Fix the host's settings first.", "status.fixHost"); return; }
   const selectedId = HostsUI.selected;
   const checkSelection = () => {
-    if (HostsUI.selected !== selectedId) throw new Error("Selected host changed. Connect again to use the current selection.");
+    if (HostsUI.selected !== selectedId) throw new Error(t("status.hostChanged", "Selected host changed. Connect again to use the current selection."));
     HostsUI.check();
   };
   connectStarted = true;
   let handedToWasm = false;
   try {
-  if (!runtimeReady) status("waiting for runtime…");
+  if (!runtimeReady) status("waiting for runtime…", "status.waiting");
   // Audio: browsers only start an AudioContext from a user gesture, so create it here, before
   // any await; FreeRDP's Web Audio backend (rdpsnd "emscripten") plays through it.
   try {
@@ -1107,7 +1143,7 @@ async function connect(againPassword = null) {
   } catch (e) { log("[page] no Web Audio: " + e.message); }
   if (againPassword === null) await HostsUI.prepare();   // the vault's passkey, if this host's password is there
   checkSelection();
-  if (!await runtime) throw new Error("WebAssembly runtime unavailable.");
+  if (!await runtime) throw new Error(t("status.noRuntime", "WebAssembly runtime unavailable."));
   checkSelection();
   if ($("fs").checked) await enterFullscreen();
   // SDL3 applies FreeRDP's windowed state with document.exitFullscreen(); the page owns full
@@ -1136,7 +1172,7 @@ async function connect(againPassword = null) {
   const size = `${even(r.width)}x${even(r.height)}`, scale = Math.round(dpr * 100);
   checkSelection();
   HostsUI.use(againPassword, host => {
-    if (host.direct && !window.directSocketsAvailable) throw new Error("This saved host needs Direct TCP. Install and open the isolated app.");
+    if (host.direct && !window.directSocketsAvailable) throw new Error(t("status.needsDirect", "This saved host needs Direct TCP. Install and open the isolated app."));
     const session = readSession();
     const resolved = { ...host, extra: FreeRDPOptions.resolve(session, host.extra).join(" ") };
     let args;
@@ -1157,8 +1193,8 @@ async function connect(againPassword = null) {
     sessionPassword = host.password;
     if (modularClient()) again.keep(selectedId, host.password);
     info.started = Date.now(); info.server = host.host;
-    info.transport = host.direct ? "direct TCP (IWA)" : "WebSocket gateway";
-    $("go").disabled = true; status("connecting…");
+    info.transport = host.direct ? t("info.direct", "direct TCP (IWA)") : t("info.gateway", "WebSocket gateway");
+    $("go").disabled = true; status("connecting…", "status.connecting");
     log("[page] sdl-freerdp " + args.map(a => a.startsWith("/p:") ? "/p:***" : a).join(" "));
     $("pass").value = "";
     placeToolbar(); $("logPanel").open = false; $("canvas").focus();
@@ -1175,7 +1211,7 @@ async function connect(againPassword = null) {
     status(e.message);
     if (againPassword === null) { document.body.classList.remove("session"); syncHeader(); }
     if (!handedToWasm) { connectStarted = false; $("go").disabled = !runtimeReady; }
-    if (againPassword !== null) showEnd("Not reconnected: " + e.message, true);
+    if (againPassword !== null) showEnd(t("end.notAgain", "Not reconnected: " + e.message, { why: e.message }), true);
   }
 }
 
@@ -1197,7 +1233,7 @@ const LOGON_FAILED = /ERRCONNECT_(LOGON_FAILURE|WRONG_PASSWORD|ACCESS_DENIED|ACC
 function showEnd(text, canReconnect) {
   $("endText").textContent = text;
   $("endReconnect").hidden = !canReconnect;
-  $("endReconnect").textContent = modularClient() && again.has(HostsUI.selected) ? "Reconnect" : "Reload and connect";
+  $("endReconnect").textContent = modularClient() && again.has(HostsUI.selected) ? t("tb.reconnect", "Reconnect") : t("end.reload", "Reload and connect");
   $("endBar").hidden = false;
 }
 function sessionEnded(unexpected, why = "") {
@@ -1206,18 +1242,19 @@ function sessionEnded(unexpected, why = "") {
   if (modularClient()) newClient();   // ready for Reconnect, while the bar says what happened
   if (connLog.some((l) => LOGON_FAILED.test(l))) {
     again.forget(); retry.count = 0; endCapture();
-    showEnd("The server refused the password. Connect again with the right one.", false);
+    showEnd(t("end.refused", "The server refused the password. Connect again with the right one."), false);
     return;
   }
   const canAgain = modularClient() && again.has(HostsUI.selected);
   if (unexpected && canAgain && retry.count < retry.max) {
     const wait = Math.min(30, 2 ** ++retry.count);
-    showEnd(`Connection lost. Reconnecting in ${wait} s (try ${retry.count} of ${retry.max})…`, true);
+    showEnd(t("end.retry", `Connection lost. Reconnecting in ${wait} s (try ${retry.count} of ${retry.max})…`, { wait, n: retry.count, max: retry.max }), true);
     retry.timer = setTimeout(() => reconnect(true), wait * 1000);
     return;
   }
   endCapture();
-  showEnd(unexpected ? "Connection lost." : why ? `The session ended: ${why}.` : "The session ended.", true);
+  showEnd(unexpected ? t("end.lost", "Connection lost.") : why ? t("end.endedWhy", `The session ended: ${why.text}.`, { why: said(why) })
+    : t("end.ended", "The session ended."), true);
 }
 async function reconnect(automatic = false) {
   clearTimeout(retry.timer);
@@ -1227,7 +1264,7 @@ async function reconnect(automatic = false) {
   // a session that still runs, e.g. a network that hangs instead of failing: close its sockets;
   // FreeRDP reconnects by itself, or ends and comes back here
   if (crash.running) { for (const s of sockets) try { s.close(); } catch (e) { /* closed */ } sockets.clear(); return; }
-  $("endText").textContent = "Reconnecting…"; $("endReconnect").hidden = true;
+  $("endText").textContent = t("end.reconnecting", "Reconnecting…"); $("endReconnect").hidden = true;
   const password = await again.take(HostsUI.selected);
   await connect(password ?? "");
   if (crash.running) { $("endBar").hidden = true; }
@@ -1244,17 +1281,34 @@ const reconnected = () => { retry.count = 0; $("endBar").hidden = true; };
   if (!saved || saved.state === "clean" || !saved.lines?.length) return;
   const when = new Date(saved.time).toLocaleString();
   const why = saved.reason || (saved.state === "running" ? "the page was closed, reloaded or crashed during the session" : "unknown");
-  $("lastlogText").textContent = `The last session ended unexpectedly (${why}, ${when}). Its log is saved in this browser.`;
+  // the log keeps the English reason; the notice says it in the visitor's language
+  const whyText = saved.reason || (saved.state === "running" ? t("lastlog.closed", why) : t("lastlog.unknown", why));
+  $("lastlogText").textContent = t("lastlog.text", `The last session ended unexpectedly (${why}, ${when}). Its log is saved in this browser.`, { why: whyText, when });
   $("lastlog").hidden = false;
   const text = `FreeRDP Web: last session ended unexpectedly (${why}, ${when})\n` + saved.lines.join("\n");
   const show = () => { logEl.textContent = text + "\n\n--- current page ---\n" + logEl.textContent; $("logPanel").open = true; };
   $("lastlogCopy").onclick = () => navigator.clipboard.writeText(text).then(
-    () => { $("lastlogCopy").textContent = "Copied"; }, () => { show(); $("lastlogCopy").textContent = "Shown below"; });
+    () => { $("lastlogCopy").textContent = t("copied", "Copied"); }, () => { show(); $("lastlogCopy").textContent = t("lastlog.shown", "Shown below"); });
   $("lastlogShow").onclick = show;
   $("lastlogDismiss").onclick = () => { try { localStorage.removeItem(CRASH_KEY); } catch (e) {} $("lastlog").hidden = true; };
 })();
 // a submitted form is what tells the browser's password manager to offer saving the password
 $("connectForm").addEventListener("submit", (e) => { e.preventDefault(); connect(); });
+
+// The words the page sets itself, again in the visitor's language once it changes (i18n.js has
+// already put the HTML's own words in it). Lines that come and go (the end bar, the toasts) keep
+// the language they were said in.
+let goReady = false, micReady = false;
+function showGo() { $("go").textContent = goReady ? t("form.connect", "Connect") : t("form.loading", "Loading…"); }
+function showMicTitle() {
+  $("optMic").parentElement.title = micReady ? t("set.micTitle", "Send this browser's microphone to the remote session (the browser asks first)")
+    : t("set.micNone", "This build of the client has no microphone support");
+}
+function showFsButton() { $("tbFs").textContent = document.fullscreenElement ? t("tb.window", "Window") : t("tb.fullscreen", "Full screen"); }
+globalThis.FreeRDPi18n?.onChange(() => {
+  showTargetLabel(); showGo(); showMicTitle(); showFsButton(); showPinTitle(); showScreensButton(); showDirectHint();
+  updateSessionText(); showHotkeys(); updateRoute(); status(...statusLine);
+});
 
 // Input diagnostics, OFF by default because keys typed into the remote side can be passwords.
 // Enable with ?debugkeys=1; even then only the physical key position is logged, never the

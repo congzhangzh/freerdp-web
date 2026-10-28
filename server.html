@@ -3,45 +3,47 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Get a server · FreeRDP Web</title>
+<title data-i18n="srv.pageTitle">Get a server · FreeRDP Web</title>
 <link rel="icon" href="icon-256.png" type="image/png">
 <link rel="stylesheet" href="ui.css">
 <script src="theme.js"></script>
+<script src="i18n.js"></script>
 </head>
 <body>
 <main class="help">
   <header class="top">
     <a class="brand" href="index.html">FreeRDP Web</a>
-    <nav aria-label="Help">
-      <a href="index.html#intro">▶ Intro</a>
-      <a href="safety.html">Safety and tunnels</a>
-      <a href="keyboard.html">Keyboard</a>
-      <a href="server.html" aria-current="page">Get a server</a>
-      <a href="install.html">Install as app</a>
-      <a href="release-notes.html">Release notes</a>
-      <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener" title="The source, issues and releases">GitHub</a>
-      <label><span class="sr-only">Theme</span><select id="theme" aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+    <nav aria-label="Help" data-i18n-attr="aria-label:nav.help">
+      <a href="index.html#intro" data-i18n="nav.intro">▶ Intro</a>
+      <a href="safety.html" data-i18n="nav.safety">Safety and tunnels</a>
+      <a href="keyboard.html" data-i18n="nav.keyboard">Keyboard</a>
+      <a href="server.html" aria-current="page" data-i18n="nav.server">Get a server</a>
+      <a href="install.html" data-i18n="nav.install">Install as app</a>
+      <a href="release-notes.html" data-i18n="nav.notes">Release notes</a>
+      <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener" title="The source, issues and releases" data-i18n-attr="title:nav.githubTitle">GitHub</a>
+      <label class="lang-pick"><span class="lang-label" aria-hidden="true">🌐 <span data-i18n="nav.language">Language</span></span><select id="lang" aria-label="Language" data-i18n-attr="aria-label:nav.language"><option value="auto" data-i18n="lang.auto">Auto</option><option value="en" lang="en">English</option><option value="zh" lang="zh-Hans">中文</option></select></label>
+      <label><span class="sr-only" data-i18n="nav.theme">Theme</span><select id="theme" aria-label="Theme" data-i18n-attr="aria-label:nav.theme"><option value="system" data-i18n="theme.system">System</option><option value="light" data-i18n="theme.light">Light</option><option value="dark" data-i18n="theme.dark">Dark</option></select></label>
     </nav>
   </header>
-  <h1>Get a server</h1>
-  <p class="lead">FreeRDP Web connects to any RDP server: xrdp, gnome-remote-desktop, or Windows' own Remote
+  <h1 data-i18n="nav.server">Get a server</h1>
+  <p class="lead"><span data-i18n="srv.lead">FreeRDP Web connects to any RDP server: xrdp, gnome-remote-desktop, or Windows' own Remote
     Desktop. The packages below are the
-    <a href="https://github.com/congzhangzh/rdp-release-kit" target="_blank" rel="noopener">release kit</a>'s xrdp,
-    with Wayland sessions (GNOME, KDE Plasma, sway), tested with this page before each release.</p>
+    </span><a href="https://github.com/congzhangzh/rdp-release-kit" target="_blank" rel="noopener" data-i18n="srv.kit">release kit</a><span data-i18n="srv.leadEnd">'s xrdp,
+    with Wayland sessions (GNOME, KDE Plasma, sway), tested with this page before each release.</span></p>
 
   <!-- server.js fills this from install.json, which the release kit writes next to the page when
        it publishes the site; without that file (a local build) this line is all there is -->
   <div id="kit">
-    <p id="kitFallback">The packages for your Linux distribution, and native clients for your computer:
-      <a href="https://github.com/congzhangzh/rdp-release-kit/releases/latest" target="_blank" rel="noopener">the release kit's latest release</a>.</p>
+    <p id="kitFallback"><span data-i18n="srv.fallback">The packages for your Linux distribution, and native clients for your computer:
+      </span><a href="https://github.com/congzhangzh/rdp-release-kit/releases/latest" target="_blank" rel="noopener" data-i18n="srv.latest">the release kit's latest release</a><span data-i18n="punct.period">.</span></p>
   </div>
 
-  <h2>Then connect</h2>
-  <p>Keep the RDP server on 127.0.0.1 and reach it through SSH: <a href="safety.html">Safety and tunnels</a> has
-    the one-line command. Then open <a href="index.html">FreeRDP Web</a> and connect with your user name and
-    password on the server.</p>
+  <h2 data-i18n="srv.then">Then connect</h2>
+  <p><span data-i18n="srv.thenSsh">Keep the RDP server on 127.0.0.1 and reach it through SSH: </span><a href="safety.html" data-i18n="nav.safety">Safety and tunnels</a><span data-i18n="srv.thenCmd"> has
+    the one-line command. Then open </span><a href="index.html">FreeRDP Web</a><span data-i18n="srv.thenEnd"> and connect with your user name and
+    password on the server.</span></p>
 
-  <p><a href="index.html">Back to FreeRDP Web</a></p>
+  <p><a href="index.html" data-i18n="back">Back to FreeRDP Web</a></p>
 </main>
 <script src="help.js"></script>
 <script src="server.js"></script>
