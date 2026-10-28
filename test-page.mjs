@@ -139,7 +139,7 @@ const about = () => ev("JSON.stringify(Object.fromEntries([...document.querySele
 const version = JSON.parse(readFileSync(join(web, ".well-known/manifest.webmanifest"), "utf8")).version;
 const aboutRows = await about();
 check("About, before a session: the version, the engine and the decoders", aboutRows.Version === `FreeRDP Web ${version}`
-  && /^(JSPI|Asyncify)/.test(aboutRows.Engine) && /^AV1: WebCodecs/.test(aboutRows.Decoders), JSON.stringify(aboutRows));
+  && /^(JSPI|Asyncify)/.test(aboutRows.Engine) && /^WebCodecs \(browser\); fallback: dav1d/.test(aboutRows["AV1 decoder"]), JSON.stringify(aboutRows));
 if (existsSync(join(runtimeDir, "MANIFEST")))
   check("About names FreeRDP and SDL from the client's MANIFEST", /\(commit [0-9a-f]{10}\)$/.test(aboutRows.FreeRDP ?? "") && !!aboutRows.SDL,
     `${aboutRows.FreeRDP} / ${aboutRows.SDL}`);

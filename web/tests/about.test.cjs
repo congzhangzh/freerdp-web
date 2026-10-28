@@ -28,12 +28,13 @@ test("About: the version, the engine and the build, with the decoders the client
   assert.deepEqual(rows, {
     Version: "FreeRDP Web 20261028.1", Engine: "JSPI",
     FreeRDP: "20261026.4 (commit c12c6df857)", SDL: "3.4.18+timer (commit 1d615c14f9)",
-    Decoders: "AV1: WebCodecs (browser), dav1d 1.5.4 as fallback, in this page · H.264: WebCodecs (browser) · Opus 1.6.1",
+    "AV1 decoder": "WebCodecs (browser); fallback: dav1d 1.5.4 (in this page)",
+    "H.264 decoder": "WebCodecs (browser)", "Audio decoder": "Opus 1.6.1",
     Libraries: "zlib 1.3.2", Built: "2026-10-27, Emscripten 6.0.12",
     Page: "this checkout, abc123, with uncommitted changes", Overrides: "freerdp from a local directory", "Release kit": "20261028.2"});
 });
 test("About without MANIFEST or RELEASE (a local build): only what the page knows", () => {
   assert.deepEqual(A.rows({}), [["Version", "–"], ["Engine", "–"],
-    ["Decoders", "AV1: WebCodecs (browser), dav1d as fallback, in this page · H.264: WebCodecs (browser)"]]);
+    ["AV1 decoder", "WebCodecs (browser); fallback: dav1d (in this page)"], ["H.264 decoder", "WebCodecs (browser)"]]);
   assert.deepEqual(A.parseManifest("<html>not a manifest</html>"), {sources: {}, overrides: []});
 });

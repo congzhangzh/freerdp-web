@@ -267,7 +267,7 @@ built with, and the codec details read as one confusing list. Now there are two 
 | Card | Where | Shows |
 |---|---|---|
 | **Info** (`#info`, `app.js`) | toolbar, during a session; refreshed every second | Server, Transport, Resolution, Canvas, Video codecs (each with its colour, updates per second and bit rate), Screens, AV1 decoder (WebCodecs in hardware or software for the stream's profile, or dav1d once it fell back), H.264 decoder (hardware or software), Audio codec, AV1 frames, AV1 decode, Audio, Network in and out, Session (time) |
-| **About** (`#aboutPanel`, `about.js`) | under the form before a session (as the Log is), and from the toolbar's **About** during one | Version (FreeRDP Web, from the IWA manifest), Engine (JSPI or Asyncify), and from the client's `MANIFEST`: FreeRDP (version and commit), SDL, Decoders (AV1 through WebCodecs with dav1d as fallback, H.264 through WebCodecs, Opus), the other libraries, the build date and Emscripten, the page's commit, local overrides; the kit's release from `RELEASE` |
+| **About** (`#aboutPanel`, `about.js`) | under the form before a session (as the Log is), and from the toolbar's **About** during one | Version (FreeRDP Web, from the IWA manifest), Engine (JSPI or Asyncify), and from the client's `MANIFEST`: FreeRDP (version and commit), SDL, a row per decoder (AV1: WebCodecs, fallback dav1d; H.264: WebCodecs; audio: Opus), the other libraries, the build date and Emscripten, the page's commit, local overrides; the kit's release from `RELEASE` |
 
 A row whose file is missing (a local build has no `MANIFEST` or `RELEASE`) is left out.
 

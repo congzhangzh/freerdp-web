@@ -44,9 +44,11 @@
       [t("about.engine", "Engine"), engine || "–"],
       ["FreeRDP", src(s.freerdp)],
       ["SDL", src(s.sdl3_wasm)],
-      // what decodes is fixed by the build; whether the browser does it in hardware is the session's (Info)
-      [t("about.decoders", "Decoders"), [t("about.av1", `AV1: WebCodecs (browser), ${dav1d} as fallback, in this page`, { dav1d }),
-        t("about.h264", "H.264: WebCodecs (browser)"), s.opus && `Opus ${s.opus.version}`].filter(Boolean).join(" · ")],
+      // what decodes is fixed by the build, a row per codec: the first choice, then its fallback;
+      // whether the browser does it in hardware is the session's (Info)
+      [t("about.av1.label", "AV1 decoder"), t("about.av1", `WebCodecs (browser); fallback: ${dav1d} (in this page)`, { dav1d })],
+      [t("about.h264.label", "H.264 decoder"), t("about.h264", "WebCodecs (browser)")],
+      [t("about.audio.label", "Audio decoder"), s.opus ? `Opus ${s.opus.version}` : ""],
       [t("about.libraries", "Libraries"), others.join(", ")],
       [t("about.built", "Built"), m.built ? `${m.built}, Emscripten ${m.emscripten}` : ""],
       [t("about.page", "Page"), page],
