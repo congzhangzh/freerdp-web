@@ -1,5 +1,10 @@
 // Hosts and settings live in localStorage (hosts.js); the password never does.
 const $ = (id) => document.getElementById(id);
+// the mascot stays still for people who ask for less motion (its poster frame)
+if (globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+  const v = document.querySelector?.("#mascot video");
+  if (v) { v.removeAttribute("autoplay"); v.pause(); }
+}
 const logEl = $("log");
 const info = { started: 0, decoder: "–", transport: "–", server: "–" };
 // Crash capture: the last log lines are kept and, while a session runs, saved to localStorage

@@ -55,6 +55,13 @@ input:disabled, select:disabled { opacity:.55; }
 /* the slogan under the header (index.html) */
 .tagline { margin:-8px 0 6px; font-size:15px; }
 .tagline.hint { margin:0 0 18px; font-size:13px; }
+/* the mascot beside the tagline, a small card; above it on a phone */
+.mascot { float:right; width:280px; margin:-6px 0 8px 16px; }
+.mascot video { display:block; width:100%; aspect-ratio:7/3; border-radius:10px; background:#fff; }
+.mascot figcaption { margin-top:4px; font-size:12px; line-height:1.35; }
+.route { clear:both; }
+@media (max-width:640px) { .mascot { float:none; width:auto; max-width:360px; margin:0 0 10px; } }
+body.session .mascot { display:none; }
 
 /* the route from this browser to the remote desktop, with the command that builds it */
 .route { margin:0 0 20px; padding:12px 14px; border:1px solid var(--line); border-left:4px solid var(--caution);
