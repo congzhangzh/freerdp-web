@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Get a server · FreeRDP Web</title>
+<link rel="icon" href="icon-256.png" type="image/png">
+<link rel="stylesheet" href="ui.css">
+<script src="theme.js"></script>
+</head>
+<body>
+<main class="help">
+  <header class="top">
+    <a class="brand" href="index.html">FreeRDP Web</a>
+    <nav aria-label="Help">
+      <a href="index.html#intro">▶ Intro</a>
+      <a href="safety.html">Safety and tunnels</a>
+      <a href="keyboard.html">Keyboard</a>
+      <a href="server.html" aria-current="page">Get a server</a>
+      <a href="install.html">Install as app</a>
+      <a href="release-notes.html">Release notes</a>
+      <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener" title="The source, issues and releases">GitHub</a>
+      <label><span class="sr-only">Theme</span><select id="theme" aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+    </nav>
+  </header>
+  <h1>Get a server</h1>
+  <p class="lead">FreeRDP Web connects to any RDP server: xrdp, gnome-remote-desktop, or Windows' own Remote
+    Desktop. The packages below are the
+    <a href="https://github.com/congzhangzh/rdp-release-kit" target="_blank" rel="noopener">release kit</a>'s xrdp,
+    with Wayland sessions (GNOME, KDE Plasma, sway), tested with this page before each release.</p>
+
+  <!-- server.js fills this from install.json, which the release kit writes next to the page when
+       it publishes the site; without that file (a local build) this line is all there is -->
+  <div id="kit">
+    <p id="kitFallback">The packages for your Linux distribution, and native clients for your computer:
+      <a href="https://github.com/congzhangzh/rdp-release-kit/releases/latest" target="_blank" rel="noopener">the release kit's latest release</a>.</p>
+  </div>
+
+  <h2>Then connect</h2>
+  <p>Keep the RDP server on 127.0.0.1 and reach it through SSH: <a href="safety.html">Safety and tunnels</a> has
+    the one-line command. Then open <a href="index.html">FreeRDP Web</a> and connect with your user name and
+    password on the server.</p>
+
+  <p><a href="index.html">Back to FreeRDP Web</a></p>
+</main>
+<script src="help.js"></script>
+<script src="server.js"></script>
+</body>
+</html>

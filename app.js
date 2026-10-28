@@ -1,5 +1,10 @@
 // Hosts and settings live in localStorage (hosts.js); the password never does.
 const $ = (id) => document.getElementById(id);
+// the mascot stays still for people who ask for less motion (its poster frame)
+if (globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+  const v = document.querySelector?.("#mascot video");
+  if (v) { v.removeAttribute("autoplay"); v.pause(); }
+}
 const logEl = $("log");
 const info = { started: 0, decoder: "–", transport: "–", server: "–" };
 // Crash capture: the last log lines are kept and, while a session runs, saved to localStorage
@@ -751,6 +756,7 @@ let pinned0 = false; try { pinned0 = localStorage.getItem("freerdp-web-tbpinned"
 setPinned(pinned0);
 $("tbPin").onclick = () => { setPinned(!document.body.classList.contains("tbpinned")); backToCanvas(); };
 $("tbInfo").onclick = () => { $("info").hidden = !$("info").hidden; updateInfo(); backToCanvas(); };
+$("tbAbout").onclick = () => { const d = $("aboutPanel"); d.open = !d.open; backToCanvas(); };
 
 // ---- All screens: the remote desktop across every screen (screens.js has the geometry). The
 // Window Management API (Chrome, Edge) lists the screens and places windows on them: this window
@@ -952,8 +958,8 @@ const hwText = (h) => h === true ? "hardware" : h === false ? "software" : "chec
 // 1 = High, 4:4:4
 const av1Profile = () => { let p = -1; for (const d of Module.freerdpAv1?.decoders?.values() ?? []) if (d.profile >= 0) p = d.profile; return p; };
 const AV1_CHROMA = { 0: "4:2:0", 1: "4:4:4" };
-let version = "?";
-fetch(".well-known/manifest.webmanifest").then((r) => r.json()).then((m) => { version = m.version; }).catch(() => {});
+// Info: the live session only, refreshed every second while shown. What the client was built
+// with (its version, engine, FreeRDP, SDL, the decoders it has) is About's (about.js)
 function updateInfo() {
   if ($("info").hidden) return;
   const now = performance.now(), dt = (now - last.t) / 1000 || 1;
@@ -989,12 +995,11 @@ function updateInfo() {
       }
       return parts.join(" · ") || "no updates yet"; })()],
     ["Screens", multiOn() ? `${multi.wins.size + 1}, ${multi.mode === "separate" ? "a monitor each" : "one wide desktop"}; the desktop spans ${multi.box.width} × ${multi.box.height} CSS px` : "this one"],
-    ["Client build", window.freerdpEngine ?? "–"],
     ["AV1 decoder", (() => {
       if (!/^WebCodecs/.test(info.decoder)) return /dav1d/.test(info.decoder) ? `${info.decoder}: software, in this page` : info.decoder;
       const p = av1Profile();
       if (p < 0) return info.decoder;
-      return `WebCodecs (browser), ${hwText(hardware(p === 1 ? "av01.1.13M.08" : "av01.0.13M.08"))} for AV1 ${AV1_CHROMA[p]}; dav1d as fallback`; })()],
+      return `WebCodecs (browser), ${hwText(hardware(p === 1 ? "av01.1.13M.08" : "av01.0.13M.08"))} for AV1 ${AV1_CHROMA[p]}`; })()],
     ["H.264 decoder", (() => {
       if (!Module.freerdpH264?.decoders?.size) return "–";
       // the stream's own codec string is not kept; a High profile one (level 4.0) stands for it
@@ -1014,7 +1019,6 @@ function updateInfo() {
     ["Network in", `${kbit(net.rx - last.rx)}, ${mb(net.rx)} total`],
     ["Network out", `${kbit(net.tx - last.tx)}, ${mb(net.tx)} total`],
     ["Session", `${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, "0")}`],
-    ["Client", `FreeRDP Web ${version}`],
   ];
   const tbl = $("infoTable"); tbl.textContent = "";
   for (const [k, v] of rows) { const tr = tbl.insertRow(); tr.insertCell().textContent = k; tr.insertCell().textContent = v; }

@@ -1,9 +1,11 @@
 // The splash: on a first visit, the demo videos (a minute or so each) before the client, with
-// Skip; the header's "Demo" shows it again. Only where the site has them: the Pages build puts
-// the videos and demo/demo.json next to the page (see media.json); without them nothing shows.
+// Skip; the header's "Demo" shows it again. Only where the site has them: the release kit,
+// publishing the site, puts the videos and demo/demo.json next to the page (site.sh does the
+// same locally, with fetch-media.sh); without them nothing shows.
 //
 // Each demo has an address to share, shown under it with Copy link: index.html#<id>, its "id"
-// in demo.json (media.json's anchors, which fetch-media.sh stamps in, keep it for good), or
+// in demo.json (the kit's build/site-anchors.json, stamped in when the site is made, keeps it
+// for good), or
 // else its file name without the extension. Its file name and "aliases" (earlier addresses)
 // lead to it too, and so does any other anchor: #intro, or one no demo has any more, opens the
 // first. While the splash is open the address bar follows the tab; closing it drops the

@@ -1,0 +1,106 @@
+{
+  "release": "20261028.3",
+  "url": "https://github.com/congzhangzh/rdp-release-kit/releases/tag/20261028.3",
+  "server": [
+    {
+      "name": "Debian testing (forky)",
+      "sessions": "Xorg, GNOME, KDE, sway",
+      "command": "cd /tmp && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/xrdp_0.10.80.20261027.1.8ef7574a-0kit153.debian-forky_$(dpkg --print-architecture).deb && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/xorgxrdp_0.10.80.20261018.1.59d0735c-0kit153.debian-forky_$(dpkg --print-architecture).deb && sudo apt install ./xrdp_*.deb ./xorgxrdp_*.deb pipewire-module-xrdp",
+      "more": []
+    },
+    {
+      "name": "Debian 13",
+      "sessions": "Xorg, GNOME",
+      "command": "cd /tmp && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/xrdp_0.10.80.20261027.1.8ef7574a-0kit153.debian-13_$(dpkg --print-architecture).deb && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/xorgxrdp_0.10.80.20261018.1.59d0735c-0kit153.debian-13_$(dpkg --print-architecture).deb && sudo apt install ./xrdp_*.deb ./xorgxrdp_*.deb pipewire-module-xrdp",
+      "more": []
+    },
+    {
+      "name": "Ubuntu 26.10",
+      "sessions": "Xorg, GNOME, KDE, sway",
+      "command": "cd /tmp && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/xrdp_0.10.80.20261027.1.8ef7574a-0kit153.ubuntu-26.10_$(dpkg --print-architecture).deb && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/xorgxrdp_0.10.80.20261018.1.59d0735c-0kit153.ubuntu-26.10_$(dpkg --print-architecture).deb && sudo apt install ./xrdp_*.deb ./xorgxrdp_*.deb pipewire-module-xrdp",
+      "more": []
+    },
+    {
+      "name": "Ubuntu 26.04",
+      "sessions": "Xorg, GNOME, sway",
+      "command": "cd /tmp && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/xrdp_0.10.80.20261027.1.8ef7574a-0kit153.ubuntu-26.04_$(dpkg --print-architecture).deb && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/xorgxrdp_0.10.80.20261018.1.59d0735c-0kit153.ubuntu-26.04_$(dpkg --print-architecture).deb && sudo apt install ./xrdp_*.deb ./xorgxrdp_*.deb pipewire-module-xrdp",
+      "more": []
+    },
+    {
+      "name": "Ubuntu 24.04",
+      "sessions": "Xorg, GNOME",
+      "command": "cd /tmp && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/xrdp_0.10.80.20261027.1.8ef7574a-0kit153.ubuntu-24.04_$(dpkg --print-architecture).deb && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/xorgxrdp_0.10.80.20261018.1.59d0735c-0kit153.ubuntu-24.04_$(dpkg --print-architecture).deb && sudo apt install ./xrdp_*.deb ./xorgxrdp_*.deb pipewire-module-xrdp",
+      "more": []
+    },
+    {
+      "name": "Fedora 45",
+      "sessions": "GNOME, KDE, sway; Xorg with xorgxrdp",
+      "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/xrdp-0.10.80.20261027.1.8ef7574a-0kit153.fc45.$(uname -m).rpm https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/pipewire-module-xrdp-0.2-0kit153.fc45.$(uname -m).rpm",
+      "more": [
+        {
+          "what": "Xorg session (xorgxrdp)",
+          "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/xorgxrdp-0.10.80.20261018.1.59d0735c-0kit153.fc45.$(uname -m).rpm"
+        },
+        {
+          "what": "Optional: GNOME's Mutter with our fix for windows on the wrong monitor (GNOME/mutter!5438)",
+          "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/mutter-51.0-1.0kit1.fc45.$(uname -m).rpm https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/mutter-common-51.0-1.0kit1.fc45.noarch.rpm"
+        }
+      ]
+    },
+    {
+      "name": "Fedora 44",
+      "sessions": "GNOME, KDE, sway; Xorg with xorgxrdp",
+      "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/xrdp-0.10.80.20261027.1.8ef7574a-0kit153.fc44.$(uname -m).rpm https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/pipewire-module-xrdp-0.2-0kit153.fc44.$(uname -m).rpm",
+      "more": [
+        {
+          "what": "Xorg session (xorgxrdp)",
+          "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/xorgxrdp-0.10.80.20261018.1.59d0735c-0kit153.fc44.$(uname -m).rpm"
+        }
+      ]
+    },
+    {
+      "name": "Fedora 43",
+      "sessions": "GNOME, KDE, sway; Xorg with xorgxrdp",
+      "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/xrdp-0.10.80.20261027.1.8ef7574a-0kit153.fc43.$(uname -m).rpm https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/pipewire-module-xrdp-0.2-0kit153.fc43.$(uname -m).rpm",
+      "more": [
+        {
+          "what": "Xorg session (xorgxrdp)",
+          "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/xorgxrdp-0.10.80.20261018.1.59d0735c-0kit153.fc43.$(uname -m).rpm"
+        }
+      ]
+    }
+  ],
+  "start": "sudo systemctl enable --now xrdp",
+  "clients": [
+    {
+      "platform": "Linux ARM64",
+      "file": "sdl3-freerdp-20261028.1-linux-aarch64.tar.xz",
+      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/sdl3-freerdp-20261028.1-linux-aarch64.tar.xz"
+    },
+    {
+      "platform": "Linux x86_64",
+      "file": "sdl3-freerdp-20261028.1-linux-x86_64.tar.xz",
+      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/sdl3-freerdp-20261028.1-linux-x86_64.tar.xz"
+    },
+    {
+      "platform": "macOS Apple Silicon",
+      "file": "sdl3-freerdp-20261028.1-macos-arm64.tar.xz",
+      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/sdl3-freerdp-20261028.1-macos-arm64.tar.xz"
+    },
+    {
+      "platform": "macOS Intel",
+      "file": "sdl3-freerdp-20261028.1-macos-x86_64.tar.xz",
+      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/sdl3-freerdp-20261028.1-macos-x86_64.tar.xz"
+    },
+    {
+      "platform": "Windows ARM64",
+      "file": "sdl3-freerdp-20261028.1-windows-aarch64.zip",
+      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/sdl3-freerdp-20261028.1-windows-aarch64.zip"
+    },
+    {
+      "platform": "Windows x86_64",
+      "file": "sdl3-freerdp-20261028.1-windows-x86_64.zip",
+      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.3/sdl3-freerdp-20261028.1-windows-x86_64.zip"
+    }
+  ]
+}
