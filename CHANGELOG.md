@@ -15,6 +15,21 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261028.10
+
+- **English and Simplified Chinese** (聪哥): the page follows the browser's language, English
+  the default. A browser whose first English or Chinese language is Chinese (any region) gets
+  Simplified Chinese; everyone else English, which stays in the HTML (the page without
+  JavaScript). The 🌐 Language switch next to Theme picks Auto, English or 中文, remembered in
+  this browser (`localStorage` freerdp-web-lang); a switch applies at once. `web/i18n.js` holds
+  the Chinese (553 strings) and applies it with textContent and setAttribute only (the
+  installed app's Trusted Types), `lang="zh-Hans"`; scripts translate what they build through
+  `FreeRDPi18n.t()`. Commands, codec names, versions, log lines and the release kit's data
+  (install.json, the demo videos' titles and captions) stay English, the release-note entries
+  too (a Chinese note says so). `test-i18n.mjs`: 33 checks, English unchanged on every page.
+- **About: a row per decoder**: "AV1 decoder: WebCodecs (browser); fallback: dav1d 1.5.4 (in
+  this page)", "H.264 decoder: WebCodecs (browser)", "Audio decoder: Opus 1.6.1", not one row.
+
 ## 20261028.9
 
 - **Get a server: a line per kind of session**: an `install.json` whose sessions read
