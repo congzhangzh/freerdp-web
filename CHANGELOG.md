@@ -15,6 +15,27 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261028.1
+
+No change to the page itself; its tests and documentation.
+
+- **The screens tests no longer go on before the window they test has opened, nor hang at
+  the end**: `test-screens-wlup.mjs` waited for the middle of the canvas to turn dark before
+  choosing Separate screens, but GNOME's overview right after login is dark too. On a slow
+  server (the release kit's GNOME server held to one CPU) the test went on before foot had
+  opened in 12 of 30 runs; foot was then placed after the layout change, and the check that
+  the session's windows stay on this window's screen failed for a reason that is not the one
+  it tests. foot now runs with a background of its own (`b4146e`) and the test waits for that
+  colour: 9 of 9 runs had foot open in time. Both screens tests closed the second window with
+  a `window.close()` that a closing page may never answer, and hung (3 times in 60 runs); they
+  now wait 5 s at most. The tests also remove Chrome's temporary directory when they are
+  stopped or fail.
+- **The site is published by the release kit**: this repository is the page's source and its
+  releases; the kit builds the client with a release, tests the pair, records the demo videos
+  and publishes https://congzhangzh.github.io/freerdp-web/ from one of its releases
+  (`pages.yml`, `media.json` and `kit-test.sh` are gone; `test.yml` runs the unit tests).
+  The docs name the kit's xrdp as the only one, and its demo videos lose "preview".
+
 ## 20261027.2
 
 - **A logoff is the end of the session, not a lost connection**: FreeRDP's SDL client exits
