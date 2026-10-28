@@ -82,7 +82,7 @@ await send("Runtime.enable"); await send("Page.enable");
 
 // phone width first: the form must not scroll sideways
 await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
-for (const page of ["index.html", "safety.html", "keyboard.html", "install.html", "release-notes.html"]) {
+for (const page of ["index.html", "safety.html", "keyboard.html", "server.html", "install.html", "release-notes.html"]) {
   await send("Page.navigate", { url: `${ORIGIN}/${page}` }); await sleep(1000);
   const w = await ev("document.documentElement.scrollWidth");
   check(`${page} fits 390 px`, w <= 390, `${w} px`);
@@ -134,6 +134,15 @@ if (hasDemo) {
 }
 check("the client starts", ready && await ev("crossOriginIsolated"),
   ready ? "" : `status "${await ev("document.getElementById('status').textContent")}", isolated ${await ev("crossOriginIsolated")}; ${logs.slice(-3).join(" | ")}`);
+// About: what the client was built with, before any session (about.js); Info holds only the session's facts
+const about = () => ev("JSON.stringify(Object.fromEntries([...document.querySelectorAll('#aboutTable tr')].map((r) => [r.cells[0].textContent, r.cells[1].textContent])))").then(JSON.parse);
+const version = JSON.parse(readFileSync(join(web, ".well-known/manifest.webmanifest"), "utf8")).version;
+const aboutRows = await about();
+check("About, before a session: the version, the engine and the decoders", aboutRows.Version === `FreeRDP Web ${version}`
+  && /^(JSPI|Asyncify)/.test(aboutRows.Engine) && /^AV1: WebCodecs/.test(aboutRows.Decoders), JSON.stringify(aboutRows));
+if (existsSync(join(runtimeDir, "MANIFEST")))
+  check("About names FreeRDP and SDL from the client's MANIFEST", /\(commit [0-9a-f]{10}\)$/.test(aboutRows.FreeRDP ?? "") && !!aboutRows.SDL,
+    `${aboutRows.FreeRDP} / ${aboutRows.SDL}`);
 check("the session settings start as recommended", await ev("document.getElementById('sessionSummary').textContent") === "recommended");
 
 // the hosts: one at first; a new one gets its own settings; the form follows the selection

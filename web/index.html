@@ -45,6 +45,7 @@
     <button id="demoOpen" type="button" hidden>▶ Intro</button>
     <a href="safety.html">Safety and tunnels</a>
     <a href="keyboard.html">Keyboard</a>
+    <a href="server.html">Get a server</a>
     <a href="install.html">Install as app</a>
     <a href="release-notes.html">Release notes</a>
     <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener" title="The source, issues and releases">GitHub</a>
@@ -252,7 +253,8 @@
   <button id="tbFs">Full screen</button>
   <button id="tbScreens" title="The remote desktop on every screen: a window on each other screen shows its part" hidden>All screens</button>
   <button id="tbCapture" title="Capture the mouse and keyboard; Ctrl + Alt releases them">Capture</button>
-  <button id="tbInfo">Info</button>
+  <button id="tbInfo" title="This session: the server, the codecs in use, decoding, frame rate, network">Info</button>
+  <button id="tbAbout" title="This client: its version and what it was built with">About</button>
   <button id="tbLog">Log</button>
   <button id="tbReconnect" title="Connect again, with the same password (no passkey, no typing)">Reconnect</button>
   <button id="tbQuit">Disconnect</button>
@@ -277,6 +279,8 @@
 <div id="hotkeyToast" role="status" hidden></div>
 <div id="screensToast" role="status" hidden></div>
 <div id="captureToast" role="status" hidden>Mouse and keyboard captured · <kbd>Ctrl</kbd> + <kbd>Alt</kbd> releases them</div>
+<!-- what this client was built with (about.js); the toolbar's Info shows the live session -->
+<details id="aboutPanel"><summary>About this client</summary><table id="aboutTable"></table></details>
 <details id="logPanel"><summary>Log</summary><pre id="log"></pre></details>
 </div>
 <script src="tt-policy.js"></script>
@@ -287,6 +291,7 @@
 <script src="screens.js"></script>
 <script src="hosts.js"></script>
 <script src="hosts-ui.js"></script>
+<script src="about.js"></script>
 <script src="app.js"></script>
 <script src="splash.js"></script>
 <script src="engine.js"></script>

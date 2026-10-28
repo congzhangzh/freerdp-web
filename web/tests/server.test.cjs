@@ -1,0 +1,33 @@
+const {test} = require("node:test");
+const assert = require("node:assert/strict");
+const {readFileSync} = require("node:fs");
+const {join} = require("node:path");
+const S = require("../server.js");
+// the sample the browser test (test-server.mjs) serves as install.json
+const sample = JSON.parse(readFileSync(join(__dirname, "..", "..", "test-server-install.json"), "utf8"));
+
+test("install.json: distributions grouped by the name's first word, in their order", () => {
+  const k = S.parse(sample);
+  assert.equal(k.release, "20261028.2");
+  assert.deepEqual(k.families.map((f) => [f.name, f.id, f.servers.map((s) => s.name)]), [
+    ["Debian", "server-debian", ["Debian 13"]],
+    ["Ubuntu", "server-ubuntu", ["Ubuntu 26.04"]],
+    ["Fedora", "server-fedora", ["Fedora 45", "Fedora 44"]]]);
+  const debian = k.families[0].servers[0];
+  assert.equal(debian.sessions, "GNOME, KDE, sway; Xorg with xorgxrdp");
+  assert.deepEqual(debian.more.map((m) => m.what), ["Xorg session"]);
+  assert.deepEqual(k.families[2].servers[1].more, []);   // "more" absent
+  assert.equal(k.start, "sudo systemctl enable --now xrdp");
+});
+test("install.json: an entry without a name or a command, a link that is not https, are skipped", () => {
+  const k = S.parse(sample);
+  assert.equal(k.families.flatMap((f) => f.servers).length, 4);
+  assert.deepEqual(k.clients.map((c) => c.platform), ["Linux x86_64", "Windows x64"]);
+  assert.equal(S.parse({...sample, url: "http://example.com/"}).url, S.LATEST);
+});
+test("install.json that has nothing to show is none: the page keeps its link to the latest release", () => {
+  for (const bad of [null, "text", 42, [], {}, {server: "x"}, {server: []}, {server: [{name: "Debian 13"}]}])
+    assert.equal(S.parse(bad), null, JSON.stringify(bad));
+  const k = S.parse({server: [{name: "Debian 13", command: "sudo apt install ./xrdp.deb"}]});
+  assert.deepEqual([k.release, k.url, k.start, k.clients], ["", S.LATEST, "", []]);
+});

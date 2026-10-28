@@ -19,7 +19,7 @@ reading anything. Expert controls exist, but out of the way.
 | Form | Gateway, User, Password, **Connect**. A real `<form>` with `autocomplete="username"` / `"current-password"`, so the browser's password manager offers to save and fill the password. The page itself never stores a password. |
 | Safety notice | Always at the top: the route *this browser → gateway 127.0.0.1:3390 → SSH → RDP 127.0.0.1:3389* and the one-line SSH command that builds it, with a Copy button. The command follows the gateway port and the user name typed in the form. |
 | Before the session | No black canvas: only the form. The canvas appears when the session starts. |
-| Help | Three pages, linked from the top of every page: **Safety and tunnels** (`safety.html`), **Keyboard** (`keyboard.html`), **Install as app** (`install.html`). Help is reachable by click and keyboard, never only through a tooltip. |
+| Help | Four pages, linked from the top of every page: **Safety and tunnels** (`safety.html`), **Keyboard** (`keyboard.html`), **Get a server** (`server.html`), **Install as app** (`install.html`). Help is reachable by click and keyboard, never only through a tooltip. |
 | Look | One left-aligned column, system font, light and dark from the system setting. No web fonts: an Isolated Web App cannot load them. |
 
 ## Hosts
@@ -235,13 +235,50 @@ Three browser details decide how it is built:
   display channel is up, `sdl_disp.cpp`); a resize event before that is lost. While the
   screens are in use the page sends another one until the canvas has the size it is shown at.
 
+## Get a server
+
+Added on 2026-10-28. The client is no use without a server, and the site never said where to
+get one. `server.html` says the page works with any RDP server (xrdp, gnome-remote-desktop,
+Windows) and lists the release kit's tested xrdp, with Wayland sessions, from `install.json`,
+which the kit writes next to the page when it publishes the site:
+
+```json
+{ "release": "<kit release>", "url": "<its GitHub release>",
+  "server": [{ "name": "Fedora 45", "sessions": "GNOME, KDE, sway; Xorg with xorgxrdp",
+               "command": "sudo dnf install …", "more": [{ "what": "Xorg session", "command": "…" }] }],
+  "start": "sudo systemctl enable --now xrdp",
+  "clients": [{ "platform": "Linux x86_64", "file": "sdl3-freerdp-….tar.xz", "url": "https://…" }] }
+```
+
+| Part | Decision |
+|---|---|
+| Distributions | A card per entry of `server` (name, sessions, its one command with Copy, the `more` commands under it), grouped by the name's first word (Debian, Ubuntu, Fedora) in the file's order, with a link to each group at the top |
+| Start | the `start` command once, after the cards |
+| Clients | a table, platform and file link; then *All files and checksums* links the kit's release |
+| Without the file | a missing, broken or empty `install.json` (a local build) leaves the page's one static line, a link to the kit's latest release. The cards replace that line only once the file has been read and checked, so the page never breaks |
+| Safety | built with `textContent` only (the installed app requires Trusted Types); links only to `https:` addresses; an entry without a name or a command is skipped |
+| Phone | long commands wrap inside their own box; no sideways scrolling at 390 px |
+
+## Info and About
+
+Decided on 2026-10-28: the toolbar's **Info** mixed the live session with what the client was
+built with, and the codec details read as one confusing list. Now there are two cards:
+
+| Card | Where | Shows |
+|---|---|---|
+| **Info** (`#info`, `app.js`) | toolbar, during a session; refreshed every second | Server, Transport, Resolution, Canvas, Video codecs (each with its colour, updates per second and bit rate), Screens, AV1 decoder (WebCodecs in hardware or software for the stream's profile, or dav1d once it fell back), H.264 decoder (hardware or software), Audio codec, AV1 frames, AV1 decode, Audio, Network in and out, Session (time) |
+| **About** (`#aboutPanel`, `about.js`) | under the form before a session (as the Log is), and from the toolbar's **About** during one | Version (FreeRDP Web, from the IWA manifest), Engine (JSPI or Asyncify), and from the client's `MANIFEST`: FreeRDP (version and commit), SDL, Decoders (AV1 through WebCodecs with dav1d as fallback, H.264 through WebCodecs, Opus), the other libraries, the build date and Emscripten, the page's commit, local overrides; the kit's release from `RELEASE` |
+
+A row whose file is missing (a local build has no `MANIFEST` or `RELEASE`) is left out.
+
 ## Verification
 
 | What | How | Result |
 |---|---|---|
-| Option mapping, overrides, keyboard actions, hosts (storage, migration, export, import), the screens' geometry | `node --test web/tests/*.test.cjs` | 53 tests pass |
+| Option mapping, overrides, keyboard actions, hosts (storage, migration, export, import), the screens' geometry, install.json, MANIFEST | `node --test web/tests/*.test.cjs` | 60 tests pass |
+| Get a server: cards grouped by family, every command with a Copy button that copies it, the start command, the clients, phone width; without install.json, or a broken one, only the link to the latest release; every header links to it | `node test-server.mjs` | 20 checks pass |
 | Connection bridge with session settings, migration | `web/tests/bridge.test.cjs` | pass |
-| The page with the real client: hosts, export and import, the vault with virtual passkeys (a second passkey, the recovery code), settings, mstsc keys, phone width | `node test-page.mjs <client dir>` | 41 checks pass (49 with the demo media) |
+| The page with the real client: hosts, export and import, the vault with virtual passkeys (a second passkey, the recovery code), settings, mstsc keys, phone width, About before a session | `node test-page.mjs <client dir>` | 43 checks pass without the demo media (2026-10-28, kit client web-20261027.6) |
 | Reconnect: a dropped gateway, then the toolbar's Reconnect, against the CI xrdp session (no reload, no passkey, no typing; xrdp logs each login) | `PAGE=<page URL> node test-reconnect.mjs`, with a modular client | 6 checks pass, 3 runs in a row |
 | Reconnect after the server ends the session: its window manager quits, xrdp logs it off; the end bar says the session ended, and Reconnect from it logs in again with a picture (FreeRDP's client does not exit after a clean end in a browser: the page ends the session 5 s after it) | part of `test-reconnect.mjs`; `XRDP=<container> XRDP_ADDR=<host:port>` for another xrdp | 11 checks pass in all; the three new ones fail with 20261026.6 |
 | Capture ends with the session: captured, then FreeRDP's Disconnect hotkey (Right Alt + Right Shift + D); the mouse and the keys come back without a Ctrl + Alt and the page is back at the connect form; Info names the codec's colour and hardware or software decoding | `XRDP=<container> GATEWAY=<host:port> PAGE=<page URL> node test-capture.mjs` | 15 checks pass, twice; FreeRDP misses the test's chord about 1 run in 5 on a busy machine |
