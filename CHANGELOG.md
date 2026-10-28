@@ -15,6 +15,16 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261028.4
+
+- **A second mascot, 蛮蛮**, the paired bird of the Classic of Mountains and Seas (《山海经·西山经》:
+  "有鸟焉，其状如凫，而一翼一目，相得乃飞，名曰蛮蛮"): each bird has one wing and one eye, and they
+  fly only together, like this page and the desktop in the cloud. Two buttons under the card,
+  Twins and 蛮蛮, show one at a time; the choice is remembered (`localStorage`, when the
+  browser allows it). Only the one shown plays, and none for reduced motion; the hidden one is
+  not loaded until picked (`preload="none"`). `mascot-manman.mp4` (H.264 560 x 240, 170 KB)
+  and its poster (7 KB), made with Google Gemini (Veo), cropped and re-encoded without sound.
+
 ## 20261028.3
 
 - **A mascot**: two twins, one at your laptop and one in the cloud, joined by a wave, waving
