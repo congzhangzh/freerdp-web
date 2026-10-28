@@ -51,6 +51,9 @@ input:disabled, select:disabled { opacity:.55; }
 .top nav select { width:auto; appearance:none; -webkit-appearance:none; padding-right:22px;
   background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E") no-repeat right 8px center; }
 .top nav select option { color:var(--ink); background:var(--panel); }
+/* the language switch says what it is: 🌐 Language / 🌐 语言 */
+.top nav .lang-pick { display:inline-flex; align-items:center; gap:2px; }
+.top nav .lang-label { font-size:13px; color:var(--muted); white-space:nowrap; }
 
 /* the slogan under the header (index.html) */
 .tagline { margin:-8px 0 6px; font-size:15px; }
