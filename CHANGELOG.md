@@ -15,6 +15,11 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261028.8
+
+- **Each mascot plays to its end, then holds 3 s** (聪哥): its last frame stays 3 s before the
+  next turn, as the slogan does; a clip that cannot play moves on after 15 s.
+
 ## 20261028.7
 
 - **The card is just the picture, as a marquee** (聪哥: the caption and the buttons took too much
