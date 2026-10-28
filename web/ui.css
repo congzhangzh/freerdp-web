@@ -57,7 +57,13 @@ input:disabled, select:disabled { opacity:.55; }
 .tagline.hint { margin:0 0 18px; font-size:13px; }
 /* the mascot beside the tagline, a small card; above it on a phone */
 .mascot { float:right; width:280px; margin:-6px 0 8px 16px; }
-.mascot video { display:block; width:100%; aspect-ratio:7/3; border-radius:10px; background:#fff; }
+.mascot-stage { position:relative; aspect-ratio:7/3; border-radius:10px; background:#fff; overflow:hidden; }
+.mascot-stage video { position:absolute; inset:0; width:100%; height:100%; }
+.mascot-slogan { position:absolute; inset:0; margin:0; display:flex; flex-direction:column; justify-content:center;
+  align-items:center; gap:2px; text-align:center; font-size:15px; color:#0f5f63; }
+.mascot-slogan b { font-size:22px; color:#d9644a; }
+.mascot-slogan span { font-size:13px; color:#3d6f72; }
+.mascot-slogan[hidden], .mascot-stage video[hidden] { display:none; }
 .mascot figcaption { margin-top:4px; font-size:12px; line-height:1.35; }
 .mascot-pick { display:flex; gap:6px; margin-top:4px; }
 .mascot-pick button[aria-pressed="true"] { font-weight:600; }

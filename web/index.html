@@ -52,11 +52,14 @@
     <label><span class="sr-only">Theme</span><select id="theme" aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
   </nav>
 </header>
-<!-- the mascots, one at a time: the entangled twins (you here and you in the cloud) and 蛮蛮,
-     the paired bird of the Classic of Mountains and Seas; muted loops, still for reduced motion -->
+<!-- the slogan and a mascot in turn: the entangled twins (you here and you in the cloud) or 蛮蛮,
+     the paired bird of the Classic of Mountains and Seas; app.js runs the turns -->
 <figure id="mascot" class="mascot">
-  <video data-mascot="twins" src="mascot.mp4" poster="mascot-poster.webp" autoplay muted loop playsinline preload="metadata" aria-hidden="true"></video>
-  <video data-mascot="manman" src="mascot-manman.mp4" poster="mascot-manman-poster.webp" data-still="mascot-manman-still.webp" muted loop playsinline preload="none" aria-hidden="true" hidden></video>
+  <div class="mascot-stage">
+    <p class="mascot-slogan">You here, you in the cloud:<b>one desktop.</b><span lang="zh">你在这里，也在云端。</span></p>
+    <video data-mascot="twins" src="mascot.mp4" poster="mascot-poster.webp" muted playsinline preload="metadata" aria-hidden="true" hidden></video>
+    <video data-mascot="manman" src="mascot-manman.mp4" poster="mascot-manman-still.webp" muted playsinline preload="none" aria-hidden="true" hidden></video>
+  </div>
   <figcaption class="hint">
     <span data-mascot="twins">Entangled twins: you here, you in the cloud. Real entanglement carries no message;
       these two carry every key you press.</span>

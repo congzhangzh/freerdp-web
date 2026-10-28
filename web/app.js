@@ -1,28 +1,45 @@
 // Hosts and settings live in localStorage (hosts.js); the password never does.
 const $ = (id) => document.getElementById(id);
-// the mascots, one at a time (the choice is remembered): only the one shown plays, and none
-// for people who ask for less motion (each shows its poster, or its still picture: data-still)
+// the slogan and a mascot in turn: the slogan for 4 s, then the chosen mascot plays once, then
+// the slogan again. The choice (Twins or 蛮蛮) is remembered and shows its mascot at once; only
+// the mascot shown plays. Played for everyone, reduced motion too (聪哥's choice)
 {
   const fig = document.getElementById?.("mascot");
-  const still = globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  const show = (name) => {
-    for (const el of fig.querySelectorAll("[data-mascot]")) el.hidden = el.dataset.mascot !== name;
-    for (const b of fig.querySelectorAll("[data-pick]")) b.setAttribute("aria-pressed", String(b.dataset.pick === name));
-    for (const v of fig.querySelectorAll("video")) {
-      if (v.hidden || still) { v.removeAttribute("autoplay"); v.pause(); } else v.play()?.catch(() => {});
-    }
-  };
   if (fig?.querySelectorAll) {
-    if (still) for (const v of fig.querySelectorAll("video[data-still]")) v.poster = v.dataset.still;
-    let pick = "twins";
+    const slogan = fig.querySelector(".mascot-slogan");
+    const videos = [...fig.querySelectorAll("video[data-mascot]")];
+    let pick = "twins", timer = 0;
     try { pick = localStorage.getItem("freerdp-web-mascot") || pick; } catch (e) {}
-    show(fig.querySelector(`[data-pick="${pick}"]`) ? pick : "twins");
+    if (!videos.some((v) => v.dataset.mascot === pick)) pick = "twins";
+    const choose = () => {
+      for (const el of fig.querySelectorAll("figcaption [data-mascot]")) el.hidden = el.dataset.mascot !== pick;
+      for (const b of fig.querySelectorAll("[data-pick]")) b.setAttribute("aria-pressed", String(b.dataset.pick === pick));
+    };
+    const mascotTurn = () => {
+      clearTimeout(timer);
+      slogan.hidden = true;
+      for (const v of videos) {
+        v.hidden = v.dataset.mascot !== pick;
+        if (v.hidden) v.pause(); else { v.currentTime = 0; v.play()?.catch(() => {}); }
+      }
+    };
+    const sloganTurn = () => {
+      for (const v of videos) { v.pause(); v.hidden = true; }
+      slogan.hidden = false;
+      clearTimeout(timer);
+      timer = setTimeout(mascotTurn, 4000);
+    };
+    for (const v of videos) v.addEventListener("ended", sloganTurn);
     fig.addEventListener("click", (e) => {
       const b = e.target.closest?.("[data-pick]");
       if (!b) return;
-      show(b.dataset.pick);
-      try { localStorage.setItem("freerdp-web-mascot", b.dataset.pick); } catch (e) {}
+      pick = b.dataset.pick;
+      try { localStorage.setItem("freerdp-web-mascot", pick); } catch (e) {}
+      choose();
+      mascotTurn();
     });
+    choose();
+    sloganTurn();
   }
 }
 const logEl = $("log");
