@@ -15,6 +15,13 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261028.5
+
+- **蛮蛮's still picture for reduced motion**: with `prefers-reduced-motion`, the 蛮蛮 card shows
+  Gemini's picture of the pair (one wing and one eye each), not a frame of the video
+  (`mascot-manman-still.webp`, 11 KB, the whole picture fitted with white sides; the video's
+  `data-still`).
+
 ## 20261028.4
 
 - **A second mascot, 蛮蛮**, the paired bird of the Classic of Mountains and Seas (《山海经·西山经》:
