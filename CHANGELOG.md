@@ -1,7 +1,7 @@
 # Changes
 
-The version is the one in `web/.well-known/manifest.webmanifest`; the page shows it in the
-session's Info panel. An installed app (IWA) updates only to a newer version.
+The version is the one in `web/.well-known/manifest.webmanifest`; the page shows it in its
+About panel (under the form, and on a session's toolbar). An installed app (IWA) updates only to a newer version.
 
 Since 20261021.1 the version is the release date and that day's release number,
 `<YYYYMMDD>.<N>` (the tag too; `v<YYYYMMDD>.<N>` before 20261025.1): the page is released
@@ -14,6 +14,27 @@ the FreeRDP commit and this page's commit.
 How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI build (a
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
+
+## 20261028.2
+
+- **Get a server** (`server.html`, a new page in every page's header): how to get an RDP
+  server and the native clients. One card per distribution release (Debian, Ubuntu, Fedora)
+  with its sessions and one command to install the release kit's xrdp, the extra commands
+  under it (Fedora's xorgxrdp, and on Fedora 45 the kit's Mutter with the fix for windows on
+  the wrong monitor), the start command, the clients with their links, and the kit release
+  they come from. It reads `install.json`, which the release kit puts next to the page when it
+  publishes the site (rdp-release-kit `c300986`); without it, or with one it cannot read, the
+  page links to the kit's latest release. Built with `textContent` only (the installed app's
+  Trusted Types), links only to `https:`. `test-server.mjs`: 20 checks, the fallbacks and a
+  390 px phone width among them. Copy buttons now work for commands added after the page loaded.
+- **Info is the session, About is the client**: the toolbar's Info showed the live session
+  (server, codecs in use, hardware or software decoding) mixed with what the client was built
+  with. Info keeps the session only; the build's facts move to About (`about.js`): under the
+  form as "About this client", and on a session's toolbar as About. It has the version, the
+  engine (JSPI or Asyncify), FreeRDP and SDL with their commits, the libraries, the decoders
+  (WebCodecs, dav1d as AV1's fallback, Opus), the build date, this page's commit and the kit
+  release, read from the client's `MANIFEST` and the site's `RELEASE`; a missing file leaves
+  its rows out. The test ids and the Info rows the tests read are unchanged.
 
 ## 20261028.1
 
