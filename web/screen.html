@@ -7,6 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FreeRDP Web: screen</title>
 <link rel="icon" href="icon-256.png" type="image/png">
+<script src="i18n.js"></script>
 <style>
   html, body { margin:0; height:100%; background:#000; overflow:hidden; }
   #view { display:block; width:100vw; height:100vh; outline:none; }
@@ -18,7 +19,7 @@
 <body>
 <canvas id="view" tabindex="-1"></canvas>
 <img id="vcursor" alt="" hidden>
-<p id="hint">Click to fill this screen with the remote desktop</p>
+<p id="hint" data-i18n="screen.hint">Click to fill this screen with the remote desktop</p>
 <script src="screens.js"></script>
 <script src="screen.js"></script>
 </body>

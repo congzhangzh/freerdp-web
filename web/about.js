@@ -27,6 +27,8 @@
     }
     return m;
   }
+  // the labels in the visitor's language (i18n.js); English without it (node's tests)
+  const t = (key, text, vars) => root.FreeRDPi18n?.t(key, text, vars) ?? text;
   const short = (sha) => sha.slice(0, 10);
   const src = (s) => s ? s.version + (s.commit ? ` (commit ${short(s.commit)})` : "") : "";
 
@@ -35,20 +37,21 @@
     const m = manifest || { sources: {}, overrides: [] }, s = m.sources;
     const named = new Set(["freerdp", "sdl3_wasm", "dav1d", "opus"]);
     const others = Object.entries(s).filter(([n]) => !named.has(n)).map(([n, v]) => `${n} ${v.version}`);
-    const page = m.localPage ? `this checkout, ${m.localPage}` : m.page ? `freerdp-web ${short(m.page)}` : "";
+    const page = m.localPage ? t("about.checkout", `this checkout, ${m.localPage}`, { page: m.localPage }) : m.page ? `freerdp-web ${short(m.page)}` : "";
+    const dav1d = "dav1d" + (s.dav1d ? " " + s.dav1d.version : "");
     return [
-      ["Version", version ? `FreeRDP Web ${version}` : "–"],
-      ["Engine", engine || "–"],
+      [t("about.version", "Version"), version ? `FreeRDP Web ${version}` : "–"],
+      [t("about.engine", "Engine"), engine || "–"],
       ["FreeRDP", src(s.freerdp)],
       ["SDL", src(s.sdl3_wasm)],
       // what decodes is fixed by the build; whether the browser does it in hardware is the session's (Info)
-      ["Decoders", [`AV1: WebCodecs (browser), dav1d${s.dav1d ? " " + s.dav1d.version : ""} as fallback, in this page`,
-        "H.264: WebCodecs (browser)", s.opus && `Opus ${s.opus.version}`].filter(Boolean).join(" · ")],
-      ["Libraries", others.join(", ")],
-      ["Built", m.built ? `${m.built}, Emscripten ${m.emscripten}` : ""],
-      ["Page", page],
-      ["Overrides", m.overrides.length ? m.overrides.join(", ") + " from a local directory" : ""],
-      ["Release kit", release || ""],
+      [t("about.decoders", "Decoders"), [t("about.av1", `AV1: WebCodecs (browser), ${dav1d} as fallback, in this page`, { dav1d }),
+        t("about.h264", "H.264: WebCodecs (browser)"), s.opus && `Opus ${s.opus.version}`].filter(Boolean).join(" · ")],
+      [t("about.libraries", "Libraries"), others.join(", ")],
+      [t("about.built", "Built"), m.built ? `${m.built}, Emscripten ${m.emscripten}` : ""],
+      [t("about.page", "Page"), page],
+      [t("about.overrides", "Overrides"), m.overrides.length ? t("about.local", m.overrides.join(", ") + " from a local directory", { names: m.overrides.join(", ") }) : ""],
+      [t("about.kit", "Release kit"), release || ""],
     ].filter(([, v]) => v);
   }
 
@@ -78,4 +81,5 @@
     // the engine can change once its client loads (no JSPI build here): read it when shown
     document.getElementById("aboutPanel")?.addEventListener("toggle", render);
   });
+  root.FreeRDPi18n?.onChange(render);
 })(globalThis);

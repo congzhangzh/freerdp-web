@@ -271,11 +271,24 @@ built with, and the codec details read as one confusing list. Now there are two 
 
 A row whose file is missing (a local build has no `MANIFEST` or `RELEASE`) is left out.
 
+## Languages
+
+Added on 2026-10-28: English and Simplified Chinese, following the browser, English by default.
+
+| Part | Decision |
+|---|---|
+| Choice | the header's **Language** select, before Theme: Auto (the default), English, 中文, kept in this browser (`freerdp-web-lang`). Auto takes the first of `navigator.languages` that is English or Chinese; any `zh` (zh-TW and zh-HK too) gives Simplified Chinese, anything else English. A change applies at once, no reload |
+| English | the HTML and the scripts as written: in English `i18n.js` touches nothing, so the page reads exactly as before |
+| Chinese | `web/i18n.js` holds the table. Leaf elements carry `data-i18n="key"` (and `data-i18n-attr` for title, aria-label, placeholder); a sentence with a link or bold text has a span per piece. Scripts translate what they build with `FreeRDPi18n.t(key, English, vars)` and redo it on `onChange()`. `<html lang="zh-Hans">` |
+| Stays English | log lines, FreeRDP options, commands, paths, codec names, versions, install.json's sessions, the demos' titles and captions (demo.json), the release-note entries (a line in Chinese says so), host names already stored ("My server") |
+| Safety | `textContent` and `setAttribute` only (the installed app enforces Trusted Types) |
+
 ## Verification
 
 | What | How | Result |
 |---|---|---|
-| Option mapping, overrides, keyboard actions, hosts (storage, migration, export, import), the screens' geometry, install.json, MANIFEST | `node --test web/tests/*.test.cjs` | 60 tests pass |
+| Option mapping, overrides, keyboard actions, hosts (storage, migration, export, import), the screens' geometry, install.json, MANIFEST, the language choice and the Chinese table (no key missing, none unused) | `node --test web/tests/*.test.cjs` | 67 tests pass |
+| English and Chinese: index.html and server.html in a zh-CN browser (Chinese, `lang="zh-Hans"`), every page in an en-US one exactly as written, the Language select both ways, a saved choice over the browser's, every page at 390 px in Chinese | `node test-i18n.mjs` | 34 checks pass |
 | Get a server: cards grouped by family, every command with a Copy button that copies it, the start command, the clients, phone width; without install.json, or a broken one, only the link to the latest release; every header links to it | `node test-server.mjs` | 20 checks pass |
 | Connection bridge with session settings, migration | `web/tests/bridge.test.cjs` | pass |
 | The page with the real client: hosts, export and import, the vault with virtual passkeys (a second passkey, the recovery code), settings, mstsc keys, phone width, About before a session | `node test-page.mjs <client dir>` | 43 checks pass without the demo media (2026-10-28, kit client web-20261027.6) |

@@ -6,19 +6,21 @@
 (function (root) {
   "use strict";
   const KEY = "freerdp-web-keyboard", HOTKEYS_KEY = "freerdp-web-hotkeys";
+  // the names in the visitor's language (i18n.js, "i18n" below); English without it (node's tests)
+  const t = (key, text, vars) => root.FreeRDPi18n?.t(key, text, vars) ?? text;
   // FreeRDP's mask needs every modifier in it held, on that side. Right Shift alone is FreeRDP's
   // default, and typing a capital D with the right hand then disconnects. Right Alt is on every
   // keyboard (Right Option on a Mac; MacBooks have no Right Ctrl), so it joins Right Shift by default.
   const MODIFIERS = {
-    "ralt-rshift": { name: "Right Alt + Right Shift", sdl: ["KMOD_RALT", "KMOD_RSHIFT"], codes: ["AltRight", "ShiftRight"] },
-    "rctrl-rshift": { name: "Right Ctrl + Right Shift", sdl: ["KMOD_RCTRL", "KMOD_RSHIFT"], codes: ["ControlRight", "ShiftRight"] },
-    "rshift": { name: "Right Shift (FreeRDP's own default)", sdl: ["KMOD_RSHIFT"], codes: ["ShiftRight"] },
-    "off": { name: "Off: no hotkeys", sdl: ["KMOD_NONE"], codes: null },
+    "ralt-rshift": { name: "Right Alt + Right Shift", i18n: "kb.modRaltRshift", sdl: ["KMOD_RALT", "KMOD_RSHIFT"], codes: ["AltRight", "ShiftRight"] },
+    "rctrl-rshift": { name: "Right Ctrl + Right Shift", i18n: "kb.modRctrlRshift", sdl: ["KMOD_RCTRL", "KMOD_RSHIFT"], codes: ["ControlRight", "ShiftRight"] },
+    "rshift": { name: "Right Shift (FreeRDP's own default)", i18n: "kb.modRshift", sdl: ["KMOD_RSHIFT"], codes: ["ShiftRight"] },
+    "off": { name: "Off: no hotkeys", i18n: "kb.modOff", sdl: ["KMOD_NONE"], codes: null },
   };
   const ACTIONS = {
-    fullscreen: { name: "Full screen on or off", pref: "SDL_Fullscreen", key: "Enter" },
-    disconnect: { name: "Disconnect", pref: "SDL_Disconnect", key: "KeyD" },
-    grab: { name: "Keyboard grab on or off", pref: "SDL_Grab", key: "KeyG" },
+    fullscreen: { name: "Full screen on or off", i18n: "kb.actFullscreen", pref: "SDL_Fullscreen", key: "Enter" },
+    disconnect: { name: "Disconnect", i18n: "tb.quit", pref: "SDL_Disconnect", key: "KeyD" },
+    grab: { name: "Keyboard grab on or off", i18n: "kb.actGrab", pref: "SDL_Grab", key: "KeyG" },
   };
   // the keys a hotkey can use: KeyboardEvent.code -> [label, FreeRDP's SDL scancode name]
   const KEYS = {};
@@ -63,23 +65,24 @@
     if (!codes || !codes.every((c) => held.has(c))) return null;
     return Object.keys(ACTIONS).find((a) => h.keys[a] === e.code) || null;
   }
+  const named = (v) => t(v.i18n, v.name);
   const hotkeyText = (h, a) => MODIFIERS[h.modifier].codes
-    ? MODIFIERS[h.modifier].name.replace(/ \(.*\)$/, "") + " + " + KEYS[h.keys[a]][0] : "off";
+    ? named(MODIFIERS[h.modifier]).replace(/ \(.*\)$|（.*）$/, "") + " + " + KEYS[h.keys[a]][0] : t("kb.off", "off");
   const PROFILES = {
     freerdp: { name: "FreeRDP" },
     mstsc: {
       name: "mstsc (Windows Remote Desktop)",
       keys: [
-        ["Ctrl + Alt + Break", "Full screen on or off (Ctrl + Alt + Pause on keyboards without Break)"],
-        ["Ctrl + Alt + Home", "Show the connection bar"],
-        ["Ctrl + Alt + End", "Sends Ctrl + Alt + Delete to the remote desktop"],
+        ["Ctrl + Alt + Break", { name: "Full screen on or off (Ctrl + Alt + Pause on keyboards without Break)", i18n: "kb.mstscFullscreen" }],
+        ["Ctrl + Alt + Home", { name: "Show the connection bar", i18n: "kb.mstscBar" }],
+        ["Ctrl + Alt + End", { name: "Sends Ctrl + Alt + Delete to the remote desktop", i18n: "kb.mstscCad" }],
       ],
     },
   };
   // the shortcuts of a profile: FreeRDP's hotkeys as set, and the profile's own
   function shortcuts(p, h = getHotkeys()) {
-    const own = MODIFIERS[h.modifier].codes ? Object.keys(ACTIONS).map((a) => [hotkeyText(h, a), ACTIONS[a].name]) : [];
-    return [...(PROFILES[valid(p)].keys || []), ...own];
+    const own = MODIFIERS[h.modifier].codes ? Object.keys(ACTIONS).map((a) => [hotkeyText(h, a), named(ACTIONS[a])]) : [];
+    return [...(PROFILES[valid(p)].keys || []).map(([keys, what]) => [keys, named(what)]), ...own];
   }
   // The mstsc action for a keydown, or null. Break arrives as code "Pause" (key "Cancel" with Ctrl).
   function action(profile, e) {
@@ -99,10 +102,10 @@
   const $ = (id) => document.getElementById(id);
   const select = $("keyboardProfile");
   const option = (value, text) => Object.assign(document.createElement("option"), { value, textContent: text });
-  for (const [m, v] of Object.entries(MODIFIERS)) $("hotkeyModifier").append(option(m, v.name));
+  for (const [m, v] of Object.entries(MODIFIERS)) $("hotkeyModifier").append(option(m, named(v)));
   for (const a in ACTIONS) {
     const label = document.createElement("label"), span = document.createElement("span"), keys = document.createElement("select");
-    label.className = "field"; span.textContent = ACTIONS[a].name; keys.id = "hotkey-" + a;
+    label.className = "field"; span.textContent = named(ACTIONS[a]); span.dataset.action = a; keys.id = "hotkey-" + a;
     for (const [code, [text]] of Object.entries(KEYS)) keys.append(option(code, text));
     label.append(span, keys); $("hotkeyKeys").append(label);
   }
@@ -118,20 +121,27 @@
       dt.textContent = keys; dd.textContent = what; row.append(dt, dd); list.append(row);
     }
   }
-  const saved = (ok) => ok ? "Saved. It applies to the next session." : "This browser does not allow saving it.";
+  const saved = (ok) => ok ? t("kb.saved", "Saved. It applies to the next session.") : t("kb.notSaved", "This browser does not allow saving it.");
   select.addEventListener("change", () => { $("profileStatus").textContent = saved(set(select.value)); render(); });
   function changeHotkeys() {
     const h = { modifier: $("hotkeyModifier").value, keys: {} };
     for (const a in ACTIONS) h.keys[a] = $("hotkey-" + a).value;
-    try { $("hotkeyStatus").textContent = saved(setHotkeys(h)); } catch (e) { $("hotkeyStatus").textContent = e.message; }
+    try { $("hotkeyStatus").textContent = saved(setHotkeys(h)); }
+    catch (e) { $("hotkeyStatus").textContent = /share a key/.test(e.message) ? t("kb.shareKey", e.message) : e.message; }
     render();
   }
   $("hotkeyModifier").addEventListener("change", changeHotkeys);
   $("hotkeyKeys").addEventListener("change", changeHotkeys);
   $("resetProfile").addEventListener("click", () => { set("freerdp"); render();
-    $("profileStatus").textContent = "Back to FreeRDP, the default."; });
+    $("profileStatus").textContent = t("kb.backProfile", "Back to FreeRDP, the default."); });
   $("resetHotkeys").addEventListener("click", () => { setHotkeys(DEFAULT_HOTKEYS); render();
-    $("hotkeyStatus").textContent = "Back to the recommended hotkeys."; });
+    $("hotkeyStatus").textContent = t("kb.backHotkeys", "Back to the recommended hotkeys."); });
   window.addEventListener("storage", (e) => { if (e.key === KEY || e.key === HOTKEYS_KEY || e.key === null) render(); });
+  // a new language: the names built here, then the list (the status lines keep theirs)
+  root.FreeRDPi18n?.onChange(() => {
+    for (const o of $("hotkeyModifier").options) o.textContent = named(MODIFIERS[o.value]);
+    for (const span of $("hotkeyKeys").querySelectorAll("span[data-action]")) span.textContent = named(ACTIONS[span.dataset.action]);
+    render();
+  });
   render();
 })(globalThis);

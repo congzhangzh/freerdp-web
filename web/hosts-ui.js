@@ -11,7 +11,11 @@
   const current = () => state.hosts.find((h) => h.id === state.selected);
   const target = (h) => (h.direct ? h.directHost : h.host);
   const store = () => H.save(localStorage, state);
-  const say = (text) => { $("hostStatus").textContent = text; };
+  // the words in the visitor's language (i18n.js): the English given here, or its Chinese
+  const t = (key, text, vars) => globalThis.FreeRDPi18n?.t(key, text, vars) ?? text;
+  // the status line; with a key, said again in the new language when it changes
+  let said = null;
+  const say = (text, key, vars) => { said = [text, key, vars]; $("hostStatus").textContent = key ? t(key, text, vars) : text; };
 
   // ---- the host bar
   function render() {
@@ -23,7 +27,7 @@
       b.setAttribute("aria-checked", String(h.id === state.selected));
       const name = document.createElement("b"), where = document.createElement("span");
       name.textContent = h.name;
-      where.textContent = [h.user, target(h)].filter(Boolean).join(" @ ") || "not set up yet";
+      where.textContent = [h.user, target(h)].filter(Boolean).join(" @ ") || t("hosts.notSet", "not set up yet");
       b.append(name, where);
       b.onclick = () => select(h.id);
       list.append(b);
@@ -39,12 +43,13 @@
   }
   function addHost(base) {
     const h = base ? { ...H.clean(base), id: crypto.randomUUID(), vaultSaved: false } : H.blank();
-    h.name = H.uniqueName(state, base ? base.name + " copy" : "New host");
+    h.name = H.uniqueName(state, base ? t("hosts.copyName", base.name + " copy", { name: base.name }) : t("hosts.newName", "New host"));
     if (!base && window.directSocketsAvailable) h.direct = true;   // the installed app: Direct TCP
     state.hosts.push(h);
     select(h.id);
     $("hostName").focus(); $("hostName").select();
-    say(base ? `“${h.name}”: a copy, without the saved password.` : `“${h.name}”: set it up below; it is saved as you type.`);
+    if (base) say(`“${h.name}”: a copy, without the saved password.`, "hosts.copied", { name: h.name });
+    else say(`“${h.name}”: set it up below; it is saved as you type.`, "hosts.added", { name: h.name });
   }
   // a host's link, index.html?v=<host:port>: the address only (no name, user or settings)
   const linkTo = (address) => location.origin + location.pathname + "?v=" + encodeURIComponent(address).replace(/%3A/gi, ":");
@@ -53,19 +58,19 @@
     address = address.trim();
     if (!address || address.length > 255 || /[\s/]/.test(address)) return false;
     const found = state.hosts.find((h) => target(h) === address || h.host === address || h.directHost === address);
-    if (found) { select(found.id); say(`“${found.name}”, from the link.`); return true; }
+    if (found) { select(found.id); say(`“${found.name}”, from the link.`, "hosts.fromLink", { name: found.name }); return true; }
     const h = H.blank(H.uniqueName(state, address));
     if (window.directSocketsAvailable) { h.direct = true; h.directHost = address; } else h.host = address;
     state.hosts.push(h);
     select(h.id);
-    say(`“${h.name}”: a new host from the link. Check the address before you connect.`);
+    say(`“${h.name}”: a new host from the link. Check the address before you connect.`, "hosts.newFromLink", { name: h.name });
     return true;
   }
   $("hostLink").onclick = () => {
-    const t = target(current());
-    if (!t) { say("Enter the address first; the link carries it."); return; }
-    const link = linkTo(t);
-    navigator.clipboard.writeText(link).then(() => say("Link copied: " + link), () => say("The link: " + link));
+    const address = target(current());
+    if (!address) { say("Enter the address first; the link carries it.", "hosts.linkFirst"); return; }
+    const link = linkTo(address);
+    navigator.clipboard.writeText(link).then(() => say("Link copied: " + link, "hosts.linkCopied", { link }), () => say("The link: " + link, "hosts.linkShown", { link }));
   };
   $("hostNew").onclick = () => addHost(null);
   $("hostDuplicate").onclick = () => addHost(current());
@@ -75,11 +80,11 @@
     const h = current();
     if (state.hosts.length < 2) return;
     if (Date.now() - deleteArmed > 4000) {
-      deleteArmed = Date.now(); $("hostDelete").textContent = "Delete: click again";
-      setTimeout(() => { $("hostDelete").textContent = "Delete"; }, 4000);
+      deleteArmed = Date.now(); $("hostDelete").textContent = t("hosts.deleteAgain", "Delete: click again");
+      setTimeout(() => { $("hostDelete").textContent = t("hosts.delete", "Delete"); }, 4000);
       return;
     }
-    deleteArmed = 0; $("hostDelete").textContent = "Delete";
+    deleteArmed = 0; $("hostDelete").textContent = t("hosts.delete", "Delete");
     if (h.vaultSaved && vault) {
       if (!vault.unlocked) await unlockAndAdopt();
       await vault.remove(h.id);
@@ -87,7 +92,8 @@
     state.hosts = state.hosts.filter((x) => x.id !== h.id);
     state.selected = state.hosts[0].id; store(); render();
     selectListener(current());
-    say(`“${h.name}” deleted${h.vaultSaved ? ", with its saved password" : ""}.`);
+    if (h.vaultSaved) say(`“${h.name}” deleted, with its saved password.`, "hosts.deletedPw", { name: h.name });
+    else say(`“${h.name}” deleted.`, "hosts.deleted", { name: h.name });
   });
 
   // ---- the passkey vault, per host: the password of a host that asks for it, encrypted
@@ -95,7 +101,7 @@
     if (busy) return;
     busy = true; renderVault();
     try { await action(); }
-    catch (e) { say(e.name === "AbortError" ? "Vault operation cancelled." : e.message); }
+    catch (e) { if (e.name === "AbortError") say("Vault operation cancelled.", "vault.cancelled"); else say(e.message); }
     finally { busy = false; render(); }
   }
   // hosts kept in a vault by an earlier version of the page become hosts of the bar
@@ -107,7 +113,7 @@
         directHost: e.direct ? e.host : "", direct: e.direct, user: e.username, extra: e.extra, vault: true, vaultSaved: true }));
       added++;
     }
-    if (added) { store(); say(`Added ${added} host${added > 1 ? "s" : ""} kept in the passkey vault.`); }
+    if (added) { store(); say(`Added ${added} host${added > 1 ? "s" : ""} kept in the passkey vault.`, "vault.adopted", { n: added }); }
   }
   async function unlockAndAdopt() { await vault.unlock(); adopt(); }
   async function refreshMethods() { methods = await vault.methods(); exists = !!methods; }
@@ -115,15 +121,15 @@
     const h = current(), on = h.vault, unlocked = !!vault?.unlocked;
     $("vaultKeep").checked = on;
     $("vaultPanel").hidden = !on;
-    $("pass").placeholder = on && h.vaultSaved ? "Kept in the vault: leave empty" : "";
+    $("pass").placeholder = on && h.vaultSaved ? t("vault.kept", "Kept in the vault: leave empty") : "";
     let text;
-    if (!available) text = "The vault needs HTTPS (or localhost) and a browser with passkeys that support PRF.";
-    else if (!exists) text = "There is no vault in this browser yet: create one, with a passkey.";
-    else if (!unlocked) text = (h.vaultSaved ? "Saved. Connect asks for your passkey." : "Unlock the vault to save this host's password in it.") +
-      (methods?.passkeys > 1 ? ` Any of its ${methods.passkeys} passkeys opens it.` : "") +
-      (methods?.code ? " No passkey at hand? Use the recovery code." : " Its passkey gone, or on another device? Delete the vault and create a new one.");
-    else text = h.vaultSaved ? "Saved in the vault. Type a new password and save it to replace it." : "Type the password above, then save it in the vault.";
-    if (busy) text = "Waiting for the passkey…";
+    if (!available) text = t("vault.needs", "The vault needs HTTPS (or localhost) and a browser with passkeys that support PRF.");
+    else if (!exists) text = t("vault.none", "There is no vault in this browser yet: create one, with a passkey.");
+    else if (!unlocked) text = (h.vaultSaved ? t("vault.savedLocked", "Saved. Connect asks for your passkey.") : t("vault.unlockToSave", "Unlock the vault to save this host's password in it.")) +
+      (methods?.passkeys > 1 ? t("vault.anyOf", ` Any of its ${methods.passkeys} passkeys opens it.`, { n: methods.passkeys }) : "") +
+      (methods?.code ? t("vault.useCode", " No passkey at hand? Use the recovery code.") : t("vault.lost", " Its passkey gone, or on another device? Delete the vault and create a new one."));
+    else text = h.vaultSaved ? t("vault.savedOpen", "Saved in the vault. Type a new password and save it to replace it.") : t("vault.typeFirst", "Type the password above, then save it in the vault.");
+    if (busy) text = t("vault.waiting", "Waiting for the passkey…");
     $("vaultStatus").textContent = text;
     const show = (id, visible, enabled = true) => { $(id).hidden = !visible; $(id).disabled = busy || !enabled; };
     show("vaultCreate", available && !exists);
@@ -145,30 +151,35 @@
     const keys = vault.keys(), passkeys = keys.filter((k) => k.kind === "passkey").length;
     $("vaultKeyList").replaceChildren(...keys.map((k) => {
       const li = document.createElement("li");
-      const when = k.added ? ", added " + new Date(k.added).toLocaleDateString() : "";
-      li.textContent = (k.kind === "code" ? "Recovery code" : "Passkey: " + k.label) + when + (k.current ? " (opened it now)" : "");
+      const date = k.added ? new Date(k.added).toLocaleDateString() : "";
+      const when = k.added ? t("vault.added", ", added " + date, { date }) : "";
+      li.textContent = (k.kind === "code" ? t("vault.code", "Recovery code") : t("vault.passkey", "Passkey: " + k.label, { label: k.label })) + when +
+        (k.current ? t("vault.current", " (opened it now)") : "");
       if (k.kind === "code" || passkeys > 1) {
         const b = document.createElement("button");
         b.type = "button"; b.className = "small"; b.disabled = busy;
-        b.textContent = removeArmed.id === k.id && Date.now() - removeArmed.at < 4000 ? "Remove: click again" : "Remove";
+        b.textContent = removeArmed.id === k.id && Date.now() - removeArmed.at < 4000 ? t("vault.removeAgain", "Remove: click again") : t("vault.remove", "Remove");
         b.onclick = () => removeKey(k);
         li.append(b);
       }
       return li;
     }));
     $("vaultAddKey").disabled = $("vaultNewCode").disabled = busy;
-    $("vaultNewCode").textContent = keys.some((k) => k.kind === "code") ? "Replace the recovery code" : "Create a recovery code";
+    $("vaultNewCode").textContent = keys.some((k) => k.kind === "code") ? t("vault.replaceCode", "Replace the recovery code") : t("vault.newCode", "Create a recovery code");
   }
   function removeKey(k) {
     if (removeArmed.id !== k.id || Date.now() - removeArmed.at > 4000) {
       removeArmed = { id: k.id, at: Date.now() }; renderKeys();
       setTimeout(renderKeys, 4100);
-      say(k.kind === "code" ? "Removing the recovery code: only passkeys will open the vault."
-        : `Removing “${k.label}”: it stops opening the vault. A passkey that was lost or stolen? Change the passwords that matter too.`);
+      if (k.kind === "code") say("Removing the recovery code: only passkeys will open the vault.", "vault.removingCode");
+      else say(`Removing “${k.label}”: it stops opening the vault. A passkey that was lost or stolen? Change the passwords that matter too.`, "vault.removingKey", { label: k.label });
       return;
     }
     removeArmed = { id: "", at: 0 };
-    run(async () => { await vault.removeKey(k.id); await refreshMethods(); say(k.kind === "code" ? "Recovery code removed." : `“${k.label}” removed from the vault.`); });
+    run(async () => {
+      await vault.removeKey(k.id); await refreshMethods();
+      if (k.kind === "code") say("Recovery code removed.", "vault.codeRemoved"); else say(`“${k.label}” removed from the vault.`, "vault.keyRemoved", { label: k.label });
+    });
   }
   function lock() { vault?.lock(); $("pass").value = ""; renderVault(); }
   $("vaultKeep").onchange = () => {
@@ -177,7 +188,7 @@
     store(); render();
     selectListener(current(), true);
   };
-  $("vaultCreate").onclick = () => run(async () => { await vault.create(); await refreshMethods(); say("Vault created. Save this host's password in it."); });
+  $("vaultCreate").onclick = () => run(async () => { await vault.create(); await refreshMethods(); say("Vault created. Save this host's password in it.", "vault.created"); });
   $("vaultUnlock").onclick = () => run(unlockAndAdopt);
   // another passkey for the same vault: a phone, Google Password Manager, iCloud Keychain, Windows
   // Hello, a security key… The system's dialog picks where it is made ("Use a phone or tablet",
@@ -186,43 +197,44 @@
     const label = $("vaultKeyName").value.trim();
     try { await vault.addPasskey(label); }
     catch (e) {
-      if (e.name === "InvalidStateError") throw new Error("That passkey provider already holds a passkey of this vault: choose another one (a phone, a security key…).");
+      if (e.name === "InvalidStateError") throw new Error(t("vault.sameProvider", "That passkey provider already holds a passkey of this vault: choose another one (a phone, a security key…)."));
       throw e;
     }
     $("vaultKeyName").value = ""; await refreshMethods();
-    say(`Passkey${label ? ` “${label}”` : ""} added: it opens the vault too.`);
+    if (label) say(`Passkey “${label}” added: it opens the vault too.`, "vault.keyAddedNamed", { label });
+    else say("Passkey added: it opens the vault too.", "vault.keyAdded");
   });
   $("vaultNewCode").onclick = () => run(async () => {
     const code = await vault.newRecoveryCode(); await refreshMethods();
     $("vaultCodeText").textContent = code; $("vaultCodeBox").hidden = false;
-    say("Recovery code created; an earlier one no longer opens the vault. It is shown below this once.");
+    say("Recovery code created; an earlier one no longer opens the vault. It is shown below this once.", "vault.codeCreated");
   });
   $("vaultCodeCopy").onclick = () => navigator.clipboard.writeText($("vaultCodeText").textContent).then(
-    () => say("Recovery code copied."), () => say("Select the code and copy it."));
+    () => say("Recovery code copied.", "vault.codeCopied"), () => say("Select the code and copy it.", "vault.codeSelect"));
   const unlockWithCode = () => run(async () => {
     const code = $("vaultCodeInput").value;
     try { await vault.unlockWithCode(code); } finally { $("vaultCodeInput").value = ""; }
     adopt();
-    say("Vault unlocked with the recovery code. Add a passkey you have now, and maybe a new recovery code.");
+    say("Vault unlocked with the recovery code. Add a passkey you have now, and maybe a new recovery code.", "vault.codeUnlocked");
   });
   $("vaultCodeUnlock").onclick = unlockWithCode;
   // Enter in the vault's own fields acts there; it must not submit the form (Connect)
   for (const [field, action] of [["vaultCodeInput", unlockWithCode], ["vaultKeyName", () => $("vaultAddKey").click()]])
     $(field).addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); action(); } });
-  $("vaultLock").onclick = () => { lock(); say("Vault locked; its passwords are cleared from the page."); };
+  $("vaultLock").onclick = () => { lock(); say("Vault locked; its passwords are cleared from the page.", "vault.locked"); };
   $("vaultSave").onclick = () => run(async () => {
     const h = current(), password = $("pass").value;
-    if (!password) throw new Error("Type the password first.");
+    if (!password) throw new Error(t("vault.passwordFirst", "Type the password first."));
     try {
       await vault.save({ id: h.id, label: h.name, host: target(h) || "unset", username: h.user, password, extra: h.extra, direct: h.direct });
     } finally { $("pass").value = ""; }
     h.vaultSaved = true; store();
-    say(`“${h.name}”: password saved in the vault.`);
+    say(`“${h.name}”: password saved in the vault.`, "vault.saved", { name: h.name });
   });
   $("vaultForget").onclick = () => run(async () => {
     const h = current();
     await vault.remove(h.id); h.vaultSaved = false; store();
-    say(`“${h.name}”: the saved password is gone from the vault.`);
+    say(`“${h.name}”: the saved password is gone from the vault.`, "vault.forgotten", { name: h.name });
   });
   // only its own passkey opens the vault (its PRF secret): without it, the way out is to start
   // over. Asks twice, like deleting a host; the hosts stay, their saved passwords go.
@@ -230,17 +242,20 @@
   $("vaultDelete").onclick = () => run(async () => {
     const saved = state.hosts.filter((h) => h.vaultSaved);
     if (Date.now() - vaultDeleteArmed > 4000) {
-      vaultDeleteArmed = Date.now(); $("vaultDelete").textContent = "Delete the vault: click again";
-      setTimeout(() => { $("vaultDelete").textContent = "Delete the vault"; }, 4000);
-      say(saved.length ? `This deletes ${saved.length} saved password${saved.length > 1 ? "s" : ""}. To keep ${saved.length > 1 ? "them" : "it"}, unlock and export first.`
-        : "This deletes the vault in this browser.");
+      vaultDeleteArmed = Date.now(); $("vaultDelete").textContent = t("vault.deleteAgain", "Delete the vault: click again");
+      setTimeout(() => { $("vaultDelete").textContent = t("vault.delete", "Delete the vault"); }, 4000);
+      if (saved.length) say(`This deletes ${saved.length} saved password${saved.length > 1 ? "s" : ""}. To keep ${saved.length > 1 ? "them" : "it"}, unlock and export first.`,
+        "vault.deleteWarn", { n: saved.length });
+      else say("This deletes the vault in this browser.", "vault.deleteEmpty");
       return;
     }
-    vaultDeleteArmed = 0; $("vaultDelete").textContent = "Delete the vault";
+    vaultDeleteArmed = 0; $("vaultDelete").textContent = t("vault.delete", "Delete the vault");
     await vault.destroy(); exists = false; methods = null; $("pass").value = "";
     for (const h of saved) h.vaultSaved = false;
     store();
-    say(`Vault deleted${saved.length ? `, with ${saved.length} saved password${saved.length > 1 ? "s" : ""}` : ""}. Create a new one with the passkey you have now.`);
+    if (saved.length) say(`Vault deleted, with ${saved.length} saved password${saved.length > 1 ? "s" : ""}. Create a new one with the passkey you have now.`,
+      "vault.deletedPw", { n: saved.length });
+    else say("Vault deleted. Create a new one with the passkey you have now.", "vault.deleted");
   });
   window.addEventListener("pagehide", lock);
 
@@ -268,7 +283,7 @@
     $("exportPassphrase").value = "";
     if ($("exportDialog").returnValue !== "ok") return;
     run(async () => {
-      if (encrypt && passphrase.length < 8) throw new Error("Not exported: use a passphrase of at least 8 characters.");
+      if (encrypt && passphrase.length < 8) throw new Error(t("export.short", "Not exported: use a passphrase of at least 8 characters."));
       let passwords = null;
       try {
         if (withPw) {
@@ -279,8 +294,9 @@
         download(await H.exportText(state, { passwords, passphrase: encrypt ? passphrase : "" }),
           encrypt ? "freerdp-web-hosts.encrypted.json" : "freerdp-web-hosts.json");
       } finally { passwords?.clear(); }
-      say(`Exported ${state.hosts.length} host${state.hosts.length > 1 ? "s" : ""}` +
-        (withPw ? ", with the passwords kept in the vault" : ", without passwords") + (encrypt ? ", encrypted." : "."));
+      const n = state.hosts.length;
+      say(`Exported ${n} host${n > 1 ? "s" : ""}` + (withPw ? ", with the passwords kept in the vault" : ", without passwords") + (encrypt ? ", encrypted." : "."),
+        withPw ? (encrypt ? "export.doneWithPwEncrypted" : "export.doneWithPw") : (encrypt ? "export.doneEncrypted" : "export.done"), { n });
     });
   });
   $("hostImport").onclick = () => $("hostImportFile").click();
@@ -319,9 +335,11 @@
           }
         }
       } finally { for (const item of items) item.password = ""; store(); }
-      say(`Imported ${items.length} host${items.length > 1 ? "s" : ""}` + (!withPw ? "." : kept === withPw
+      const n = items.length, lost = withPw - kept;
+      say(`Imported ${n} host${n > 1 ? "s" : ""}` + (!withPw ? "." : kept === withPw
         ? `, and ${kept} password${kept > 1 ? "s" : ""} into the passkey vault.`
-        : `; ${withPw - kept} password${withPw - kept > 1 ? "s were" : " was"} not kept: create or unlock the passkey vault, then import again.`));
+        : `; ${lost} password${lost > 1 ? "s were" : " was"} not kept: create or unlock the passkey vault, then import again.`),
+        !withPw ? "import.done" : kept === withPw ? "import.doneWithPw" : "import.donePwLost", { n, kept, lost });
     });
   }
 
@@ -350,23 +368,23 @@
       return true;
     },
     check() {
-      if (busy) throw new Error("Wait for the vault operation to finish.");
+      if (busy) throw new Error(t("vault.busy", "Wait for the vault operation to finish."));
       FreeRDPVault.validateOptions($("extra").value);
     },
     needsVault() { const h = current(); return h.vault && h.vaultSaved && !$("pass").value; },
     // before Connect waits for anything: the passkey prompt, while the click still counts
     async prepare() {
       if (!this.needsVault() || vault?.unlocked) return;
-      if (!available) throw new Error("This host's password is in the passkey vault, which this browser cannot open here.");
+      if (!available) throw new Error(t("vault.cannotOpen", "This host's password is in the passkey vault, which this browser cannot open here."));
       busy = true; renderVault();
       try { await unlockAndAdopt(); } finally { busy = false; render(); }
     },
     // the connection's host and password, handed synchronously to consume and dropped after;
     // password: the one kept for Reconnect (app.js), instead of the vault or the form
     use(password, consume) {
-      const h = current(), t = target(h);
-      if (!t) throw new Error(h.direct ? "Enter the RDP server first." : "Enter the gateway first.");
-      const base = { host: t, username: h.user, extra: h.extra, direct: h.direct };
+      const h = current(), address = target(h);
+      if (!address) throw new Error(h.direct ? t("status.rdpFirst", "Enter the RDP server first.") : t("status.gatewayFirst", "Enter the gateway first."));
+      const base = { host: address, username: h.user, extra: h.extra, direct: h.direct };
       if (password !== null) { const host = { ...base, password }; try { return consume(host); } finally { host.password = ""; } }
       if (this.needsVault()) return vault.use(h.id, (e) => consume({ ...base, password: e.password }));
       const host = { ...base, password: $("pass").value };
@@ -378,8 +396,8 @@
     // keep it: one passkey prompt (creating the vault on first use), then locked again
     async acceptSave() {
       const h = offeredHost();
-      if (!h) throw new Error("Nothing to save any more.");
-      if (busy) throw new Error("Wait for the vault operation to finish.");
+      if (!h) throw new Error(t("save.nothing", "Nothing to save any more."));
+      if (busy) throw new Error(t("vault.busy", "Wait for the vault operation to finish."));
       busy = true;
       try {
         if (!exists) { await vault.create(); await refreshMethods(); }
@@ -396,6 +414,8 @@
     },
     lock,
   };
+  // a new language (i18n.js): the bar, the vault's lines and the last status again
+  globalThis.FreeRDPi18n?.onChange(() => { render(); if (said) say(...said); });
   render();
   (async () => {
     try {

@@ -232,9 +232,10 @@ python3 serve.py 8180 dist
 
 | Test | Needs | Command |
 |---|---|---|
-| Unit tests: vault, connection bridge, session options, keyboard, install.json, MANIFEST | Node 20+ | `node --test web/tests/*.test.cjs` |
+| Unit tests: vault, connection bridge, session options, keyboard, install.json, MANIFEST, languages | Node 20+ | `node --test web/tests/*.test.cjs` |
 | Reconnect against the CI xrdp session: a dropped gateway, then the toolbar's Reconnect | Node 22+, Chrome, `uvx websockify`, the `grd-wasm-xrdp-ci` container, a modular client served by `serve.py` | `PAGE=http://localhost:<port>/index.html node test-reconnect.mjs` |
 | Get a server: the cards from a sample `install.json` (`test-server-install.json`), the Copy buttons, the clients, and the link that replaces them without the file | Node 22+, Chrome | `node test-server.mjs` |
+| English and Chinese: the pages in a zh-CN and an en-US browser, the Language select, English exactly as written, phone width | Node 22+, Chrome | `node test-i18n.mjs` |
 | The page with the real client, no server | Node 22+, Chrome, a built client (`sdl-freerdp.js` and `.wasm`) | `node test-page.mjs <client dir>` |
 | A full login: xrdp in a throwaway container, reached over SSH and websockify | Docker or Podman; the [release kit](https://github.com/congzhangzh/rdp-release-kit) with its Debian 13 xrdp packages built | `PAGE_SRC=<this checkout> ./build-wasm.sh`, then `test/wasm-session.sh dist/wasm/web <this checkout>/rdp-gateway.sh` in the kit |
 

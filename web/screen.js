@@ -50,9 +50,10 @@
   // it does not reach the remote side. In full screen Keyboard Lock sends Esc and the Windows key
   // there too; holding Esc leaves.
   const hint = document.getElementById("hint");
+  const t = (key, text, vars) => globalThis.FreeRDPi18n?.t(key, text, vars) ?? text;   // i18n.js
   async function fill() {
     try { await document.documentElement.requestFullscreen({ navigationUI: "hide" }); }
-    catch (e) { hint.textContent = "Full screen refused: " + e.message; return; }
+    catch (e) { hint.textContent = t("screen.refused", "Full screen refused: " + e.message, { why: e.message }); return; }
     try { await navigator.keyboard?.lock?.(); } catch (e) { /* the keys the browser keeps stay local */ }
   }
   document.addEventListener("fullscreenchange", () => { hint.hidden = !!document.fullscreenElement; });

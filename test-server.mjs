@@ -126,9 +126,9 @@ check("no page errors", !logs.some((l) => l.startsWith("EXCEPTION")), logs.filte
 // every page with the header links to Get a server, right before Install as app
 for (const page of readdirSync(web).filter((f) => f.endsWith(".html"))) {
   const html = readFileSync(join(web, page), "utf8");
-  if (!html.includes('<nav aria-label="Help">')) continue;
+  if (!html.includes('<nav aria-label="Help"')) continue;
   check(`${page}: Get a server in the header, before Install as app`,
-    /<a href="server.html"( aria-current="page")?>Get a server<\/a>\s*<a href="install.html"/.test(html));
+    /<a href="server.html"( aria-current="page")?( data-i18n="nav.server")?>Get a server<\/a>\s*<a href="install.html"/.test(html));
 }
 
 writeFileSync(join(out, "server.log"), logs.join("\n") + "\n");

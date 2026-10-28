@@ -3,30 +3,34 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Release notes · FreeRDP Web</title>
+<title data-i18n="notes.pageTitle">Release notes · FreeRDP Web</title>
 <link rel="icon" href="icon-256.png" type="image/png">
 <link rel="stylesheet" href="ui.css">
 <script src="theme.js"></script>
+<script src="i18n.js"></script>
 </head>
 <body>
 <main class="help">
   <header class="top">
     <a class="brand" href="index.html">FreeRDP Web</a>
-    <nav aria-label="Help">
-      <a href="index.html#intro">▶ Intro</a>
-      <a href="safety.html">Safety and tunnels</a>
-      <a href="keyboard.html">Keyboard</a>
-      <a href="server.html">Get a server</a>
-      <a href="install.html">Install as app</a>
-      <a href="release-notes.html" aria-current="page">Release notes</a>
-      <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener" title="The source, issues and releases">GitHub</a>
-      <label><span class="sr-only">Theme</span><select id="theme" aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+    <nav aria-label="Help" data-i18n-attr="aria-label:nav.help">
+      <a href="index.html#intro" data-i18n="nav.intro">▶ Intro</a>
+      <a href="safety.html" data-i18n="nav.safety">Safety and tunnels</a>
+      <a href="keyboard.html" data-i18n="nav.keyboard">Keyboard</a>
+      <a href="server.html" data-i18n="nav.server">Get a server</a>
+      <a href="install.html" data-i18n="nav.install">Install as app</a>
+      <a href="release-notes.html" aria-current="page" data-i18n="nav.notes">Release notes</a>
+      <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener" title="The source, issues and releases" data-i18n-attr="title:nav.githubTitle">GitHub</a>
+      <label><span class="sr-only" data-i18n="nav.language">Language</span><select id="lang" aria-label="Language" data-i18n-attr="aria-label:nav.language"><option value="auto" data-i18n="lang.auto">Auto</option><option value="en" lang="en">English</option><option value="zh" lang="zh-Hans">中文</option></select></label>
+      <label><span class="sr-only" data-i18n="nav.theme">Theme</span><select id="theme" aria-label="Theme" data-i18n-attr="aria-label:nav.theme"><option value="system" data-i18n="theme.system">System</option><option value="light" data-i18n="theme.light">Light</option><option value="dark" data-i18n="theme.dark">Dark</option></select></label>
     </nav>
   </header>
-  <h1>Release notes</h1>
-  <p class="lead">What changed for you, newest first. The version you are running is shown in <b>About this
-    client</b>, under the connection form (and on a session's toolbar), on the <b>Version</b> line. A new version arrives the next time you load the page; a session
-    that is already open keeps going.</p>
+  <h1 data-i18n="nav.notes">Release notes</h1>
+  <p class="lead"><span data-i18n="notes.lead">What changed for you, newest first. The version you are running is shown in </span><b data-i18n="about.title">About this
+    client</b><span data-i18n="notes.leadWhere">, under the connection form (and on a session's toolbar), on the </span><b data-i18n="about.version">Version</b><span data-i18n="notes.leadEnd"> line. A new version arrives the next time you load the page; a session
+    that is already open keeps going.</span></p>
+  <!-- shown only in Chinese (i18n.js): the entries below stay in English -->
+  <p class="note" data-i18n="notes.english" data-i18n-only="zh" hidden></p>
 
   <h2>20261028.9 <span class="muted">· 28 October 2026</span></h2>
   <ul>
