@@ -15,6 +15,13 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261028.7
+
+- **The card is just the picture, as a marquee** (聪哥: the caption and the buttons took too much
+  space): the slogan for 3 s, then 蛮蛮 and then the twins, each playing its clip once, round
+  and round; a clip that cannot play moves on after 12 s. The caption is for screen readers
+  only (`sr-only`); the Twins / 蛮蛮 buttons and the remembered choice go.
+
 ## 20261028.6
 
 - **The slogan and the mascot take turns** (聪哥's design): the card beside the tagline shows
