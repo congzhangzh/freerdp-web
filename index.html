@@ -52,11 +52,17 @@
     <label><span class="sr-only">Theme</span><select id="theme" aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
   </nav>
 </header>
-<!-- the mascot: you here and you in the cloud, entangled; a muted loop (still for reduced motion) -->
+<!-- in turn, like a marquee: the slogan, 蛮蛮 (the paired bird of the Classic of Mountains and
+     Seas) and the entangled twins (you here and you in the cloud); app.js runs the turns -->
 <figure id="mascot" class="mascot">
-  <video src="mascot.mp4" poster="mascot-poster.webp" autoplay muted loop playsinline preload="metadata" aria-hidden="true"></video>
-  <figcaption class="hint">Entangled twins: you here, you in the cloud. Real entanglement carries no message;
-    these two carry every key you press.</figcaption>
+  <div class="mascot-stage">
+    <p class="mascot-slogan">You here, you in the cloud:<b>one desktop.</b><span lang="zh">你在这里，也在云端。</span></p>
+    <video data-mascot="manman" src="mascot-manman.mp4" poster="mascot-manman-still.webp" muted playsinline preload="metadata" aria-hidden="true" hidden></video>
+    <video data-mascot="twins" src="mascot.mp4" poster="mascot-poster.webp" muted playsinline preload="metadata" aria-hidden="true" hidden></video>
+  </div>
+  <figcaption class="sr-only">The page's mascots in turn: 蛮蛮, the paired bird of the Classic of Mountains and Seas
+    (山海经), with one wing and one eye each, which flies only together (相得乃飞); and the entangled twins, you
+    here and you in the cloud.</figcaption>
 </figure>
 <!-- what this is, in one line, and who it is for -->
 <p class="tagline"><b>Lightning-fast remote desktop in your browser:</b> AV1 decoded by the browser,

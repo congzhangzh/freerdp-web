@@ -1,9 +1,29 @@
 // Hosts and settings live in localStorage (hosts.js); the password never does.
 const $ = (id) => document.getElementById(id);
-// the mascot stays still for people who ask for less motion (its poster frame)
-if (globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
-  const v = document.querySelector?.("#mascot video");
-  if (v) { v.removeAttribute("autoplay"); v.pause(); }
+// in turn, like a marquee: the slogan, then 蛮蛮, then the twins; each clip plays to its end,
+// and each turn then holds 3 s (on the clip's last frame) before the next. A clip that cannot
+// play moves on after 15 s. Played for everyone, reduced motion too (聪哥's choice)
+{
+  const fig = document.getElementById?.("mascot");
+  if (fig?.querySelectorAll) {
+    const slogan = fig.querySelector(".mascot-slogan");
+    const turns = [slogan, ...fig.querySelectorAll("video[data-mascot]")];
+    let at = -1, timer = 0;
+    const next = () => {
+      clearTimeout(timer);
+      at = (at + 1) % turns.length;
+      for (const t of turns) if (t !== turns[at]) { t.hidden = true; t.pause?.(); }
+      const t = turns[at];
+      t.hidden = false;
+      if (t === slogan) { timer = setTimeout(next, 3000); return; }
+      t.currentTime = 0;
+      t.play()?.catch(() => {});
+      timer = setTimeout(next, 15000);
+    };
+    // its last frame stays for 3 s
+    for (const v of turns.slice(1)) v.addEventListener("ended", () => { clearTimeout(timer); timer = setTimeout(next, 3000); });
+    next();
+  }
 }
 const logEl = $("log");
 const info = { started: 0, decoder: "–", transport: "–", server: "–" };

@@ -1,8 +1,8 @@
 {
   "recorded": {
-    "kit": "654fa284a21f4856b08a3743eeb03208749ee5a3",
-    "web": "web-20261028.6-654fa284a21f",
-    "xrdp": "xrdp-20261028.5-654fa284a21f",
+    "kit": "7e738133fd349a6d839c57c1cbf07825a6e5c296",
+    "web": "web-20261028.8-7e738133fd34",
+    "xrdp": "xrdp-20261028.6-7e738133fd34",
     "pipewire-module-xrdp": "pipewire-module-xrdp-20261028.1-977724d19e72"
   },
   "videos": [
@@ -19,7 +19,7 @@
       ]
     },
     {
-      "title": "xrdp + GNOME Wayland, two screens",
+      "title": "xrdp + GNOME Wayland, AV1, Two monitors",
       "src": "demo/xrdp-gnome-screens.mp4",
       "poster": "demo/xrdp-gnome-screens.jpg",
       "caption": "The page's All screens on a computer with two screens, side by side: rdp-release-kit's xrdp with GNOME on Wayland, Fedora 45. Separate screens gives GNOME a monitor for each screen, the page's screen the primary, where the terminal stays; Super+Shift+Right moves it to the other screen, and closing the second screen's window brings one screen back.",
@@ -42,7 +42,7 @@
       ]
     },
     {
-      "title": "upstream xrdp + Xfce",
+      "title": "upstream xrdp + Xfce Xorg",
       "src": "demo/xrdp-original-xfce.mp4",
       "poster": "demo/xrdp-original-xfce.jpg",
       "caption": "Debian 13's own xrdp (xrdp's upstream release) with Xfce, reached over SSH and websockify: the page, a session, typing, then Firefox on the server with web video and WebGL, with sound. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD.",
