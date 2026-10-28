@@ -15,6 +15,12 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261028.9
+
+- **Get a server: a line per kind of session**: an `install.json` whose sessions read
+  "Wayland: …; Xorg: …" (the release kit's from 2026-10-28 on) shows each on its own line, its
+  label in bold; an older one keeps its single "Sessions:" line. `test-server.mjs` 21 checks.
+
 ## 20261028.8
 
 - **Each mascot plays to its end, then holds 3 s** (聪哥): its last frame stays 3 s before the
