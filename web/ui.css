@@ -64,9 +64,6 @@ input:disabled, select:disabled { opacity:.55; }
 .mascot-slogan b { font-size:22px; color:#d9644a; }
 .mascot-slogan span { font-size:13px; color:#3d6f72; }
 .mascot-slogan[hidden], .mascot-stage video[hidden] { display:none; }
-.mascot figcaption { margin-top:4px; font-size:12px; line-height:1.35; }
-.mascot-pick { display:flex; gap:6px; margin-top:4px; }
-.mascot-pick button[aria-pressed="true"] { font-weight:600; }
 .route { clear:both; }
 @media (max-width:640px) { .mascot { float:none; width:auto; max-width:360px; margin:0 0 10px; } }
 body.session .mascot { display:none; }
