@@ -5,6 +5,8 @@
 // One entry of "server" per distribution release ("Debian 13", "Ubuntu 26.04", "Fedora 45"…);
 // the page groups them by the name's first word. Without the file, or with one it cannot read
 // (a local build), the page keeps its one line that links to the kit's latest release.
+// With the native clients it shows freerdp-tk, their connection window, and its demo videos:
+// demo/demo.json's "clients" (the kit records them; without them, no videos).
 // Everything is built with textContent, never as HTML: the installed app requires Trusted Types.
 (function (root) {
   "use strict";
@@ -37,6 +39,15 @@
     return { release: text(data.release), url: https(data.url) || LATEST, families, start: text(data.start), clients };
   }
 
+  // demo.json's freerdp-tk videos: [{ title, src, poster, caption }], files next to the page in
+  // demo/ only; anything else is skipped
+  const local = (v, ext) => (new RegExp("^demo/[\\w.-]+\\." + ext + "$").test(text(v)) ? text(v) : "");
+  function clips(demo) {
+    return (Array.isArray(demo?.clients) ? demo.clients : [])
+      .map((c) => ({ title: text(c?.title), src: local(c?.src, "mp4"), poster: local(c?.poster, "jpg"), caption: text(c?.caption) }))
+      .filter((c) => c.title && c.src);
+  }
+
   // ---- the page ----
   function el(tag, props = {}, ...children) {
     const e = document.createElement(tag);
@@ -61,7 +72,7 @@
     });
   };
 
-  function render(k, into) {
+  function render(k, into, videos = []) {
     const out = document.createDocumentFragment();
     out.append(el("p", { class: "muted" }, t("srv.from", "From the release kit's release "),
       link(k.url, k.release || t("srv.onGithub", "on GitHub")), t("srv.fromEnd", ", the one this site was published from.")));
@@ -89,22 +100,37 @@
       const table = el("table", { id: "clients" }, el("tr", {}, el("th", { text: t("srv.platform", "Platform") }), el("th", { text: t("srv.file", "File") })));
       for (const c of k.clients) table.append(el("tr", {}, el("td", { text: c.platform }), el("td", {}, link(c.url, c.file))));
       out.append(table);
+      out.append(el("h3", { id: "freerdp-tk", text: t("srv.tk", "freerdp-tk, the connection window") }),
+        el("p", { text: t("srv.tkWhy", "Each client comes with freerdp-tk, a window that keeps your connections, their passwords in the system's own keyring, and starts the client. Unpack the file and start freerdp-tk (Windows: freerdp-tk.cmd; macOS: freerdp-tk.command, in Finder).") }),
+        el("p", { text: t("srv.tkUvx", "With uv, the window alone, for a FreeRDP 3 client you already have (uv's own Python, which has Tk):") }),
+        copyable("uvx --managed-python freerdp-tk"));
+      // the videos' titles and captions are the kit's, as written
+      const shelf = el("div", { class: "clips" });
+      for (const v of videos) {
+        const video = el("video", { controls: "", preload: "none", playsinline: "", src: v.src });
+        if (v.poster) video.setAttribute("poster", v.poster);
+        shelf.append(el("figure", { class: "clip" }, video, el("figcaption", {}, el("b", { text: v.title }), v.caption ? " " + v.caption : "")));
+      }
+      if (videos.length) out.append(shelf);
     }
     out.append(el("p", {}, t("srv.all", "All files and checksums: "), link(k.url, k.url)));
     into.replaceChildren(out);
   }
 
-  const api = { parse, LATEST };
+  const api = { parse, clips, LATEST };
   root.FreeRDPServer = api;
   if (typeof module !== "undefined" && module.exports) { module.exports = api; return; }
   // any failure (no file, not JSON, nothing usable, a bug) keeps the fallback line
   const into = document.getElementById("kit");
-  if (into) fetch("install.json", { cache: "no-cache" })
-    .then((r) => { if (!r.ok) throw new Error("install.json: HTTP " + r.status); return r.json(); })
-    .then((data) => {
+  // the videos are extra: without demo.json the rest still shows
+  const demo = () => fetch("demo/demo.json").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  if (into) Promise.all([fetch("install.json", { cache: "no-cache" }), demo()])
+    .then(([r, d]) => { if (!r.ok) throw new Error("install.json: HTTP " + r.status); return r.json().then((data) => [data, d]); })
+    .then(([data, d]) => {
       const k = parse(data); if (!k) throw new Error("install.json: no distribution in it");
-      render(k, into);
-      root.FreeRDPi18n?.onChange(() => render(k, into));   // a new language: the cards again
+      const videos = clips(d);
+      render(k, into, videos);
+      root.FreeRDPi18n?.onChange(() => render(k, into, videos));   // a new language: the cards again
     })
     .catch((e) => console.log("[page] " + (e?.message || e) + "; the page links to the kit's latest release"));
 })(globalThis);

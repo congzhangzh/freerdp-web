@@ -43,10 +43,17 @@ const send = (method, params = {}) => new Promise((res) => { const i = ++id; pen
 const ORIGIN = "http://localhost:1";
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".json": "application/json" };
 let installJson = null;   // what install.json is: a file, a string, or null (404)
+// demo/demo.json as the kit publishes it, with freerdp-tk's videos (their files are not needed:
+// a video loads nothing before it is played)
+const demoJson = JSON.stringify({ videos: [{ title: "the splash's", src: "demo/xrdp-gnome.mp4" }], clients: [
+  { title: "xrdp + GNOME Wayland, AV1, freerdp-tk release", src: "demo/freerdp-tk-release.mp4", poster: "demo/freerdp-tk-release.jpg",
+    caption: "Unpacked from the release, saved, connected." },
+  { title: "xrdp + GNOME Wayland, H.264, freerdp-tk uvx", src: "demo/freerdp-tk-uvx.mp4", poster: "demo/freerdp-tk-uvx.jpg" }] });
 function serve(m) {
   const path = decodeURIComponent(new URL(m.params.request.url).pathname).replace(/\/$/, "/index.html");
   let body = null, type = TYPES[extname(path)] || "application/octet-stream";
   if (path === "/install.json") body = installJson === null ? null : Buffer.from(existsSync(installJson) ? readFileSync(installJson) : installJson);
+  else if (path === "/demo/demo.json") body = Buffer.from(demoJson);
   else if (!path.includes("..") && existsSync(join(web, path))) body = readFileSync(join(web, path));
   if (!body) return send("Fetch.fulfillRequest", { requestId: m.params.requestId, responseCode: 404, body: "" });
   send("Fetch.fulfillRequest", { requestId: m.params.requestId, responseCode: 200, body: body.toString("base64"),
@@ -82,7 +89,7 @@ await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, devi
 await open(sample);
 const cards = await ev("[...document.querySelectorAll('#kit .distro')].map((c) => c.querySelector('h4').textContent)");
 check("a card per distribution with a name and a command", JSON.stringify(cards) === JSON.stringify(["Debian 13", "Ubuntu 26.04", "Fedora 45", "Fedora 44"]), JSON.stringify(cards));
-check("grouped by family, with a link to each", JSON.stringify(await ev("[...document.querySelectorAll('#kit h3')].map((h) => h.id + ':' + h.textContent)"))
+check("grouped by family, with a link to each", JSON.stringify(await ev("[...document.querySelectorAll('#kit h3[id^=server-]')].map((h) => h.id + ':' + h.textContent)"))
   === JSON.stringify(["server-debian:Debian", "server-ubuntu:Ubuntu", "server-fedora:Fedora"])
   && JSON.stringify(await ev("[...document.querySelectorAll('#kit .families a')].map((a) => a.hash)")) === JSON.stringify(["#server-debian", "#server-ubuntu", "#server-fedora"]));
 const first = await ev("document.querySelector('#kit .distro')?.innerText") || "";
@@ -92,7 +99,8 @@ check("a card shows its sessions, a line per kind, and its more commands",
 const old = await ev("document.querySelectorAll('#kit .distro')[1]?.innerText") || "";
 check("an older install.json's sessions stay one line", old.includes("Sessions: " + want.server[1].sessions), old.split("\n").slice(0, 2).join(" | "));
 const pres = await ev("[...document.querySelectorAll('#kit .copyable')].map((c) => [c.querySelector('pre').textContent, !!c.querySelector('button[data-copy]')])");
-const commands = [want.server[0].command, want.server[0].more[0].command, want.server[1].command, want.server[2].command, want.server[3].command, want.start];
+const commands = [want.server[0].command, want.server[0].more[0].command, want.server[1].command, want.server[2].command, want.server[3].command, want.start,
+  "uvx --managed-python freerdp-tk"];
 check("every command, the more ones and the start one, has a Copy button", JSON.stringify(pres) === JSON.stringify(commands.map((c) => [c, true])),
   `${pres.length} commands`);
 // what the button hands the clipboard (the system clipboard stays untouched)
@@ -106,6 +114,10 @@ check("the clients table: platform and file link, a link that is not https left 
 check("the link to all files and checksums", await ev(`[...document.querySelectorAll('#kit a')].some((a) => a.href === ${JSON.stringify(want.url)} && a.textContent === ${JSON.stringify(want.url)})`)
   && (await ev("document.getElementById('kit').innerText")).includes("All files and checksums: " + want.url));
 check("the fallback line is gone", await ev("!document.getElementById('kitFallback')"));
+check("freerdp-tk after the clients, with its uvx line", await ev("document.querySelector('#clients + h3')?.id") === "freerdp-tk");
+const clips = await ev("[...document.querySelectorAll('#kit figure.clip')].map((f) => [f.querySelector('b').textContent, f.querySelector('video').getAttribute('src'), f.querySelector('video').getAttribute('poster'), f.querySelector('video').preload])");
+check("demo.json's freerdp-tk videos, each with its title and poster, loading nothing before play",
+  JSON.stringify(clips) === JSON.stringify(JSON.parse(demoJson).clients.map((c) => [c.title, c.src, c.poster, "none"])), JSON.stringify(clips.map((c) => c[0])));
 const w = await ev("document.documentElement.scrollWidth");
 check("server.html with install.json fits 390 px", w <= 390, `${w} px`);
 check("the long commands wrap inside their box", await ev("[...document.querySelectorAll('#kit pre')].every((p) => p.scrollWidth <= p.clientWidth + 1)"));

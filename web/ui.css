@@ -275,6 +275,10 @@ body.session #logPanel:not([open]) { display:none; }
 .help .distro .hint { margin:6px 0 0; }
 .help .distro .copyable { margin-top:6px; }
 .help .distro pre { margin:0; background:var(--paper); }
+.help .clips { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap:14px; margin-top:12px; }
+.help .clip { margin:0; min-width:0; }
+.help .clip video { display:block; width:100%; aspect-ratio:16/9; border-radius:6px; background:#000; }
+.help .clip figcaption { margin-top:6px; font-size:13px; color:var(--muted); }
 dl.keys > div { display:grid; grid-template-columns:minmax(10em, 15em) 1fr; align-items:baseline; gap:4px 16px; padding:8px 0; border-bottom:1px solid var(--line); }
 dl.keys dt { font-family:var(--mono); font-size:13px; } dl.keys dd { margin:0; }
 

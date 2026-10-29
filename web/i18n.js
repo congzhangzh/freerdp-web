@@ -529,6 +529,9 @@
     "srv.platform": "平台",
     "srv.file": "文件",
     "srv.all": "全部文件及校验和：",
+    "srv.tk": "freerdp-tk：连接窗口",
+    "srv.tkWhy": "每个客户端都带着 freerdp-tk：一个窗口，保存你的连接，把密码存进系统自己的钥匙串，并启动客户端。解压文件后启动 freerdp-tk（Windows：freerdp-tk.cmd；macOS：在访达里打开 freerdp-tk.command）。",
+    "srv.tkUvx": "用 uv 的话，只装这个窗口，配合你已有的 FreeRDP 3 客户端（用 uv 自己的 Python，它带 Tk）：",
 
     // ---- install.html and install.js
     "inst.pageTitle": "安装 FreeRDP Web",

@@ -31,3 +31,17 @@ test("install.json that has nothing to show is none: the page keeps its link to 
   const k = S.parse({server: [{name: "Debian 13", command: "sudo apt install ./xrdp.deb"}]});
   assert.deepEqual([k.release, k.url, k.start, k.clients], ["", S.LATEST, "", []]);
 });
+test("demo.json's freerdp-tk videos: files in demo/ only, a title and a video each", () => {
+  const demo = {videos: [{title: "the splash's", src: "demo/xrdp-gnome.mp4"}], clients: [
+    {title: "xrdp + GNOME Wayland, AV1, freerdp-tk release", src: "demo/freerdp-tk-release.mp4",
+     poster: "demo/freerdp-tk-release.jpg", caption: "Unpacked, started, saved."},
+    {title: "elsewhere", src: "https://example.com/x.mp4"},
+    {title: "up a folder", src: "demo/../x.mp4"},
+    {title: "", src: "demo/untitled.mp4"},
+    {title: "a bad poster", src: "demo/freerdp-tk-uvx.mp4", poster: "javascript:alert(1)"}]};
+  assert.deepEqual(S.clips(demo), [
+    {title: "xrdp + GNOME Wayland, AV1, freerdp-tk release", src: "demo/freerdp-tk-release.mp4",
+     poster: "demo/freerdp-tk-release.jpg", caption: "Unpacked, started, saved."},
+    {title: "a bad poster", src: "demo/freerdp-tk-uvx.mp4", poster: "", caption: ""}]);
+  for (const none of [null, {}, {videos: []}, {clients: "x"}]) assert.deepEqual(S.clips(none), []);
+});

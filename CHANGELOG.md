@@ -15,6 +15,22 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261028.11
+
+- **Get a server shows freerdp-tk** (聪哥: demo videos of the native client, one for the
+  release, one for uvx): under the native clients, what freerdp-tk is (the connection window
+  each client comes with, the password in the system's own keyring), how to start it from the
+  unpacked file, `uvx --managed-python freerdp-tk` with its Copy button for the window alone
+  (uv's own Python, which has Tk: plain uvx takes the system's when there is one, and
+  Debian's has no Tk without `python3-tk`), and the kit's two
+  videos of it, side by side on a wide screen, one above the other on a phone. The videos come
+  from `demo/demo.json`'s `clients`, which the kit records (`test/record-demos.sh`,
+  `client-release` and `client-uvx`) and its site puts next to the page; only files in
+  `demo/` are taken, a video loads nothing until it is played (`preload="none"`), and without
+  them the rest of the page is as before. `server.js` `clips()`, its unit test, and
+  `test-server.mjs` checks the heading, the uvx line and the videos; the Chinese of the new
+  lines is in `i18n.js`.
+
 ## 20261028.10
 
 - **English and Simplified Chinese** (聪哥): the page follows the browser's language, English
