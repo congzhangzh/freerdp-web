@@ -33,6 +33,13 @@ test("About: the version, the engine and the build, with the decoders the client
     Libraries: "zlib 1.3.2", Built: "2026-10-27, Emscripten 6.0.12",
     Page: "this checkout, abc123, with uncommitted changes", Overrides: "freerdp from a local directory", "Release kit": "20261028.2"});
 });
+test("About: an AV2 decoder row only when the build has libavm", () => {
+  const m = A.parseManifest(MANIFEST + "  avm              20261030.1 dc33252c968799c9a0053236f723a44e3c5460f3\n");
+  const rows = Object.fromEntries(A.rows({manifest: m}));
+  assert.equal(rows["AV2 decoder"], "libavm 20261030.1 (in this page)");
+  assert.equal(rows.Libraries, "zlib 1.3.2");   // avm has its own row
+  assert.equal(Object.fromEntries(A.rows({manifest: A.parseManifest(MANIFEST)}))["AV2 decoder"], undefined);
+});
 test("About without MANIFEST or RELEASE (a local build): only what the page knows", () => {
   assert.deepEqual(A.rows({}), [["Version", "–"], ["Engine", "–"],
     ["AV1 decoder", "WebCodecs (browser); fallback: dav1d (in this page)"], ["H.264 decoder", "WebCodecs (browser)"]]);

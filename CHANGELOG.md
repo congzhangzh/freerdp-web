@@ -15,6 +15,14 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261030.5
+
+- **About: an AV2 decoder row** when the web client was built with AV2 (the kit's
+  MANIFEST names `avm`, libavm; FreeRDP#13925): "libavm <version> (in this page)", as no
+  browser decodes AV2. The client offers AV2 with AV1 (Session settings' Auto); a server
+  picks it only when told to (e.g. the kit's Windows host with `/gfx-av2`). `about.js`,
+  its unit test, the Chinese in `i18n.js`.
+
 ## 20261030.4
 
 - **Get a server: the Windows host's video**: `demo/demo.json`'s new `windows` videos (the

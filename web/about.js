@@ -35,7 +35,7 @@
   // the rows of the card: [label, value], those without a value left out
   function rows({ version, engine, manifest, release } = {}) {
     const m = manifest || { sources: {}, overrides: [] }, s = m.sources;
-    const named = new Set(["freerdp", "sdl3_wasm", "dav1d", "opus"]);
+    const named = new Set(["freerdp", "sdl3_wasm", "dav1d", "avm", "opus"]);
     const others = Object.entries(s).filter(([n]) => !named.has(n)).map(([n, v]) => `${n} ${v.version}`);
     const page = m.localPage ? t("about.checkout", `this checkout, ${m.localPage}`, { page: m.localPage }) : m.page ? `freerdp-web ${short(m.page)}` : "";
     const dav1d = "dav1d" + (s.dav1d ? " " + s.dav1d.version : "");
@@ -47,6 +47,9 @@
       // what decodes is fixed by the build, a row per codec: the first choice, then its fallback;
       // whether the browser does it in hardware is the session's (Info)
       [t("about.av1.label", "AV1 decoder"), t("about.av1", `WebCodecs (browser); fallback: ${dav1d} (in this page)`, { dav1d })],
+      // AV2 (FreeRDP#13925): no browser decodes it, libavm does, in the page; only in builds
+      // that have it (the MANIFEST names avm)
+      [t("about.av2.label", "AV2 decoder"), s.avm ? t("about.av2", `libavm ${s.avm.version} (in this page)`, { avm: s.avm.version }) : ""],
       [t("about.h264.label", "H.264 decoder"), t("about.h264", "WebCodecs (browser)")],
       [t("about.audio.label", "Audio decoder"), s.opus ? `Opus ${s.opus.version}` : ""],
       [t("about.libraries", "Libraries"), others.join(", ")],
