@@ -372,6 +372,8 @@
     "about.engine": "引擎",
     "about.av1.label": "AV1 解码器",
     "about.av1": "WebCodecs（浏览器）；后备：{dav1d}（在本页中）",
+    "about.av2.label": "AV2 解码器",
+    "about.av2": "libavm {avm}（在本页中）",
     "about.h264.label": "H.264 解码器",
     "about.h264": "WebCodecs（浏览器）",
     "about.audio.label": "音频解码器",
