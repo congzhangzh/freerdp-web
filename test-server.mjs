@@ -51,7 +51,9 @@ let installJson = null;   // what install.json is: a file, a string, or null (40
 const demoJson = JSON.stringify({ videos: [{ title: "the splash's", src: "demo/xrdp-gnome.mp4" }], clients: [
   { title: "xrdp + GNOME Wayland, AV1, freerdp-tk release", src: "demo/freerdp-tk-release.mp4", poster: "demo/freerdp-tk-release.jpg",
     caption: "Unpacked from the release, saved, connected." },
-  { title: "xrdp + GNOME Wayland, H.264, freerdp-tk uvx", src: "demo/freerdp-tk-uvx.mp4", poster: "demo/freerdp-tk-uvx.jpg" }] });
+  { title: "xrdp + GNOME Wayland, H.264, freerdp-tk uvx", src: "demo/freerdp-tk-uvx.mp4", poster: "demo/freerdp-tk-uvx.jpg" }],
+  windows: [{ title: "FreeRDP Web on a Windows host, AV1", src: "demo/windows-host.mp4", poster: "demo/windows-host.jpg",
+    caption: "The Start menu, Notepad, typing." }] });
 function serve(m) {
   const path = decodeURIComponent(new URL(m.params.request.url).pathname).replace(/\/$/, "/index.html");
   let body = null, type = TYPES[extname(path)] || "application/octet-stream";
@@ -118,7 +120,10 @@ check("Windows: its own section after Start it, a link to it among the distribut
   await ev("document.querySelector('#kit h2#windows')?.previousElementSibling?.matches('.copyable')") === true
   && await ev("[...document.querySelectorAll('#kit .families a')].some((a) => a.hash === '#windows')")
   && await ev(`[...document.querySelectorAll('#kit a')].some((a) => a.href === ${JSON.stringify(want.windows.url)})`));
-check("no client, no freerdp-tk, no video: they are on Get a client", await ev("document.querySelectorAll('#clients, #freerdp-tk, video').length") === 0
+check("the Windows host's video in its section, only that one",
+  JSON.stringify(await ev("[...document.querySelectorAll('#kit video')].map((v) => v.getAttribute('src'))")) === JSON.stringify(["demo/windows-host.mp4"])
+  && await ev("document.querySelector('#kit video').compareDocumentPosition(document.getElementById('windows')) === Node.DOCUMENT_POSITION_PRECEDING"));
+check("no client, no freerdp-tk: they are on Get a client", await ev("document.querySelectorAll('#clients, #freerdp-tk').length") === 0
   && await ev("!!document.querySelector('main a[href=\"client.html\"]:not(nav a)')"));
 const w = await ev("document.documentElement.scrollWidth");
 check("server.html with install.json fits 390 px", w <= 390, `${w} px`);

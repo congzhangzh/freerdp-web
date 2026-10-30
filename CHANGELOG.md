@@ -15,6 +15,15 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261030.4
+
+- **Get a server: the Windows host's video**: `demo/demo.json`'s new `windows` videos (the
+  kit records FreeRDP Web on its Windows host: the Start menu, Notepad, typing, in AV1)
+  show in the Windows section, under its commands, as freerdp-tk's do on Get a client.
+  Get a server now reads `demo.json` too; without it, or without `windows`, nothing
+  changes. `server.js` `clips(demo, kind)` and one shelf builder for both pages; unit test
+  and `test-server.mjs`.
+
 ## 20261030.3
 
 - **Get a server: Windows** (聪哥: a Windows backend, "go ahead to do them all"): when

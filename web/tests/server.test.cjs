@@ -52,4 +52,8 @@ test("demo.json's freerdp-tk videos: files in demo/ only, a title and a video ea
      poster: "demo/freerdp-tk-release.jpg", caption: "Unpacked, started, saved."},
     {title: "a bad poster", src: "demo/freerdp-tk-uvx.mp4", poster: "", caption: ""}]);
   for (const none of [null, {}, {videos: []}, {clients: "x"}]) assert.deepEqual(S.clips(none), []);
+  // the Windows host's videos: the same rules, under "windows"
+  assert.deepEqual(S.clips({windows: [{title: "on Windows", src: "demo/windows-host.mp4"}, {title: "x", src: "https://e/x.mp4"}]}, "windows"),
+    [{title: "on Windows", src: "demo/windows-host.mp4", poster: "", caption: ""}]);
+  assert.deepEqual(S.clips({windows: [{title: "on Windows", src: "demo/windows-host.mp4"}]}), []);
 });
