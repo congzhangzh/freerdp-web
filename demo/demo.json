@@ -1,8 +1,8 @@
 {
   "recorded": {
-    "kit": "3c6b70287d8396b5647a96a1366e0e91ec73c8b6",
-    "web": "web-20261029.1-3c6b70287d83",
-    "xrdp": "xrdp-20261029.1-3c6b70287d83",
+    "kit": "20fbb3d447c4bf35cdb8a11c35b1c7c3794cc8e4",
+    "web": "web-20261030.2-20fbb3d447c4",
+    "xrdp": "xrdp-20261030.2-20fbb3d447c4",
     "pipewire-module-xrdp": "pipewire-module-xrdp-20261028.1-977724d19e72"
   },
   "videos": [
@@ -70,13 +70,13 @@
       "title": "xrdp + GNOME Wayland, AV1, freerdp-tk release",
       "src": "demo/freerdp-tk-release.mp4",
       "poster": "demo/freerdp-tk-release.jpg",
-      "caption": "freerdp-tk, the connection window that comes with the kit's native clients, on a Linux desktop (Debian 13): the Linux client unpacked from the kit's release, freerdp-tk started from it, a connection filled in and saved, the password kept in the system keyring. The kit's FreeRDP connects in AV1 to rdp-release-kit's xrdp with GNOME on Wayland (Fedora 45); then freerdp-tk is started again and a double-click on the saved connection logs in, the password from the keyring."
+      "caption": "freerdp-tk, the connection window that comes with the kit's native clients, on a Linux desktop (Debian 13): the Linux client unpacked from the kit's release, freerdp-tk started from it (it takes the release's own FreeRDP, though Debian's is installed too), a connection filled in and saved, the password kept in the system keyring. The kit's FreeRDP connects in AV1 to rdp-release-kit's xrdp with GNOME on Wayland (Fedora 45); then freerdp-tk is started again and a double-click on the saved connection logs in, the password from the keyring."
     },
     {
       "title": "xrdp + GNOME Wayland, H.264, freerdp-tk uvx",
       "src": "demo/freerdp-tk-uvx.mp4",
       "poster": "demo/freerdp-tk-uvx.jpg",
-      "caption": "freerdp-tk from PyPI with uvx --managed-python, which brings uv's own Python with Tk, on a Linux desktop (Debian 13) with Debian's FreeRDP 3 client: the same connection, saved with its password in the system keyring, to rdp-release-kit's xrdp with GNOME on Wayland (Fedora 45). Debian's client has no AV1, so xrdp sends H.264."
+      "caption": "freerdp-tk from PyPI with plain uvx on a Linux desktop (Debian 13) whose Python has no Tk: freerdp-tk starts again with uv's own Python, which has it. With Debian's FreeRDP 3 client: the same connection, saved with its password in the system keyring, to rdp-release-kit's xrdp with GNOME on Wayland (Fedora 45). Debian's client has no AV1, so xrdp sends H.264."
     }
   ]
 }

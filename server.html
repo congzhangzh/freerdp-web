@@ -18,7 +18,7 @@
       <a href="safety.html" data-i18n="nav.safety">Safety and tunnels</a>
       <a href="keyboard.html" data-i18n="nav.keyboard">Keyboard</a>
       <a href="server.html" aria-current="page" data-i18n="nav.server">Get a server</a>
-      <a href="install.html" data-i18n="nav.install">Install as app</a>
+      <a href="client.html" data-i18n="nav.client">Get a client</a>
       <a href="release-notes.html" data-i18n="nav.notes">Release notes</a>
       <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener" title="The source, issues and releases" data-i18n-attr="title:nav.githubTitle">GitHub</a>
       <label class="lang-pick"><span class="lang-label" aria-hidden="true">🌐 <span data-i18n="nav.language">Language</span></span><select id="lang" aria-label="Language" data-i18n-attr="aria-label:nav.language"><option value="auto" data-i18n="lang.auto">Auto</option><option value="en" lang="en">English</option><option value="zh" lang="zh-Hans">中文</option></select></label>
@@ -34,7 +34,7 @@
   <!-- server.js fills this from install.json, which the release kit writes next to the page when
        it publishes the site; without that file (a local build) this line is all there is -->
   <div id="kit">
-    <p id="kitFallback"><span data-i18n="srv.fallback">The packages for your Linux distribution, and native clients for your computer:
+    <p id="kitFallback"><span data-i18n="srv.fallback">The packages for your Linux distribution:
       </span><a href="https://github.com/congzhangzh/rdp-release-kit/releases/latest" target="_blank" rel="noopener" data-i18n="srv.latest">the release kit's latest release</a><span data-i18n="punct.period">.</span></p>
   </div>
 
@@ -42,6 +42,8 @@
   <p><span data-i18n="srv.thenSsh">Keep the RDP server on 127.0.0.1 and reach it through SSH: </span><a href="safety.html" data-i18n="nav.safety">Safety and tunnels</a><span data-i18n="srv.thenCmd"> has
     the one-line command. Then open </span><a href="index.html">FreeRDP Web</a><span data-i18n="srv.thenEnd"> and connect with your user name and
     password on the server.</span></p>
+  <p><span data-i18n="srv.thenOther">Other ways to connect, without a gateway, among them FreeRDP's native client and
+    freerdp-tk: </span><a href="client.html" data-i18n="nav.client">Get a client</a><span data-i18n="punct.period">.</span></p>
 
   <p><a href="index.html" data-i18n="back">Back to FreeRDP Web</a></p>
 </main>

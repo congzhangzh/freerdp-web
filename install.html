@@ -18,7 +18,7 @@
       <a href="safety.html" data-i18n="nav.safety">Safety and tunnels</a>
       <a href="keyboard.html" data-i18n="nav.keyboard">Keyboard</a>
       <a href="server.html" data-i18n="nav.server">Get a server</a>
-      <a href="install.html" aria-current="page" data-i18n="nav.install">Install as app</a>
+      <a href="client.html" data-i18n="nav.client">Get a client</a>
       <a href="release-notes.html" data-i18n="nav.notes">Release notes</a>
       <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener" title="The source, issues and releases" data-i18n-attr="title:nav.githubTitle">GitHub</a>
       <label class="lang-pick"><span class="lang-label" aria-hidden="true">🌐 <span data-i18n="nav.language">Language</span></span><select id="lang" aria-label="Language" data-i18n-attr="aria-label:nav.language"><option value="auto" data-i18n="lang.auto">Auto</option><option value="en" lang="en">English</option><option value="zh" lang="zh-Hans">中文</option></select></label>
@@ -26,7 +26,11 @@
     </nav>
   </header>
   <h1 data-i18n="inst.title">Install FreeRDP Web as an app</h1>
-  <p class="lead"><span data-i18n="inst.lead">Installed as an </span><b>Isolated Web App</b><span data-i18n="inst.leadIwa"> (IWA), FreeRDP connects to your RDP server with a direct TCP connection: no gateway, no plugin. You do not need it: as a normal web page the client works too, through a WebSocket gateway (</span><a href="safety.html" data-i18n="nav.safety">Safety and tunnels</a><span data-i18n="inst.leadEnd">).</span></p>
+  <p class="warn"><b data-i18n="inst.skip">You probably don't need this.</b> <span data-i18n="inst.skipWhy">FreeRDP Web works as a normal web page,
+    through a WebSocket gateway (</span><a href="safety.html" data-i18n="nav.safety">Safety and tunnels</a><span data-i18n="inst.skipApp">). The app only
+    saves you the gateway, and installing it takes Chrome's developer mode today. The ways to connect, side by
+    side: </span><a href="client.html" data-i18n="nav.client">Get a client</a><span data-i18n="punct.period">.</span></p>
+  <p class="lead"><span data-i18n="inst.lead">Installed as an </span><b>Isolated Web App</b><span data-i18n="inst.leadIwa"> (IWA), FreeRDP connects to your RDP server with a direct TCP connection: no gateway, no plugin.</span></p>
 
   <h2 data-i18n="inst.now">Your browser right now</h2>
   <table id="checks"></table>
