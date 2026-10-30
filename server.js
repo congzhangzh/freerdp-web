@@ -2,7 +2,9 @@
 // (client.html: its native clients), from install.json, which the kit writes next to the page when
 // it publishes the site:
 //   { release, url, server: [{ name, sessions, command, more: [{ what, command }] }], start,
-//     clients: [{ platform, file, url }] }
+//     clients: [{ platform, file, url }], windows: { file, url, command, remove } }
+// "windows" is the Windows host (since kit 2026-10-30): FreeRDP's shadow server and
+// freerdp-shadow-service, which share a Windows PC's own screen; Get a server shows it after xrdp.
 // One entry of "server" per distribution release ("Debian 13", "Ubuntu 26.04", "Fedora 45"…);
 // the page groups them by the name's first word. Without the file, or with one it cannot read
 // (a local build), each page keeps its one line that links to the kit's latest release.
@@ -37,14 +39,18 @@
     if (!families.length) return null;
     const clients = (Array.isArray(data.clients) ? data.clients : [])
       .map((c) => ({ platform: text(c?.platform), file: text(c?.file), url: https(c?.url) })).filter((c) => c.file && c.url);
-    return { release: text(data.release), url: https(data.url) || LATEST, families, start: text(data.start), clients };
+    const w = data.windows;
+    const windows = w && typeof w === "object" && text(w.command) && https(w.url)
+      ? { file: text(w.file), url: https(w.url), command: text(w.command), remove: text(w.remove) } : null;
+    return { release: text(data.release), url: https(data.url) || LATEST, families, start: text(data.start), clients, windows };
   }
 
-  // demo.json's freerdp-tk videos: [{ title, src, poster, caption }], files next to the page in
+  // demo.json's videos of a kind: "clients" (freerdp-tk, Get a client) or "windows" (the
+  // Windows host, Get a server): [{ title, src, poster, caption }], files next to the page in
   // demo/ only; anything else is skipped
   const local = (v, ext) => (new RegExp("^demo/[\\w.-]+\\." + ext + "$").test(text(v)) ? text(v) : "");
-  function clips(demo) {
-    return (Array.isArray(demo?.clients) ? demo.clients : [])
+  function clips(demo, kind = "clients") {
+    return (Array.isArray(demo?.[kind]) ? demo[kind] : [])
       .map((c) => ({ title: text(c?.title), src: local(c?.src, "mp4"), poster: local(c?.poster, "jpg"), caption: text(c?.caption) }))
       .filter((c) => c.title && c.src);
   }
@@ -73,17 +79,29 @@
     });
   };
 
+  // the videos' titles and captions are the kit's, as written
+  function shelf(videos) {
+    const s = el("div", { class: "clips" });
+    for (const v of videos) {
+      const video = el("video", { controls: "", preload: "none", playsinline: "", src: v.src });
+      if (v.poster) video.setAttribute("poster", v.poster);
+      s.append(el("figure", { class: "clip" }, video, el("figcaption", {}, el("b", { text: v.title }), v.caption ? " " + v.caption : "")));
+    }
+    return s;
+  }
+
   const from = (k) => el("p", { class: "muted" }, t("srv.from", "From the release kit's release "),
     link(k.url, k.release || t("srv.onGithub", "on GitHub")), t("srv.fromEnd", ", the one this site was published from."));
   const all = (k) => el("p", {}, t("srv.all", "All files and checksums: "), link(k.url, k.url));
 
   // Get a server: a card per distribution, grouped by family, and the start command
-  function renderServer(k, into) {
+  function renderServer(k, into, videos = []) {
     const out = document.createDocumentFragment();
     out.append(from(k), el("h2", { text: t("srv.install", "Install xrdp") }));
-    if (k.families.length > 1) {
+    if (k.families.length > 1 || k.windows) {
       const jump = el("p", { class: "row families", "aria-label": t("srv.distros", "Distributions") });
       for (const f of k.families) jump.append(el("a", { href: "#" + f.id, class: "button", text: f.name }));
+      if (k.windows) jump.append(el("a", { href: "#windows", class: "button", text: "Windows" }));
       out.append(jump);
     }
     for (const f of k.families) {
@@ -98,6 +116,17 @@
       out.append(list);
     }
     if (k.start) out.append(el("h2", { text: t("srv.start", "Start it") }), copyable(k.start));
+    if (k.windows) {
+      const w = k.windows;
+      out.append(el("h2", { id: "windows", text: t("srv.win", "Windows: share this PC's screen") }),
+        el("p", { text: t("srv.winWhy", "FreeRDP's shadow server shares the Windows PC's own screen: the desktop of whoever is logged in and, run as a service, the logon and lock screens, UAC prompts and Ctrl+Alt+Del too. It shares that one desktop, like Remote Assistance; it starts no sessions of its own. The picture is AV1; logins are Windows accounts.") }),
+        el("p", { text: t("srv.winInstall", "In an administrator's PowerShell: download, unpack, install the service (it starts at once, and with Windows, on 127.0.0.1:3389):") }),
+        copyable(w.command));
+      if (w.remove) out.append(el("p", { class: "hint", text: t("srv.winRemove", "To remove it, in the same folder:") }), copyable(w.remove));
+      out.append(el("p", { class: "hint" }, t("srv.winMore", "If Windows' own Remote Desktop is on, it holds 3389: add /port:3388. How to reach it through SSH, and the rest: README.txt in the archive, "),
+        link(w.url, w.file || w.url), t("punct.period", ".")));
+      if (videos.length) out.append(shelf(videos));
+    }
     out.append(all(k));
     into.replaceChildren(out);
   }
@@ -113,14 +142,7 @@
       el("p", { text: t("srv.tkWhy", "Each client comes with freerdp-tk, a window that keeps your connections, their passwords in the system's own keyring, and starts the client. Unpack the file and start freerdp-tk (Windows: freerdp-tk.cmd; macOS: freerdp-tk.command, in Finder).") }),
       el("p", { text: t("srv.tkUvx", "With uv, the window alone, for a FreeRDP 3 client you already have:") }),
       copyable("uvx freerdp-tk"));
-    // the videos' titles and captions are the kit's, as written
-    const shelf = el("div", { class: "clips" });
-    for (const v of videos) {
-      const video = el("video", { controls: "", preload: "none", playsinline: "", src: v.src });
-      if (v.poster) video.setAttribute("poster", v.poster);
-      shelf.append(el("figure", { class: "clip" }, video, el("figcaption", {}, el("b", { text: v.title }), v.caption ? " " + v.caption : "")));
-    }
-    if (videos.length) out.append(shelf);
+    if (videos.length) out.append(shelf(videos));
     out.append(all(k));
     into.replaceChildren(out);
   }
@@ -131,15 +153,15 @@
   // any failure (no file, not JSON, nothing usable, a bug) keeps the fallback line
   const server = document.getElementById("kit"), native = document.getElementById("native");
   const into = server || native;
-  // the videos are extra, on Get a client only: without demo.json the rest still shows
-  const demo = () => (native ? fetch("demo/demo.json").then((r) => (r.ok ? r.json() : null)).catch(() => null) : null);
+  // the videos are extra: without demo.json the rest still shows
+  const demo = () => fetch("demo/demo.json").then((r) => (r.ok ? r.json() : null)).catch(() => null);
   if (into) Promise.all([fetch("install.json", { cache: "no-cache" }), demo()])
     .then(([r, d]) => { if (!r.ok) throw new Error("install.json: HTTP " + r.status); return r.json().then((data) => [data, d]); })
     .then(([data, d]) => {
       const k = parse(data); if (!k) throw new Error("install.json: no distribution in it");
       if (native && !k.clients.length) throw new Error("install.json: no client in it");
-      const videos = clips(d);
-      const show = () => (server ? renderServer(k, into) : renderClients(k, into, videos));
+      const videos = clips(d, server ? "windows" : "clients");
+      const show = () => (server ? renderServer(k, into, videos) : renderClients(k, into, videos));
       show();
       root.FreeRDPi18n?.onChange(show);   // a new language: the page's part again
     })

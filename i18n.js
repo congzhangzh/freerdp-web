@@ -508,7 +508,7 @@
     "srv.pageTitle": "获取服务器 · FreeRDP Web",
     "srv.lead": "FreeRDP Web 可以连接任何 RDP 服务器：xrdp、gnome-remote-desktop，或 Windows 自带的远程桌面。下面的软件包是",
     "srv.kit": "发布工具包",
-    "srv.leadEnd": "提供的 xrdp，支持 Wayland 会话（GNOME、KDE Plasma、sway），每次发布前都用本页面测试过。",
+    "srv.leadEnd": "提供的 xrdp，支持 Wayland 会话（GNOME、KDE Plasma、sway），每次发布前都用本页面测试过。Windows 电脑：用它的影子服务器，在 xrdp 软件包下面。",
     "srv.fallback": "适合你的 Linux 发行版的软件包：",
     "srv.latest": "发布工具包的最新版本",
     "srv.then": "然后连接",
@@ -530,6 +530,11 @@
     "srv.all": "全部文件及校验和：",
     "srv.tk": "freerdp-tk：连接窗口",
     "srv.tkWhy": "每个客户端都带着 freerdp-tk：一个窗口，保存你的连接，把密码存进系统自己的钥匙串，并启动客户端。解压文件后启动 freerdp-tk（Windows：freerdp-tk.cmd；macOS：在访达里打开 freerdp-tk.command）。",
+    "srv.win": "Windows：共享这台电脑的屏幕",
+    "srv.winWhy": "FreeRDP 的影子服务器共享这台 Windows 电脑自己的屏幕：当前登录者的桌面；作为服务运行时，还包括登录界面、锁屏、UAC 提示和 Ctrl+Alt+Del。它共享的就是这一个桌面，类似远程协助，不会另开会话。画面用 AV1 编码；登录用 Windows 账户。",
+    "srv.winInstall": "在管理员身份的 PowerShell 里：下载、解压、安装服务（立即启动，并随 Windows 启动，监听 127.0.0.1:3389）：",
+    "srv.winRemove": "要卸载，在同一个文件夹里：",
+    "srv.winMore": "如果 Windows 自带的远程桌面已开启，它占着 3389：加上 /port:3388。如何经 SSH 连接，以及其他说明，见压缩包里的 README.txt：",
     "srv.tkUvx": "用 uv 的话，只装这个窗口，配合你已有的 FreeRDP 3 客户端：",
 
     // ---- client.html (its native clients come from server.js, with the srv. lines above)

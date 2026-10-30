@@ -1,8 +1,8 @@
 {
   "recorded": {
-    "kit": "20fbb3d447c4bf35cdb8a11c35b1c7c3794cc8e4",
-    "web": "web-20261030.2-20fbb3d447c4",
-    "xrdp": "xrdp-20261030.2-20fbb3d447c4",
+    "kit": "a5d2dbf70bd6da00fcc581c02bf3c87befa2418f",
+    "web": "web-20261030.3-a5d2dbf70bd6",
+    "xrdp": "xrdp-20261030.3-a5d2dbf70bd6",
     "pipewire-module-xrdp": "pipewire-module-xrdp-20261028.1-977724d19e72"
   },
   "videos": [
@@ -77,6 +77,14 @@
       "src": "demo/freerdp-tk-uvx.mp4",
       "poster": "demo/freerdp-tk-uvx.jpg",
       "caption": "freerdp-tk from PyPI with plain uvx on a Linux desktop (Debian 13) whose Python has no Tk: freerdp-tk starts again with uv's own Python, which has it. With Debian's FreeRDP 3 client: the same connection, saved with its password in the system keyring, to rdp-release-kit's xrdp with GNOME on Wayland (Fedora 45). Debian's client has no AV1, so xrdp sends H.264."
+    }
+  ],
+  "windows": [
+    {
+      "title": "FreeRDP Web on a Windows host, AV1",
+      "src": "demo/windows-host.mp4",
+      "poster": "demo/windows-host.jpg",
+      "caption": "FreeRDP Web in a browser on a Windows Server 2025 machine of the CI, through websockify, to FreeRDP's shadow server run by freerdp-shadow-service as SYSTEM on the console session: the Start menu, Notepad, typing; the picture in AV1."
     }
   ]
 }
