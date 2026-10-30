@@ -102,8 +102,8 @@
       out.append(table);
       out.append(el("h3", { id: "freerdp-tk", text: t("srv.tk", "freerdp-tk, the connection window") }),
         el("p", { text: t("srv.tkWhy", "Each client comes with freerdp-tk, a window that keeps your connections, their passwords in the system's own keyring, and starts the client. Unpack the file and start freerdp-tk (Windows: freerdp-tk.cmd; macOS: freerdp-tk.command, in Finder).") }),
-        el("p", { text: t("srv.tkUvx", "With uv, the window alone, for a FreeRDP 3 client you already have (uv's own Python, which has Tk):") }),
-        copyable("uvx --managed-python freerdp-tk"));
+        el("p", { text: t("srv.tkUvx", "With uv, the window alone, for a FreeRDP 3 client you already have:") }),
+        copyable("uvx freerdp-tk"));
       // the videos' titles and captions are the kit's, as written
       const shelf = el("div", { class: "clips" });
       for (const v of videos) {

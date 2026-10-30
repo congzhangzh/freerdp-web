@@ -15,6 +15,13 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261030.1
+
+- **Get a server: plain `uvx freerdp-tk`** (was `uvx --managed-python freerdp-tk`), since
+  freerdp-tk 0.3.2 starts again with uv's own Python by itself when uvx took one without Tk.
+  The line no longer explains the Python. `server.js`, its Chinese line in `i18n.js`, and
+  `test-server.mjs`'s list of commands.
+
 ## 20261028.11
 
 - **Get a server shows freerdp-tk** (聪哥: demo videos of the native client, one for the

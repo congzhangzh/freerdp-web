@@ -100,7 +100,7 @@ const old = await ev("document.querySelectorAll('#kit .distro')[1]?.innerText") 
 check("an older install.json's sessions stay one line", old.includes("Sessions: " + want.server[1].sessions), old.split("\n").slice(0, 2).join(" | "));
 const pres = await ev("[...document.querySelectorAll('#kit .copyable')].map((c) => [c.querySelector('pre').textContent, !!c.querySelector('button[data-copy]')])");
 const commands = [want.server[0].command, want.server[0].more[0].command, want.server[1].command, want.server[2].command, want.server[3].command, want.start,
-  "uvx --managed-python freerdp-tk"];
+  "uvx freerdp-tk"];
 check("every command, the more ones and the start one, has a Copy button", JSON.stringify(pres) === JSON.stringify(commands.map((c) => [c, true])),
   `${pres.length} commands`);
 // what the button hands the clipboard (the system clipboard stays untouched)
