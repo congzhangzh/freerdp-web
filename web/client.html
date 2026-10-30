@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="cli.pageTitle">Get a client · FreeRDP Web</title>
+<link rel="icon" href="icon-256.png" type="image/png">
+<link rel="stylesheet" href="ui.css">
+<script src="theme.js"></script>
+<script src="i18n.js"></script>
+</head>
+<body>
+<main class="help">
+  <header class="top">
+    <a class="brand" href="index.html">FreeRDP Web</a>
+    <nav aria-label="Help" data-i18n-attr="aria-label:nav.help">
+      <a href="index.html#intro" data-i18n="nav.intro">▶ Intro</a>
+      <a href="safety.html" data-i18n="nav.safety">Safety and tunnels</a>
+      <a href="keyboard.html" data-i18n="nav.keyboard">Keyboard</a>
+      <a href="server.html" data-i18n="nav.server">Get a server</a>
+      <a href="client.html" aria-current="page" data-i18n="nav.client">Get a client</a>
+      <a href="release-notes.html" data-i18n="nav.notes">Release notes</a>
+      <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener" title="The source, issues and releases" data-i18n-attr="title:nav.githubTitle">GitHub</a>
+      <label class="lang-pick"><span class="lang-label" aria-hidden="true">🌐 <span data-i18n="nav.language">Language</span></span><select id="lang" aria-label="Language" data-i18n-attr="aria-label:nav.language"><option value="auto" data-i18n="lang.auto">Auto</option><option value="en" lang="en">English</option><option value="zh" lang="zh-Hans">中文</option></select></label>
+      <label><span class="sr-only" data-i18n="nav.theme">Theme</span><select id="theme" aria-label="Theme" data-i18n-attr="aria-label:nav.theme"><option value="system" data-i18n="theme.system">System</option><option value="light" data-i18n="theme.light">Light</option><option value="dark" data-i18n="theme.dark">Dark</option></select></label>
+    </nav>
+  </header>
+  <h1 data-i18n="nav.client">Get a client</h1>
+  <p class="lead" data-i18n="cli.lead">Three ways to reach your RDP server. Most people need only the first; the other two
+    connect without a gateway.</p>
+
+  <h2 id="browser" data-i18n="cli.browser">1. In this browser</h2>
+  <p><span data-i18n="cli.browserOpen">Nothing to install: open </span><a href="index.html">FreeRDP Web</a><span data-i18n="cli.browserWhy"> and
+    connect. A web page cannot open a TCP connection itself, so it goes through a small WebSocket
+    gateway next to the RDP server; </span><a href="safety.html" data-i18n="nav.safety">Safety and tunnels</a><span data-i18n="cli.browserEnd"> has
+    the one-line command, through SSH.</span></p>
+
+  <h2 id="app" data-i18n="cli.app">2. As a Chrome app</h2>
+  <p><span data-i18n="cli.appWhy">Chrome and Edge can install this page as an Isolated Web App, which connects to the RDP
+    server directly, with no gateway. Today that takes two Chrome flags and developer mode, so you
+    probably don't need it. If you do, the steps are on </span><a href="install.html" data-i18n="cli.appSteps">Install as app</a><span data-i18n="punct.period">.</span></p>
+
+  <h2 id="native-clients" data-i18n="cli.native">3. A native client</h2>
+  <p data-i18n="cli.nativeWhy">FreeRDP's own client for Windows, macOS and Linux, built by the release kit, with
+    freerdp-tk, a window that keeps your connections. Any other RDP client works too, Windows' own
+    Remote Desktop Connection included.</p>
+
+  <!-- server.js fills this from install.json and demo/demo.json, which the release kit writes next
+       to the page when it publishes the site; without them (a local build) this line is all there is -->
+  <div id="native">
+    <p id="nativeFallback"><span data-i18n="cli.fallback">The files for your computer: </span><a href="https://github.com/congzhangzh/rdp-release-kit/releases/latest" target="_blank" rel="noopener" data-i18n="srv.latest">the release kit's latest release</a><span data-i18n="punct.period">.</span></p>
+  </div>
+
+  <p><a href="index.html" data-i18n="back">Back to FreeRDP Web</a></p>
+</main>
+<script src="help.js"></script>
+<script src="server.js"></script>
+</body>
+</html>

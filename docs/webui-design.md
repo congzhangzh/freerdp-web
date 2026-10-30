@@ -19,7 +19,7 @@ reading anything. Expert controls exist, but out of the way.
 | Form | Gateway, User, Password, **Connect**. A real `<form>` with `autocomplete="username"` / `"current-password"`, so the browser's password manager offers to save and fill the password. The page itself never stores a password. |
 | Safety notice | Always at the top: the route *this browser → gateway 127.0.0.1:3390 → SSH → RDP 127.0.0.1:3389* and the one-line SSH command that builds it, with a Copy button. The command follows the gateway port and the user name typed in the form. |
 | Before the session | No black canvas: only the form. The canvas appears when the session starts. |
-| Help | Four pages, linked from the top of every page: **Safety and tunnels** (`safety.html`), **Keyboard** (`keyboard.html`), **Get a server** (`server.html`), **Install as app** (`install.html`). Help is reachable by click and keyboard, never only through a tooltip. |
+| Help | Four pages, linked from the top of every page: **Safety and tunnels** (`safety.html`), **Keyboard** (`keyboard.html`), **Get a server** (`server.html`), **Get a client** (`client.html`). **Install as app** (`install.html`) is linked from Get a client and from Direct TCP, not from the header: most visitors don't need it (since 20261030.2). Help is reachable by click and keyboard, never only through a tooltip. |
 | Look | One left-aligned column, system font, light and dark from the system setting. No web fonts: an Isolated Web App cannot load them. |
 
 ## Hosts
@@ -254,10 +254,30 @@ which the kit writes next to the page when it publishes the site:
 |---|---|
 | Distributions | A card per entry of `server` (name, sessions, its one command with Copy, the `more` commands under it), grouped by the name's first word (Debian, Ubuntu, Fedora) in the file's order, with a link to each group at the top |
 | Start | the `start` command once, after the cards |
-| Clients | a table, platform and file link; then *All files and checksums* links the kit's release |
+| Clients | on Get a client since 20261030.2 (below) |
 | Without the file | a missing, broken or empty `install.json` (a local build) leaves the page's one static line, a link to the kit's latest release. The cards replace that line only once the file has been read and checked, so the page never breaks |
 | Safety | built with `textContent` only (the installed app requires Trusted Types); links only to `https:` addresses; an entry without a name or a command is skipped |
 | Phone | long commands wrap inside their own box; no sideways scrolling at 390 px |
+
+## Get a client
+
+Added on 2026-10-30 (聪哥: Get a server held the client and its demo too, and Install as app
+confused). Get a server had grown a second subject, the native clients, freerdp-tk and its
+videos, while the header's *Install as app* offered a path most visitors don't need as if it
+were a main one. `client.html` puts the three ways to connect side by side, the usual one first:
+
+| Way | What the page says |
+|---|---|
+| 1. In this browser | nothing to install; a web page cannot open TCP itself, so it goes through a WebSocket gateway, with a link to Safety and tunnels |
+| 2. As a Chrome app | connects with no gateway, but takes two Chrome flags and developer mode today, so *you probably don't need it*; the steps are on Install as app |
+| 3. A native client | from `install.json`'s `clients`: the table, freerdp-tk with its `uvx freerdp-tk` line, demo.json's freerdp-tk videos, *All files and checksums*; any other RDP client works too |
+
+| Part | Decision |
+|---|---|
+| One script | `server.js` fills whichever page it is on (`#kit` on Get a server, `#native` on Get a client) from the same checked `install.json`; the videos are fetched on Get a client only |
+| Without the file | as on Get a server: a missing or broken `install.json`, or one without clients, leaves the one static line to the kit's latest release |
+| Header | Get a client replaces Install as app, right after Get a server, on every page |
+| Install as app | the page stays (the form's Direct TCP links to it) and starts with *You probably don't need this.*, why, and a link to Get a client |
 
 ## Info and About
 

@@ -89,10 +89,12 @@ settings, and exports or imports them as a file (passwords only if you ask, encr
 a passphrase if you ask). **Session settings** choose sound, clipboard, the video codec
 and a priority (save bandwidth, or reduce server load); **Advanced** holds Direct TCP for
 the installed app, the passkey vault and free-form FreeRDP options. The help pages
-(`safety.html`, `keyboard.html`, `server.html`, `install.html`) sit next to it. **Get a server**
-(`server.html`) lists the release kit's xrdp packages per distribution and its native clients,
-from the `install.json` the kit writes next to the page when it publishes the site; without
-that file (a local build) it links to the kit's latest release.
+(`safety.html`, `keyboard.html`, `server.html`, `client.html`, and `install.html`, linked from
+`client.html`) sit next to it. **Get a server** (`server.html`) lists the release kit's xrdp
+packages per distribution, and **Get a client** (`client.html`) the three ways to connect: this
+page, the installed app, and the kit's native clients with freerdp-tk and its videos. Both read
+the `install.json` the kit writes next to the page when it publishes the site; without that
+file (a local build) they link to the kit's latest release.
 
 Why it looks and behaves this way: [docs/webui-design.md](docs/webui-design.md). Where it
 is published, and why only on purpose: [docs/hosting.md](docs/hosting.md).
@@ -234,7 +236,7 @@ python3 serve.py 8180 dist
 |---|---|---|
 | Unit tests: vault, connection bridge, session options, keyboard, install.json, MANIFEST, languages | Node 20+ | `node --test web/tests/*.test.cjs` |
 | Reconnect against the CI xrdp session: a dropped gateway, then the toolbar's Reconnect | Node 22+, Chrome, `uvx websockify`, the `grd-wasm-xrdp-ci` container, a modular client served by `serve.py` | `PAGE=http://localhost:<port>/index.html node test-reconnect.mjs` |
-| Get a server: the cards from a sample `install.json` (`test-server-install.json`), the Copy buttons, the clients, and the link that replaces them without the file | Node 22+, Chrome | `node test-server.mjs` |
+| Get a server and Get a client: the cards and the clients from a sample `install.json` (`test-server-install.json`), the Copy buttons, freerdp-tk's videos, the link that replaces them without the file, every page's header | Node 22+, Chrome | `node test-server.mjs` |
 | English and Chinese: the pages in a zh-CN and an en-US browser, the Language select, English exactly as written, phone width | Node 22+, Chrome | `node test-i18n.mjs` |
 | The page with the real client, no server | Node 22+, Chrome, a built client (`sdl-freerdp.js` and `.wasm`) | `node test-page.mjs <client dir>` |
 | A full login: xrdp in a throwaway container, reached over SSH and websockify | Docker or Podman; the [release kit](https://github.com/congzhangzh/rdp-release-kit) with its Debian 13 xrdp packages built | `PAGE_SRC=<this checkout> ./build-wasm.sh`, then `test/wasm-session.sh dist/wasm/web <this checkout>/rdp-gateway.sh` in the kit |

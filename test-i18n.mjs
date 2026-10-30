@@ -30,7 +30,7 @@ const check = (name, ok, detail = "") => { console.log(`${ok ? "PASS" : "FAIL"} 
 const ORIGIN = "http://localhost:1";
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".json": "application/json",
   ".webmanifest": "application/manifest+json", ".webp": "image/webp", ".mp4": "video/mp4" };
-const PAGES = ["index.html", "safety.html", "keyboard.html", "server.html", "install.html", "release-notes.html"];
+const PAGES = ["index.html", "safety.html", "keyboard.html", "server.html", "client.html", "install.html", "release-notes.html"];
 
 // a headless Chrome that asks for these languages; its page, driven over DevTools
 async function browser(lang) {
@@ -174,7 +174,7 @@ const kit = await zh.ev("document.getElementById('kit').innerText") || "";
 check("zh: server.html is <html lang=\"zh-Hans\"> with a Chinese title", await zh.ev("document.documentElement.lang") === "zh-Hans"
   && await zh.ev("document.title") === "获取服务器 · FreeRDP Web" && await zh.ev(text("h1")) === "获取服务器");
 check("zh: the cards' headings and labels in Chinese, the sessions and commands as install.json has them",
-  ["安装 xrdp", "启动服务", "原生客户端", "全部文件及校验和："].every((s) => kit.includes(s)) && kit.includes("Wayland: GNOME, KDE Plasma, sway")
+  ["安装 xrdp", "启动服务", "全部文件及校验和："].every((s) => kit.includes(s)) && kit.includes("Wayland: GNOME, KDE Plasma, sway")
   && await zh.ev("[...document.querySelectorAll('#kit .copyable button')].every((b) => b.textContent === '复制')"), kit.split("\n").slice(0, 4).join(" | "));
 await zh.screenshot("i18n-server-wide.png");
 await zh.ev("(() => { const s = document.getElementById('lang'); s.value = 'en'; s.dispatchEvent(new Event('change')); return true; })()"); await sleep(300);
@@ -183,6 +183,14 @@ check("server.html, switched to English: the cards in English", kitEn.includes("
 await zh.ev("localStorage.setItem('freerdp-web-lang', 'auto'), true");
 await zh.open("server.html", null);
 check("zh: without install.json, the one line to the kit's latest release in Chinese", await zh.ev(text("#kitFallback a")) === "发布工具包的最新版本");
+
+// client.html: the three ways and the clients' labels in Chinese, the uvx command as it is
+await zh.open("client.html");
+const native = await zh.ev("document.getElementById('native').innerText") || "";
+check("zh: client.html with a Chinese title, its three ways in Chinese", await zh.ev("document.title") === "获取客户端 · FreeRDP Web"
+  && JSON.stringify(await zh.ev("[...document.querySelectorAll('main h2')].map((h) => h.textContent)")) === JSON.stringify(["1. 在浏览器里", "2. 作为 Chrome 应用", "3. 原生客户端"]));
+check("zh: the clients' labels in Chinese, the uvx command as it is", ["平台", "文件", "freerdp-tk：连接窗口", "全部文件及校验和："].every((s) => native.includes(s))
+  && native.includes("uvx freerdp-tk"), native.split("\n").slice(0, 3).join(" | "));
 
 // every page at phone width, in Chinese
 await zh.width(390);

@@ -15,6 +15,21 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261030.2
+
+- **Get a client, a new page** (聪哥: Get a server also held the client and its demo, and
+  Install as app was a little confusing): `client.html` puts the three ways to connect side by
+  side: in this browser (through a WebSocket gateway, the usual way), as a Chrome app (no
+  gateway, but two flags and developer mode, so probably not needed), and a native client
+  (the kit's clients, freerdp-tk with `uvx freerdp-tk`, and its demo videos, all moved from
+  Get a server). **Get a server** keeps only the servers, and its *Then connect* links to Get
+  a client. The header's **Install as app** becomes **Get a client** on every page; the
+  install page stays, linked from Get a client and the form's Direct TCP, and starts with
+  *You probably don't need this.*, why, and the link. `server.js` fills whichever of the two
+  pages it is on; the Chinese of the new lines is in `i18n.js`; `test-server.mjs` checks the
+  client page, its fallbacks and every header, `test-i18n.mjs` and `test-page.mjs` take the
+  new page.
+
 ## 20261030.1
 
 - **Get a server: plain `uvx freerdp-tk`** (was `uvx --managed-python freerdp-tk`), since

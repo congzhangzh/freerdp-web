@@ -1,11 +1,12 @@
-// The "Get a server" page (server.html): the release kit's xrdp packages and native clients, from
-// install.json, which the kit writes next to the page when it publishes the site:
+// The pages "Get a server" (server.html: the release kit's xrdp packages) and "Get a client"
+// (client.html: its native clients), from install.json, which the kit writes next to the page when
+// it publishes the site:
 //   { release, url, server: [{ name, sessions, command, more: [{ what, command }] }], start,
 //     clients: [{ platform, file, url }] }
 // One entry of "server" per distribution release ("Debian 13", "Ubuntu 26.04", "Fedora 45"…);
 // the page groups them by the name's first word. Without the file, or with one it cannot read
-// (a local build), the page keeps its one line that links to the kit's latest release.
-// With the native clients it shows freerdp-tk, their connection window, and its demo videos:
+// (a local build), each page keeps its one line that links to the kit's latest release.
+// With the native clients, Get a client shows freerdp-tk, their connection window, and its demo videos:
 // demo/demo.json's "clients" (the kit records them; without them, no videos).
 // Everything is built with textContent, never as HTML: the installed app requires Trusted Types.
 (function (root) {
@@ -72,11 +73,14 @@
     });
   };
 
-  function render(k, into, videos = []) {
+  const from = (k) => el("p", { class: "muted" }, t("srv.from", "From the release kit's release "),
+    link(k.url, k.release || t("srv.onGithub", "on GitHub")), t("srv.fromEnd", ", the one this site was published from."));
+  const all = (k) => el("p", {}, t("srv.all", "All files and checksums: "), link(k.url, k.url));
+
+  // Get a server: a card per distribution, grouped by family, and the start command
+  function renderServer(k, into) {
     const out = document.createDocumentFragment();
-    out.append(el("p", { class: "muted" }, t("srv.from", "From the release kit's release "),
-      link(k.url, k.release || t("srv.onGithub", "on GitHub")), t("srv.fromEnd", ", the one this site was published from.")));
-    out.append(el("h2", { text: t("srv.install", "Install xrdp") }));
+    out.append(from(k), el("h2", { text: t("srv.install", "Install xrdp") }));
     if (k.families.length > 1) {
       const jump = el("p", { class: "row families", "aria-label": t("srv.distros", "Distributions") });
       for (const f of k.families) jump.append(el("a", { href: "#" + f.id, class: "button", text: f.name }));
@@ -94,26 +98,30 @@
       out.append(list);
     }
     if (k.start) out.append(el("h2", { text: t("srv.start", "Start it") }), copyable(k.start));
-    if (k.clients.length) {
-      out.append(el("h2", { text: t("srv.clients", "Native clients") }),
-        el("p", { text: t("srv.clientsWhy", "FreeRDP's own client for your computer, built by the release kit.") }));
-      const table = el("table", { id: "clients" }, el("tr", {}, el("th", { text: t("srv.platform", "Platform") }), el("th", { text: t("srv.file", "File") })));
-      for (const c of k.clients) table.append(el("tr", {}, el("td", { text: c.platform }), el("td", {}, link(c.url, c.file))));
-      out.append(table);
-      out.append(el("h3", { id: "freerdp-tk", text: t("srv.tk", "freerdp-tk, the connection window") }),
-        el("p", { text: t("srv.tkWhy", "Each client comes with freerdp-tk, a window that keeps your connections, their passwords in the system's own keyring, and starts the client. Unpack the file and start freerdp-tk (Windows: freerdp-tk.cmd; macOS: freerdp-tk.command, in Finder).") }),
-        el("p", { text: t("srv.tkUvx", "With uv, the window alone, for a FreeRDP 3 client you already have:") }),
-        copyable("uvx freerdp-tk"));
-      // the videos' titles and captions are the kit's, as written
-      const shelf = el("div", { class: "clips" });
-      for (const v of videos) {
-        const video = el("video", { controls: "", preload: "none", playsinline: "", src: v.src });
-        if (v.poster) video.setAttribute("poster", v.poster);
-        shelf.append(el("figure", { class: "clip" }, video, el("figcaption", {}, el("b", { text: v.title }), v.caption ? " " + v.caption : "")));
-      }
-      if (videos.length) out.append(shelf);
+    out.append(all(k));
+    into.replaceChildren(out);
+  }
+
+  // Get a client: the native clients, freerdp-tk with its uvx line, and its videos
+  function renderClients(k, into, videos = []) {
+    const out = document.createDocumentFragment();
+    out.append(from(k));
+    const table = el("table", { id: "clients" }, el("tr", {}, el("th", { text: t("srv.platform", "Platform") }), el("th", { text: t("srv.file", "File") })));
+    for (const c of k.clients) table.append(el("tr", {}, el("td", { text: c.platform }), el("td", {}, link(c.url, c.file))));
+    out.append(table);
+    out.append(el("h3", { id: "freerdp-tk", text: t("srv.tk", "freerdp-tk, the connection window") }),
+      el("p", { text: t("srv.tkWhy", "Each client comes with freerdp-tk, a window that keeps your connections, their passwords in the system's own keyring, and starts the client. Unpack the file and start freerdp-tk (Windows: freerdp-tk.cmd; macOS: freerdp-tk.command, in Finder).") }),
+      el("p", { text: t("srv.tkUvx", "With uv, the window alone, for a FreeRDP 3 client you already have:") }),
+      copyable("uvx freerdp-tk"));
+    // the videos' titles and captions are the kit's, as written
+    const shelf = el("div", { class: "clips" });
+    for (const v of videos) {
+      const video = el("video", { controls: "", preload: "none", playsinline: "", src: v.src });
+      if (v.poster) video.setAttribute("poster", v.poster);
+      shelf.append(el("figure", { class: "clip" }, video, el("figcaption", {}, el("b", { text: v.title }), v.caption ? " " + v.caption : "")));
     }
-    out.append(el("p", {}, t("srv.all", "All files and checksums: "), link(k.url, k.url)));
+    if (videos.length) out.append(shelf);
+    out.append(all(k));
     into.replaceChildren(out);
   }
 
@@ -121,16 +129,19 @@
   root.FreeRDPServer = api;
   if (typeof module !== "undefined" && module.exports) { module.exports = api; return; }
   // any failure (no file, not JSON, nothing usable, a bug) keeps the fallback line
-  const into = document.getElementById("kit");
-  // the videos are extra: without demo.json the rest still shows
-  const demo = () => fetch("demo/demo.json").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  const server = document.getElementById("kit"), native = document.getElementById("native");
+  const into = server || native;
+  // the videos are extra, on Get a client only: without demo.json the rest still shows
+  const demo = () => (native ? fetch("demo/demo.json").then((r) => (r.ok ? r.json() : null)).catch(() => null) : null);
   if (into) Promise.all([fetch("install.json", { cache: "no-cache" }), demo()])
     .then(([r, d]) => { if (!r.ok) throw new Error("install.json: HTTP " + r.status); return r.json().then((data) => [data, d]); })
     .then(([data, d]) => {
       const k = parse(data); if (!k) throw new Error("install.json: no distribution in it");
+      if (native && !k.clients.length) throw new Error("install.json: no client in it");
       const videos = clips(d);
-      render(k, into, videos);
-      root.FreeRDPi18n?.onChange(() => render(k, into, videos));   // a new language: the cards again
+      const show = () => (server ? renderServer(k, into) : renderClients(k, into, videos));
+      show();
+      root.FreeRDPi18n?.onChange(show);   // a new language: the page's part again
     })
     .catch((e) => console.log("[page] " + (e?.message || e) + "; the page links to the kit's latest release"));
 })(globalThis);
