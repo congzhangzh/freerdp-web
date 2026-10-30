@@ -94,7 +94,7 @@ const cards = await ev("[...document.querySelectorAll('#kit .distro')].map((c) =
 check("a card per distribution with a name and a command", JSON.stringify(cards) === JSON.stringify(["Debian 13", "Ubuntu 26.04", "Fedora 45", "Fedora 44"]), JSON.stringify(cards));
 check("grouped by family, with a link to each", JSON.stringify(await ev("[...document.querySelectorAll('#kit h3[id^=server-]')].map((h) => h.id + ':' + h.textContent)"))
   === JSON.stringify(["server-debian:Debian", "server-ubuntu:Ubuntu", "server-fedora:Fedora"])
-  && JSON.stringify(await ev("[...document.querySelectorAll('#kit .families a')].map((a) => a.hash)")) === JSON.stringify(["#server-debian", "#server-ubuntu", "#server-fedora"]));
+  && JSON.stringify(await ev("[...document.querySelectorAll('#kit .families a')].map((a) => a.hash)")) === JSON.stringify(["#server-debian", "#server-ubuntu", "#server-fedora", "#windows"]));
 const first = await ev("document.querySelector('#kit .distro')?.innerText") || "";
 check("a card shows its sessions, a line per kind, and its more commands",
   first.replace(/\n+/g, "\n").includes("Wayland: GNOME, KDE Plasma, sway\nXorg: the default session") && first.includes(want.server[0].more[0].what + ":"),
@@ -102,7 +102,8 @@ check("a card shows its sessions, a line per kind, and its more commands",
 const old = await ev("document.querySelectorAll('#kit .distro')[1]?.innerText") || "";
 check("an older install.json's sessions stay one line", old.includes("Sessions: " + want.server[1].sessions), old.split("\n").slice(0, 2).join(" | "));
 const pres = await ev("[...document.querySelectorAll('#kit .copyable')].map((c) => [c.querySelector('pre').textContent, !!c.querySelector('button[data-copy]')])");
-const commands = [want.server[0].command, want.server[0].more[0].command, want.server[1].command, want.server[2].command, want.server[3].command, want.start];
+const commands = [want.server[0].command, want.server[0].more[0].command, want.server[1].command, want.server[2].command, want.server[3].command, want.start,
+  want.windows.command, want.windows.remove];
 check("every command, the more ones and the start one, has a Copy button", JSON.stringify(pres) === JSON.stringify(commands.map((c) => [c, true])),
   `${pres.length} commands`);
 // what the button hands the clipboard (the system clipboard stays untouched)
@@ -113,6 +114,10 @@ check("Copy copies the command exactly", copied === want.server[2].command && aw
 check("the link to all files and checksums", await ev(`[...document.querySelectorAll('#kit a')].some((a) => a.href === ${JSON.stringify(want.url)} && a.textContent === ${JSON.stringify(want.url)})`)
   && (await ev("document.getElementById('kit').innerText")).includes("All files and checksums: " + want.url));
 check("the fallback line is gone", await ev("!document.getElementById('kitFallback')"));
+check("Windows: its own section after Start it, a link to it among the distributions, the archive linked",
+  await ev("document.querySelector('#kit h2#windows')?.previousElementSibling?.matches('.copyable')") === true
+  && await ev("[...document.querySelectorAll('#kit .families a')].some((a) => a.hash === '#windows')")
+  && await ev(`[...document.querySelectorAll('#kit a')].some((a) => a.href === ${JSON.stringify(want.windows.url)})`));
 check("no client, no freerdp-tk, no video: they are on Get a client", await ev("document.querySelectorAll('#clients, #freerdp-tk, video').length") === 0
   && await ev("!!document.querySelector('main a[href=\"client.html\"]:not(nav a)')"));
 const w = await ev("document.documentElement.scrollWidth");

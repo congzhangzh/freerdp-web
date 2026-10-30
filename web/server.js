@@ -2,7 +2,9 @@
 // (client.html: its native clients), from install.json, which the kit writes next to the page when
 // it publishes the site:
 //   { release, url, server: [{ name, sessions, command, more: [{ what, command }] }], start,
-//     clients: [{ platform, file, url }] }
+//     clients: [{ platform, file, url }], windows: { file, url, command, remove } }
+// "windows" is the Windows host (since kit 2026-10-30): FreeRDP's shadow server and
+// freerdp-shadow-service, which share a Windows PC's own screen; Get a server shows it after xrdp.
 // One entry of "server" per distribution release ("Debian 13", "Ubuntu 26.04", "Fedora 45"…);
 // the page groups them by the name's first word. Without the file, or with one it cannot read
 // (a local build), each page keeps its one line that links to the kit's latest release.
@@ -37,7 +39,10 @@
     if (!families.length) return null;
     const clients = (Array.isArray(data.clients) ? data.clients : [])
       .map((c) => ({ platform: text(c?.platform), file: text(c?.file), url: https(c?.url) })).filter((c) => c.file && c.url);
-    return { release: text(data.release), url: https(data.url) || LATEST, families, start: text(data.start), clients };
+    const w = data.windows;
+    const windows = w && typeof w === "object" && text(w.command) && https(w.url)
+      ? { file: text(w.file), url: https(w.url), command: text(w.command), remove: text(w.remove) } : null;
+    return { release: text(data.release), url: https(data.url) || LATEST, families, start: text(data.start), clients, windows };
   }
 
   // demo.json's freerdp-tk videos: [{ title, src, poster, caption }], files next to the page in
@@ -81,9 +86,10 @@
   function renderServer(k, into) {
     const out = document.createDocumentFragment();
     out.append(from(k), el("h2", { text: t("srv.install", "Install xrdp") }));
-    if (k.families.length > 1) {
+    if (k.families.length > 1 || k.windows) {
       const jump = el("p", { class: "row families", "aria-label": t("srv.distros", "Distributions") });
       for (const f of k.families) jump.append(el("a", { href: "#" + f.id, class: "button", text: f.name }));
+      if (k.windows) jump.append(el("a", { href: "#windows", class: "button", text: "Windows" }));
       out.append(jump);
     }
     for (const f of k.families) {
@@ -98,6 +104,16 @@
       out.append(list);
     }
     if (k.start) out.append(el("h2", { text: t("srv.start", "Start it") }), copyable(k.start));
+    if (k.windows) {
+      const w = k.windows;
+      out.append(el("h2", { id: "windows", text: t("srv.win", "Windows: share this PC's screen") }),
+        el("p", { text: t("srv.winWhy", "FreeRDP's shadow server shares the Windows PC's own screen: the desktop of whoever is logged in and, run as a service, the logon and lock screens, UAC prompts and Ctrl+Alt+Del too. It shares that one desktop, like Remote Assistance; it starts no sessions of its own. The picture is AV1; logins are Windows accounts.") }),
+        el("p", { text: t("srv.winInstall", "In an administrator's PowerShell: download, unpack, install the service (it starts at once, and with Windows, on 127.0.0.1:3389):") }),
+        copyable(w.command));
+      if (w.remove) out.append(el("p", { class: "hint", text: t("srv.winRemove", "To remove it, in the same folder:") }), copyable(w.remove));
+      out.append(el("p", { class: "hint" }, t("srv.winMore", "If Windows' own Remote Desktop is on, it holds 3389: add /port:3388. How to reach it through SSH, and the rest: README.txt in the archive, "),
+        link(w.url, w.file || w.url), t("punct.period", ".")));
+    }
     out.append(all(k));
     into.replaceChildren(out);
   }

@@ -21,5 +21,6 @@
     {"platform": "Windows x64", "file": "sdl3-freerdp-20261028.1-windows-x64.zip",
      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.2/sdl3-freerdp-20261028.1-windows-x64.zip"},
     {"platform": "Skipped", "file": "not-https.zip", "url": "javascript:alert(1)"}
-  ]
+  ],
+  "windows": {"file": "freerdp-host-20261030.1-windows-x86_64.zip", "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.2/freerdp-host-20261030.1-windows-x86_64.zip", "command": "Invoke-WebRequest https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.2/freerdp-host-20261030.1-windows-x86_64.zip -OutFile freerdp-host.zip; Expand-Archive freerdp-host.zip; Set-Location freerdp-host\\freerdp-host-*; .\\freerdp-shadow-service.exe install --allow-sas -- /bind-address:127.0.0.1 /gfx-av1", "remove": ".\\freerdp-shadow-service.exe uninstall"}
 }

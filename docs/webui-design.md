@@ -255,6 +255,7 @@ which the kit writes next to the page when it publishes the site:
 | Distributions | A card per entry of `server` (name, sessions, its one command with Copy, the `more` commands under it), grouped by the name's first word (Debian, Ubuntu, Fedora) in the file's order, with a link to each group at the top |
 | Start | the `start` command once, after the cards |
 | Clients | on Get a client since 20261030.2 (below) |
+| Windows | since 20261030.3: `install.json`'s `windows` (the kit's Windows host: FreeRDP's shadow server and freerdp-shadow-service) gets a section after Start it, with its install and remove commands and the archive; taken only with an https link and a command |
 | Without the file | a missing, broken or empty `install.json` (a local build) leaves the page's one static line, a link to the kit's latest release. The cards replace that line only once the file has been read and checked, so the page never breaks |
 | Safety | built with `textContent` only (the installed app requires Trusted Types); links only to `https:` addresses; an entry without a name or a command is skipped |
 | Phone | long commands wrap inside their own box; no sideways scrolling at 390 px |

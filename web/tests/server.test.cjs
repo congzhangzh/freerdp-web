@@ -31,6 +31,14 @@ test("install.json that has nothing to show is none: the page keeps its link to 
   const k = S.parse({server: [{name: "Debian 13", command: "sudo apt install ./xrdp.deb"}]});
   assert.deepEqual([k.release, k.url, k.start, k.clients], ["", S.LATEST, "", []]);
 });
+test("install.json's windows: the Windows host with an https link and a command, else none", () => {
+  const k = S.parse(sample);
+  assert.equal(k.windows.file, "freerdp-host-20261030.1-windows-x86_64.zip");
+  assert.match(k.windows.command, /freerdp-shadow-service\.exe install/);
+  assert.equal(k.windows.remove, ".\\freerdp-shadow-service.exe uninstall");
+  for (const bad of [undefined, "x", {}, {command: "c", url: "http://example.com/x.zip"}, {url: "https://example.com/x.zip"}])
+    assert.equal(S.parse({...sample, windows: bad}).windows, null, JSON.stringify(bad));
+});
 test("demo.json's freerdp-tk videos: files in demo/ only, a title and a video each", () => {
   const demo = {videos: [{title: "the splash's", src: "demo/xrdp-gnome.mp4"}], clients: [
     {title: "xrdp + GNOME Wayland, AV1, freerdp-tk release", src: "demo/freerdp-tk-release.mp4",

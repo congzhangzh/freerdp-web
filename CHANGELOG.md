@@ -15,6 +15,18 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261030.3
+
+- **Get a server: Windows** (聪哥: a Windows backend, "go ahead to do them all"): when
+  `install.json` has the kit's Windows host (its new `windows` entry: FreeRDP's shadow
+  server and freerdp-shadow-service, FreeRDP#13931-#13935), Get a server shows a section
+  after xrdp's "Start it": what it shares (the PC's own screen, logon and lock screens,
+  UAC and Ctrl+Alt+Del through the service; AV1; Windows-account logins), the PowerShell
+  line that downloads, unpacks and installs the service on 127.0.0.1, the one that removes
+  it, and the archive. The distributions' links get a "Windows" one. Without the entry,
+  nothing changes. `server.js` `parse()` takes it only with an https link and a command;
+  unit test, `test-server.mjs` and the sample `install.json`; Chinese in `i18n.js`.
+
 ## 20261030.2
 
 - **Get a client, a new page** (聪哥: Get a server also held the client and its demo, and
