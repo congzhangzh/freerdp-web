@@ -39,6 +39,13 @@ test("install.json's windows: the Windows host with an https link and a command,
   for (const bad of [undefined, "x", {}, {command: "c", url: "http://example.com/x.zip"}, {url: "https://example.com/x.zip"}])
     assert.equal(S.parse({...sample, windows: bad}).windows, null, JSON.stringify(bad));
 });
+test("install.json's av2: the line that turns AV2 on in xrdp, when the packages have it", () => {
+  assert.deepEqual(S.parse(sample).av2, sample.av2 ? {what: sample.av2.what, command: sample.av2.command} : null);
+  const cmd = "sudo sed -i 's/^order = \\[ \"AV1\"/order = [ \"AV2\", \"AV1\"/' /etc/xrdp/gfx.toml && sudo systemctl restart xrdp";
+  assert.deepEqual(S.parse({...sample, av2: {what: "AV2", command: cmd}}).av2, {what: "AV2", command: cmd});
+  for (const bad of [undefined, "x", {}, {what: "AV2"}, {command: ""}])
+    assert.equal(S.parse({...sample, av2: bad}).av2, null, JSON.stringify(bad));
+});
 test("demo.json's freerdp-tk videos: files in demo/ only, a title and a video each", () => {
   const demo = {videos: [{title: "the splash's", src: "demo/xrdp-gnome.mp4"}], clients: [
     {title: "xrdp + GNOME Wayland, AV1, freerdp-tk release", src: "demo/freerdp-tk-release.mp4",

@@ -42,7 +42,10 @@
     const w = data.windows;
     const windows = w && typeof w === "object" && text(w.command) && https(w.url)
       ? { file: text(w.file), url: https(w.url), command: text(w.command), remove: text(w.remove) } : null;
-    return { release: text(data.release), url: https(data.url) || LATEST, families, start: text(data.start), clients, windows };
+    // AV2 for xrdp: the line that turns it on, when the release's packages have it
+    const a = data.av2;
+    const av2 = a && typeof a === "object" && text(a.command) ? { what: text(a.what), command: text(a.command) } : null;
+    return { release: text(data.release), url: https(data.url) || LATEST, families, start: text(data.start), clients, windows, av2 };
   }
 
   // demo.json's videos of a kind: "clients" (freerdp-tk, Get a client) or "windows" (the
@@ -116,10 +119,19 @@
       out.append(list);
     }
     if (k.start) out.append(el("h2", { text: t("srv.start", "Start it") }), copyable(k.start));
+    if (k.av2) {
+      out.append(el("h3", { id: "av2", text: "AV2" }),
+        el("p", { text: t("srv.av2", "These packages have AV2 next to AV1, off until you put it first in xrdp's codec order; then xrdp sends it to the clients that offer it (the kit's FreeRDP clients and FreeRDP Web), the others still get AV1 or H.264:") }),
+        copyable(k.av2.command),
+        el("p", { class: "hint", text: t("srv.av2Cost", "Smaller frames for the same picture, for more processor time on both sides: FreeRDP Web decodes AV2 in the page, in software.") }));
+    }
     if (k.windows) {
       const w = k.windows;
-      out.append(el("h2", { id: "windows", text: t("srv.win", "Windows: share this PC's screen") }),
-        el("p", { text: t("srv.winWhy", "FreeRDP's shadow server shares the Windows PC's own screen: the desktop of whoever is logged in and, run as a service, the logon and lock screens, UAC prompts and Ctrl+Alt+Del too. It shares that one desktop, like Remote Assistance; it starts no sessions of its own. The picture is AV1; logins are Windows accounts.") }),
+      out.append(el("h2", { id: "windows", text: "Windows" }),
+        el("h3", { text: t("srv.winRdp", "Its own Remote Desktop: nothing to install") }),
+        el("p", { text: t("srv.winRdpWhy", "Windows Server, and Windows Pro and Enterprise, have a Remote Desktop server of their own: turn it on (Settings, System, Remote Desktop), and FreeRDP Web reaches it through a gateway on that PC, as it reaches xrdp. Each user gets a session of their own, with its sound.") }),
+        el("h3", { text: t("srv.winShadow", "Share this PC's own screen: FreeRDP's shadow server") }),
+        el("p", { text: t("srv.winWhy", "FreeRDP's shadow server shares the Windows PC's own screen: the desktop of whoever is logged in and, run as a service, the logon and lock screens, UAC prompts and Ctrl+Alt+Del too. It shares that one desktop, like Remote Assistance; it starts no sessions of its own. The picture is AV1, or AV2 with /gfx-av2 after /gfx-av1; logins are Windows accounts.") }),
         el("p", { text: t("srv.winInstall", "In an administrator's PowerShell: download, unpack, install the service (it starts at once, and with Windows, on 127.0.0.1:3389):") }),
         copyable(w.command));
       if (w.remove) out.append(el("p", { class: "hint", text: t("srv.winRemove", "To remove it, in the same folder:") }), copyable(w.remove));

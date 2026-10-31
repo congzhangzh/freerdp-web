@@ -15,6 +15,20 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261031.1
+
+- **Get a server: Windows' own Remote Desktop, and AV2.** The Windows section starts with
+  Windows' own Remote Desktop server (Windows Server, Pro and Enterprise): nothing to
+  install, FreeRDP Web reaches it through a gateway on that PC as it reaches xrdp, a
+  session per user with its sound (the kit records it now). Then FreeRDP's shadow server,
+  whose text says AV2 is `/gfx-av2` after `/gfx-av1`. And install.json's new `av2` (the
+  kit writes it when its xrdp packages have AV2: avm-6e's encoder, `--enable-av2`) shows
+  under "Start it" as an **AV2** part: its line, which puts AV2 first in xrdp's codec order,
+  with a Copy button, and its cost (FreeRDP Web decodes AV2 in software). `server.js`
+  parses it (a unit test), `test-server.mjs` checks it with `test-server-install.json`'s new
+  `av2`, the Chinese in `i18n.js`. Run here before the tag: unit 74/74, test-server.mjs 35,
+  test-page.mjs 53, no failures.
+
 ## 20261030.7
 
 - **The page test follows 20261030.6's codec list**: `test-page.mjs`, which the kit's

@@ -105,7 +105,7 @@ const old = await ev("document.querySelectorAll('#kit .distro')[1]?.innerText") 
 check("an older install.json's sessions stay one line", old.includes("Sessions: " + want.server[1].sessions), old.split("\n").slice(0, 2).join(" | "));
 const pres = await ev("[...document.querySelectorAll('#kit .copyable')].map((c) => [c.querySelector('pre').textContent, !!c.querySelector('button[data-copy]')])");
 const commands = [want.server[0].command, want.server[0].more[0].command, want.server[1].command, want.server[2].command, want.server[3].command, want.start,
-  want.windows.command, want.windows.remove];
+  ...(want.av2 ? [want.av2.command] : []), want.windows.command, want.windows.remove];
 check("every command, the more ones and the start one, has a Copy button", JSON.stringify(pres) === JSON.stringify(commands.map((c) => [c, true])),
   `${pres.length} commands`);
 // what the button hands the clipboard (the system clipboard stays untouched)
@@ -116,8 +116,12 @@ check("Copy copies the command exactly", copied === want.server[2].command && aw
 check("the link to all files and checksums", await ev(`[...document.querySelectorAll('#kit a')].some((a) => a.href === ${JSON.stringify(want.url)} && a.textContent === ${JSON.stringify(want.url)})`)
   && (await ev("document.getElementById('kit').innerText")).includes("All files and checksums: " + want.url));
 check("the fallback line is gone", await ev("!document.getElementById('kitFallback')"));
-check("Windows: its own section after Start it, a link to it among the distributions, the archive linked",
-  await ev("document.querySelector('#kit h2#windows')?.previousElementSibling?.matches('.copyable')") === true
+// AV2 (install.json's av2): its heading and line after Start it, then Windows
+if (want.av2) check("AV2: its line after Start it, with a Copy button",
+  await ev(`(() => { const h = document.querySelector('#kit h3#av2'); const c = h?.nextElementSibling?.nextElementSibling;
+    return !!c && c.matches('.copyable') && c.querySelector('pre').textContent === ${JSON.stringify(want.av2.command)}; })()`) === true);
+check("Windows: its own section after Start it (and AV2), a link to it among the distributions, the archive linked",
+  await ev(`document.querySelector('#kit h2#windows')?.previousElementSibling?.matches(${JSON.stringify(want.av2 ? "p.hint" : ".copyable")})`) === true
   && await ev("[...document.querySelectorAll('#kit .families a')].some((a) => a.hash === '#windows')")
   && await ev(`[...document.querySelectorAll('#kit a')].some((a) => a.href === ${JSON.stringify(want.windows.url)})`));
 check("the Windows host's video in its section, only that one",
