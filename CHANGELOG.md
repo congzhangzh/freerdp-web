@@ -15,6 +15,31 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261030.6
+
+- **Session settings, Video: a list of codecs, in an order** (聪哥's idea: least data first,
+  least CPU first, and a custom order). Next to Automatic, which still sends a bare `/gfx`:
+  *Least data* (`/gfx:AV2:i444,AV1:i444,AVC444,AVC420,progressive,RFX`), *Least CPU* (H.264
+  4:2:0, one stream the browser decodes in hardware; AV1 4:2:0 first where WebCodecs has a
+  hardware AV1 decoder; no AV2, which this page decodes in software) and *Custom*. Each shows
+  its rows: on or off, 4:4:4 or 4:2:0 for AV2, AV1 and H.264, what decodes it in this
+  browser, and whether it is offered. Rows move by drag and drop, or by their arrows (touch
+  screens, keyboards); a change to a preset's list makes it Custom, stored with the host.
+  - **Why some rows say "not offered".** RDP lets a client say which codecs it takes, not in
+    what order: it advertises capability sets and the server confirms one, the best it knows
+    (FreeRDP's shadow server: FRDP_2 for AV2, then FRDP_1 for AV1, then 10.x, where H.264
+    comes before RemoteFX). So `options.js` keeps the list's order by leaving out a codec
+    the server would take before one placed above it, and names that one. A real preference
+    order would need a field in FreeRDP's own FRDP capability sets, which servers we ship
+    could honour; that is a later step.
+  - **4:4:4 means 4:4:4.** For AV1 and AV2 the client asks for one profile: a FreeRDP server
+    set to 4:2:0 refuses the AV1 set of a client that asks for 4:4:4
+    (`shadow_client.c`), so there is one choice per codec, not both. For H.264, 4:4:4 offers
+    AVC444 and AVC420; 4:2:0 offers only AVC420 (FreeRDP then advertises up to 8.1).
+  - The old choices AV1 4:2:0 and AV1 4:4:4 become a Custom list that sends what they did
+    (AV2 was on by FreeRDP's default then too). Unit tests for the presets, the order rule,
+    the migration and a stored list; the Chinese in `i18n.js`.
+
 ## 20261030.5
 
 - **About: an AV2 decoder row** when the web client was built with AV2 (the kit's

@@ -146,6 +146,23 @@ label.check { font-size:14px; }
 .choice label:has(input:checked) { background:var(--signal); color:var(--signal-ink); }
 .choice label:has(input:focus-visible) { outline:2px solid var(--signal); outline-offset:-2px; }
 .hint { margin:6px 0 0; font-size:12px; color:var(--muted); }
+/* Video's list: a row per codec, dragged or moved with its arrows */
+.codec-list { list-style:none; margin:8px 0 0; padding:0; display:grid; gap:4px; max-width:640px; }
+.codec-list li { display:grid; grid-template-columns:auto 1fr auto auto auto; grid-template-areas:"grip name chroma up down" "grip state state state state" "grip detail detail detail detail";
+  align-items:center; gap:0 8px; padding:6px 8px; border:1px solid var(--line); border-radius:6px; background:var(--panel); font-size:13px; }
+.codec-list .grip { grid-area:grip; color:var(--muted); cursor:grab; user-select:none; align-self:start; padding-top:2px; }
+.codec-list .name { grid-area:name; display:inline-flex; align-items:center; gap:6px; }
+.codec-list select { grid-area:chroma; padding:2px 6px; font-size:12px; }
+.codec-list .arrow { padding:2px 8px; font-size:12px; }
+.codec-list .arrow[data-act=up] { grid-area:up; } .codec-list .arrow[data-act=down] { grid-area:down; }
+.codec-list .state { grid-area:state; }
+.codec-list .detail { grid-area:detail; color:var(--muted); }
+.codec-list li.on { border-left:4px solid var(--signal); }
+.codec-list li.on .state { color:var(--signal); }
+.codec-list li.skipped .state { color:var(--caution); }
+.codec-list li.off { opacity:.7; }
+.codec-list li.off .state { color:var(--muted); }
+.codec-list li.fixed { display:block; border-style:dashed; color:var(--muted); font-size:12px; }
 .note { margin:0 0 14px; padding:8px 10px; font-size:12px; border-radius:5px; background:var(--soft); }
 .row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
 #preview { display:block; margin-top:6px; padding:6px 9px; border-radius:5px; background:var(--soft); overflow-wrap:anywhere; font-size:12px; }

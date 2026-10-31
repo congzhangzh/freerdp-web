@@ -142,10 +142,12 @@
       <legend data-i18n="set.video">Video</legend>
       <div class="choice" role="radiogroup" aria-label="Video" data-i18n-attr="aria-label:set.video">
         <label><input type="radio" name="codec" value="auto" checked> <span data-i18n="set.auto">Automatic</span></label>
-        <label><input type="radio" name="codec" value="av1-420"> AV1 4:2:0</label>
-        <label><input type="radio" name="codec" value="av1-444"> AV1 4:4:4</label>
+        <label><input type="radio" name="codec" value="bandwidth"> <span data-i18n="set.leastData">Least data</span></label>
+        <label><input type="radio" name="codec" value="cpu"> <span data-i18n="set.leastCpu">Least CPU</span></label>
+        <label><input type="radio" name="codec" value="custom"> <span data-i18n="set.codecCustom">Custom</span></label>
       </div>
       <p class="hint" id="codecHint"></p>
+      <ol class="codec-list" id="codecList" hidden></ol>
     </fieldset>
     <fieldset>
       <legend data-i18n="set.scale">Remote scale</legend>

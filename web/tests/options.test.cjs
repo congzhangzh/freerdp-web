@@ -6,10 +6,42 @@ test("recommended settings: gfx with every codec, sound, clipboard, nothing else
   assert.deepEqual(O.resolve(O.DEFAULTS, ""), ["/gfx", "/sound", "+clipboard"]);
   assert.ok(O.isDefault({}));
 });
-test("codec choices map to the AV1 profiles", () => {
-  assert.equal(O.resolve({codec: "av1-420"}, "")[0], "/gfx:AV1:i420");
-  assert.equal(O.resolve({codec: "av1-444"}, "")[0], "/gfx:AV1:i444");
+test("video: Automatic is a bare /gfx; the presets name every codec", () => {
+  assert.equal(O.resolve({codec: "auto"}, "")[0], "/gfx");
   assert.equal(O.resolve({codec: "bogus"}, "")[0], "/gfx");
+  assert.equal(O.resolve({codec: "bandwidth"}, "")[0], "/gfx:AV2:i444,AV1:i444,AVC444,AVC420,progressive,RFX");
+  // least CPU: H.264 4:2:0 (one stream), no AV2; AV1 4:2:0 first only with a hardware AV1 decoder
+  assert.equal(O.resolve({codec: "cpu"}, "")[0], "/gfx:AV2:off,AV1:off,AVC420,progressive,RFX");
+  assert.equal(O.resolve({codec: "cpu"}, "", {av1Hardware: true})[0], "/gfx:AV2:off,AV1:i420,AVC420,progressive,RFX");
+});
+test("video: the old AV1 choices become a Custom list that sends what they did (AV2 was on by default)", () => {
+  for (const [old, av1] of [["av1-444", "i444"], ["av1-420", "i420"]]) {
+    const s = O.normalize({codec: old});
+    assert.equal(s.codec, "custom");
+    assert.equal(O.resolve(s, "")[0], `/gfx:AV2:i444,AV1:${av1}`);
+  }
+});
+test("video: a custom order is kept by leaving out what the server would take first", () => {
+  const list = O.codecList([{id: "h264", on: true}, {id: "av2", on: true}, {id: "av1", on: true, i444: false}, {id: "rfx", on: true}]);
+  assert.deepEqual(list.map((r) => r.id), ["h264", "av2", "av1", "rfx", "progressive"]);   // the missing one comes last, off
+  const rows = O.offered(list);
+  assert.deepEqual(rows.map((r) => [r.id, r.offered, r.before ?? null]),
+    [["h264", true, null], ["av2", false, "h264"], ["av1", false, "h264"], ["rfx", true, null], ["progressive", false, null]]);
+  assert.equal(O.gfx(list), "/gfx:AV2:off,AV1:off,AVC444,AVC420,RFX");
+  // in the server's own order everything on is offered
+  assert.ok(O.offered(O.PRESETS.bandwidth()).every((r) => r.offered));
+  // nothing on: only the basic codecs (planar, ClearCodec) remain
+  assert.equal(O.gfx(O.codecList([])), "/gfx:AV2:off,AV1:off");
+  // a skipped codec names the first one above it that it would beat
+  assert.equal(O.offered(O.codecList([{id: "av1", on: true}, {id: "h264", on: true}, {id: "av2", on: true}]))[2].before, "av1");
+});
+test("video: a stored list is cleaned, and Custom is the only choice that uses it", () => {
+  const list = O.codecList([{id: "av1", on: true}, {id: "av1", on: false}, {id: "bogus", on: true}, null, {id: "rfx", on: "yes"}]);
+  assert.deepEqual(list.map((r) => [r.id, r.on]), [["av1", true], ["rfx", false], ["av2", false], ["h264", false], ["progressive", false]]);
+  assert.equal(O.resolve({codec: "custom", codecs: [{id: "rfx", on: true}]}, "")[0], "/gfx:AV2:off,AV1:off,RFX");
+  assert.equal(O.resolve({codec: "auto", codecs: [{id: "rfx", on: true}]}, "")[0], "/gfx");
+  assert.ok(O.isDefault({codecs: [{id: "rfx", on: true}]}));   // the list is not a change while Video is Automatic
+  assert.deepEqual(O.resolve({codec: "bandwidth"}, "/gfx:AV1:i420").filter((a) => /gfx/.test(a)), ["/gfx:AV1:i420"]);   // extra options win
 });
 test("the two priorities are opposite and never mixed", () => {
   const bw = O.resolve({strategy: "bandwidth"}, ""), sv = O.resolve({strategy: "server"}, "");

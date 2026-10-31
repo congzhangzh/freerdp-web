@@ -64,7 +64,7 @@ A collapsed panel under the form; its summary line says `recommended`, or what d
 | Microphone | off, on; disabled with “not in this build” when the client lacks it | `/microphone`; off: none, so the browser never asks. A client built with FreeRDP's Web Audio backend (`channels/audin/client/emscripten`, #13811; the kit's preview 20261020.1) exports `audin_emscripten_release`, which turns the switch on. The browser asks when the server opens the channel: an xrdp session needs `pipewire-module-xrdp` for that |
 | Clipboard | on, off | `+clipboard`; off: `-clipboard`, and the page's clipboard bridge stops too |
 | Full screen | off, on | page full screen on Connect (as before) |
-| Video | Automatic, AV1 4:2:0, AV1 4:4:4 | `/gfx` (every codec; this build offers AV1 4:4:4 by default), `/gfx:AV1:i420`, `/gfx:AV1:i444` |
+| Video | Automatic, Least data, Least CPU, Custom | `/gfx` (FreeRDP's defaults); the others a `/gfx:…` naming every codec of their list, in its order (see below) |
 | Priority | Recommended, Save bandwidth, Reduce server load | none; `/network:broadband-low +compression /compression-level:2`; `/network:lan -compression` |
 | Shortcuts | FreeRDP, mstsc | see below |
 
@@ -80,8 +80,18 @@ of the same kind (video, sound, clipboard, network, compression); the panel then
 which settings are overridden, and the Advanced section shows the exact options the
 client receives. *Restore recommended settings* resets the panel.
 
-Settings from earlier versions are migrated once: Extra options that held only the old
-default `/gfx:AV1:i444` become the Video setting *AV1 4:4:4* with empty Extra options.
+**Video** is a list of codecs in an order: AV2, AV1, H.264 (each 4:4:4 or 4:2:0),
+RemoteFX progressive, RemoteFX; Planar, ClearCodec and uncompressed bitmaps are always
+there. *Least data* puts them in the server's own order, all on, 4:4:4; *Least CPU* puts
+first what the browser decodes in hardware, one 4:2:0 stream, and leaves AV2 out; *Custom* is
+the visitor's order (drag and drop, or a row's arrows), and editing a preset's list turns it
+into Custom. RDP has no way to send an order: the client advertises capability sets and
+the server confirms the best one it knows. So the page keeps the order by leaving out every
+codec the server would take before one placed above it, and the row says which one.
+
+Settings from earlier versions are migrated: Extra options that held only the old default
+`/gfx:AV1:i444` became the Video setting *AV1 4:4:4* with empty Extra options, and since
+20261030.6 *AV1 4:4:4* and *AV1 4:2:0* become a Custom list that sends the same `/gfx`.
 
 ## Advanced
 
