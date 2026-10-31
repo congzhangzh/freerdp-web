@@ -15,6 +15,16 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261030.7
+
+- **The page test follows 20261030.6's codec list**: `test-page.mjs`, which the kit's
+  `site.yml` runs before the site goes live, still clicked Video's *AV1 4:2:0*, which
+  20261030.6 replaced; the click threw, the other settings of that step were never set, and
+  the publish of 20261030.6 stopped there (site run 41164816290; the live site stayed as it
+  was). It chooses *Least data* now, whose `/gfx` does not depend on the browser's hardware
+  (`/gfx:AV2:i444,AV1:i444,AVC444,AVC420,progressive,RFX`). Run here against that release's
+  files: 53 passed, no page errors. The page itself is unchanged.
+
 ## 20261030.6
 
 - **Session settings, Video: a list of codecs, in an order** (聪哥's idea: least data first,

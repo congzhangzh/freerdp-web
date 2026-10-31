@@ -279,12 +279,13 @@ await ev("document.getElementById('vaultLock').click(), document.querySelector('
 logs.length = 0;
 
 // session settings as a user clicks them; the mstsc shortcuts; a gateway port with no server
-await ev(`(() => { for (const s of ['input[name=codec][value="av1-420"]', 'input[name=strategy][value="bandwidth"]',
+await ev(`(() => { for (const s of ['input[name=codec][value="bandwidth"]', 'input[name=strategy][value="bandwidth"]',
   '#optClipboard', 'input[name=keys][value="mstsc"]', '#sessionPanel > summary']) document.querySelector(s).click();
   document.getElementById('host').value = '127.0.0.1:1'; document.getElementById('user').value = 'synthetic-user';
   document.getElementById('pass').value = 'synthetic-password';
   return true; })()`);
-const expected = "/gfx:AV1:i420 /sound -clipboard /network:broadband-low +compression /compression-level:2";
+// Video: Least data, every codec in the server's own order (Least CPU depends on the browser's hardware)
+const expected = "/gfx:AV2:i444,AV1:i444,AVC444,AVC420,progressive,RFX /sound -clipboard /network:broadband-low +compression /compression-level:2";
 check("the settings preview", await ev("document.getElementById('preview').textContent") === expected);
 await screenshot("page-settings.png");
 await ev("document.getElementById('go').click(), true");
