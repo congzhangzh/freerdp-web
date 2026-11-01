@@ -193,15 +193,39 @@ function loadSettings() {
   return q.get("autoconnect") === "1";
 }
 
+// Whether the browser has a hardware decoder for a codec string. WebCodecs never says which
+// decoder it picked; the client asks for "no-preference", which takes hardware when there is
+// one, so this is what decodes (unless the browser falls back on its own, e.g. past its size).
+// The answer comes later: the session settings show it, and Least CPU uses it, once it is in.
+const hwDecoder = {};
+function hardware(codec) {
+  if (!(codec in hwDecoder)) {
+    hwDecoder[codec] = null;
+    if (typeof VideoDecoder === "function")
+      VideoDecoder.isConfigSupported({ codec, hardwareAcceleration: "prefer-hardware" })
+        .then((r) => { hwDecoder[codec] = !!r.supported; }, () => { hwDecoder[codec] = false; })
+        .then(() => { if (document.readyState !== "loading") updateSessionText(); });
+    else hwDecoder[codec] = false;
+  }
+  return hwDecoder[codec];
+}
+const hwText = (h) => h === true ? t("info.hardware", "hardware") : h === false ? t("info.software", "software") : t("info.checking", "checking…");
+// the codec strings the hardware is asked about: AV1 Main (4:2:0) and H.264 High, as Info does
+const HW = { av1: "av01.0.13M.08", h264: "avc1.640028" };
+const codecEnv = () => ({ av1Hardware: hardware(HW.av1) === true });
+
 // ---- Session settings: a few plain choices; options.js turns them into FreeRDP options
 const radio = (name) => document.querySelector(`input[name=${name}]:checked`)?.value;
 const setRadio = (name, value) => { const r = document.querySelector(`input[name=${name}][value="${value}"]`); if (r) r.checked = true; };
+// Video's Custom list, as the host stores it; Least data and Least CPU show their own list
+let codecRows = FreeRDPOptions.normalize({}).codecs;
 function readSession() {
   return FreeRDPOptions.normalize({ audio: $("optAudio").checked, mic: $("optMic").checked, clipboard: $("optClipboard").checked,
-    codec: radio("codec"), strategy: radio("strategy"), scale: radio("scale"), screens: radio("screens") });
+    codec: radio("codec"), codecs: codecRows, strategy: radio("strategy"), scale: radio("scale"), screens: radio("screens") });
 }
 function showSession(session) {
   const s = FreeRDPOptions.normalize(session);
+  codecRows = s.codecs;
   $("optAudio").checked = s.audio; $("optMic").checked = s.mic; $("optClipboard").checked = s.clipboard;
   setRadio("codec", s.codec); setRadio("strategy", s.strategy); setRadio("scale", s.scale); setRadio("screens", s.screens);
   setRadio("keys", FreeRDPKeyboard.get());
@@ -211,9 +235,94 @@ function showSession(session) {
 const said = (m) => t(m.i18n, m.text);
 const CODEC_HINTS = {
   auto: { i18n: "hint.codecAuto", text: "The server picks from every codec the client offers (AV1 4:4:4 included)." },
-  "av1-420": { i18n: "hint.codec420", text: "AV1 with half-resolution colour: less data, slightly soft coloured text." },
-  "av1-444": { i18n: "hint.codec444", text: "AV1 with full colour: sharp text in every colour, more data." },
+  bandwidth: { i18n: "hint.codecBandwidth", text: "Every codec, with full colour: the server takes the newest it has (AV2, then AV1, then H.264). The least data, the most work for both sides." },
+  cpu: { i18n: "hint.codecCpu", text: "What this browser decodes in hardware, one stream with half-resolution colour: H.264, and AV1 first where the graphics card decodes it. No AV2: this page decodes it in software." },
+  custom: { i18n: "hint.codecCustom", text: "Your order: drag a codec, or use its arrows. The server picks from what the client offers, by its own order, so a codec it would take before one you put higher is not offered." },
 };
+// Video's list: a row per codec, in the order of the choice; a change to a preset's list makes it Custom
+const CODEC_NAMES = { av2: "AV2", av1: "AV1", h264: "H.264", progressive: "RemoteFX progressive", rfx: "RemoteFX" };
+function codecNote(id) {
+  if (id === "av2") return t("codec.av2Note", "least data; decoded in software, in this page");
+  if (id === "av1" || id === "h264") {
+    const hw = hwText(hardware(HW[id]));
+    return t("codec.webcodecsNote", `WebCodecs: ${hw} in this browser`, { hw });
+  }
+  return id === "progressive" ? t("codec.progressiveNote", "sharpens in passes; decoded in software") : t("codec.rfxNote", "decoded in software");
+}
+function codecState(r) {
+  if (!r.on) return t("codec.off", "off");
+  if (r.offered) return t("codec.offered", "offered");
+  const before = CODEC_NAMES[r.before];
+  return t("codec.skipped", `not offered: the server would take it before ${before}`, { before });
+}
+let dragged = null;
+function renderCodecs(s) {
+  const box = $("codecList"), list = FreeRDPOptions.listOf(s, codecEnv());
+  box.hidden = !list;
+  if (!list) return;
+  const rows = FreeRDPOptions.offered(list);
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const items = rows.map((r, i) => {
+    const v = FreeRDPOptions.VIDEO.find((x) => x.id === r.id), li = el("li", r.offered ? "on" : r.on ? "skipped" : "off");
+    li.draggable = true; li.dataset.id = r.id;
+    li.append(el("span", "grip", "⠿"));
+    const name = el("label", "name"), check = el("input"); check.type = "checkbox"; check.checked = r.on; check.dataset.act = "on";
+    name.append(check, el("b", null, CODEC_NAMES[r.id]));
+    li.append(name);
+    if (v.chroma) {
+      const sel = el("select"); sel.dataset.act = "chroma"; sel.disabled = !r.on;
+      sel.setAttribute("aria-label", t("codec.chroma", "Colour"));
+      for (const [value, text] of [["444", "4:4:4"], ["420", "4:2:0"]]) { const o = el("option", null, text); o.value = value; sel.append(o); }
+      sel.value = r.i444 ? "444" : "420";
+      li.append(sel);
+    }
+    const up = el("button", "arrow", "↑"), down = el("button", "arrow", "↓");
+    up.type = down.type = "button"; up.dataset.act = "up"; down.dataset.act = "down";
+    up.disabled = i === 0; down.disabled = i === rows.length - 1;
+    up.setAttribute("aria-label", t("codec.up", "Earlier")); down.setAttribute("aria-label", t("codec.down", "Later"));
+    li.append(el("small", "state", codecState(r)), el("small", "detail", codecNote(r.id)), up, down);
+    return li;
+  });
+  items.push(el("li", "fixed", t("codec.basics", "Planar, ClearCodec and uncompressed: always there, for what the others leave")));
+  box.replaceChildren(...items);
+}
+// a change to the list: it becomes Custom (from the list on show), stored with the host
+function changeCodecs(change) {
+  const s = readSession();
+  const list = FreeRDPOptions.listOf(s, codecEnv()).map((r) => ({ ...r }));
+  change(list);
+  codecRows = FreeRDPOptions.codecList(list);
+  setRadio("codec", "custom");
+  HostsUI.update({ session: readSession() });
+  updateSessionText();
+}
+$("codecList").addEventListener("change", (e) => {
+  const id = e.target.closest("li")?.dataset.id, act = e.target.dataset.act;
+  if (!id || !act) return;
+  changeCodecs((list) => { const r = list.find((x) => x.id === id); if (act === "on") r.on = e.target.checked; else r.i444 = e.target.value === "444"; });
+});
+$("codecList").addEventListener("click", (e) => {
+  const act = e.target.dataset?.act, id = e.target.closest("li")?.dataset.id;
+  if ((act !== "up" && act !== "down") || !id) return;
+  changeCodecs((list) => { const i = list.findIndex((x) => x.id === id), j = act === "up" ? i - 1 : i + 1;
+    if (j >= 0 && j < list.length) [list[i], list[j]] = [list[j], list[i]]; });
+  $("codecList").querySelector(`li[data-id="${id}"] [data-act=${act}]:not(:disabled)`)?.focus();
+});
+// drag and drop (a mouse or a pen; on touch screens, the arrows)
+$("codecList").addEventListener("dragstart", (e) => { dragged = e.target.closest("li[data-id]")?.dataset.id ?? null; e.dataTransfer.effectAllowed = "move"; });
+$("codecList").addEventListener("dragover", (e) => { if (dragged && e.target.closest("li[data-id]")) e.preventDefault(); });
+$("codecList").addEventListener("drop", (e) => {
+  const to = e.target.closest("li[data-id]")?.dataset.id, from = dragged;
+  dragged = null;
+  if (!from || !to || from === to) return;
+  e.preventDefault();
+  // dropped on a row: it takes that row's place, so moved down it goes after it, moved up before it
+  changeCodecs((list) => {
+    const at = (id) => list.findIndex((x) => x.id === id), down = at(from) < at(to), [r] = list.splice(at(from), 1);
+    list.splice(at(to) + (down ? 1 : 0), 0, r);
+  });
+});
+$("codecList").addEventListener("dragend", () => { dragged = null; });
 const STRATEGY_HINTS = {
   recommended: { i18n: "hint.strategyRecommended", text: "The client and the server choose." },
   bandwidth: { i18n: "hint.strategyBandwidth", text: "For slow links: the server sends less (no wallpaper or animations) and compresses more, which costs it more CPU." },
@@ -237,6 +346,7 @@ function scaleHint(scale) {
 function updateSessionText() {
   const s = readSession(), extra = $("extra").value;
   $("codecHint").textContent = said(CODEC_HINTS[s.codec]);
+  renderCodecs(s);
   $("strategyHint").textContent = said(STRATEGY_HINTS[s.strategy]);
   $("scaleHint").textContent = scaleHint(s.scale);
   $("screensHint").textContent = said(SCREENS_HINTS[s.screens]);
@@ -253,7 +363,7 @@ function updateSessionText() {
      s.scale !== "auto" && t("set.scaleSummary", "scale " + label("scale", s.scale), { scale: label("scale", s.scale) }),
      s.screens !== "separate" && label("screens", s.screens),
      !s.audio && t("set.noSound", "no sound"), s.mic && t("set.micSummary", "microphone"), !s.clipboard && t("set.noClipboard", "no clipboard")].filter(Boolean));
-  $("preview").textContent = FreeRDPOptions.resolve(s, extra).join(" ");
+  $("preview").textContent = FreeRDPOptions.resolve(s, extra, codecEnv()).join(" ");
   updateSummary();
 }
 // the advanced choices in effect, shown under Connect even while Advanced is closed
@@ -266,6 +376,7 @@ function updateSummary() {
   $("summary").textContent = parts.join(" · ");
 }
 document.querySelectorAll("#sessionPanel input").forEach((el) => el.addEventListener("change", () => {
+  if (el.closest("#codecList")) return;   // its own handlers
   if (el.name === "keys") FreeRDPKeyboard.set(el.value);
   else if (el.id !== "fs") HostsUI.update({ session: readSession() });
   updateSessionText();
@@ -986,20 +1097,6 @@ window.freerdpScreens = {
 };
 
 let last = { t: performance.now(), rx: 0, tx: 0, frames: 0, ms: 0 };
-// Whether the browser has a hardware decoder for a codec string. WebCodecs never says which
-// decoder it picked; the client asks for "no-preference", which takes hardware when there is
-// one, so this is what decodes (unless the browser falls back on its own, e.g. past its size)
-const hwDecoder = {};
-function hardware(codec) {
-  if (!(codec in hwDecoder)) {
-    hwDecoder[codec] = null;
-    if (typeof VideoDecoder === "function")
-      VideoDecoder.isConfigSupported({ codec, hardwareAcceleration: "prefer-hardware" })
-        .then((r) => { hwDecoder[codec] = !!r.supported; }, () => { hwDecoder[codec] = false; });
-  }
-  return hwDecoder[codec];
-}
-const hwText = (h) => h === true ? t("info.hardware", "hardware") : h === false ? t("info.software", "software") : t("info.checking", "checking…");
 // the AV1 stream's profile, from its last sequence header (av1_webcodecs.js): 0 = Main, 4:2:0;
 // 1 = High, 4:4:4
 const av1Profile = () => { let p = -1; for (const d of Module.freerdpAv1?.decoders?.values() ?? []) if (d.profile >= 0) p = d.profile; return p; };
@@ -1174,7 +1271,7 @@ async function connect(againPassword = null) {
   HostsUI.use(againPassword, host => {
     if (host.direct && !window.directSocketsAvailable) throw new Error(t("status.needsDirect", "This saved host needs Direct TCP. Install and open the isolated app."));
     const session = readSession();
-    const resolved = { ...host, extra: FreeRDPOptions.resolve(session, host.extra).join(" ") };
+    const resolved = { ...host, extra: FreeRDPOptions.resolve(session, host.extra, codecEnv()).join(" ") };
     let args;
     try { args = FreeRDPVault.connectionArgs(resolved, size, scale); } finally { resolved.password = ""; }
     clipboardOn = !args.some((a) => /^-clipboard$|^[/+]clipboard:(?:off|false)$/i.test(a));

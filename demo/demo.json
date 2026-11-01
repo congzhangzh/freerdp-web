@@ -1,9 +1,9 @@
 {
   "recorded": {
-    "kit": "c6256a8ce9f74eda3e99741dff40b39bd5bd02fd",
-    "web": "web-20261031.1-c6256a8ce9f7",
-    "xrdp": "xrdp-20261031.1-c6256a8ce9f7",
-    "pipewire-module-xrdp": "pipewire-module-xrdp-20261028.1-977724d19e72"
+    "kit": "5454928e37fb25bf0823fc1409f9b6d9a5e26a48",
+    "web": "web-20261101.2-5454928e37fb",
+    "xrdp": "xrdp-20261101.2-5454928e37fb",
+    "pipewire-module-xrdp": "pipewire-module-xrdp-20261031.1-1b78a2c01cc2"
   },
   "videos": [
     {
@@ -63,6 +63,26 @@
         "demo-gnome",
         "grd-gnome"
       ]
+    },
+    {
+      "title": "FreeRDP shadow server + Windows Server 2025, AV1",
+      "src": "demo/windows-host.mp4",
+      "poster": "demo/windows-host.jpg",
+      "caption": "FreeRDP Web in a browser on a Windows Server 2025 machine of the CI, through websockify, to FreeRDP's shadow server run by freerdp-shadow-service as SYSTEM on the console session: Notepad from Win+R, typing, then Firefox there with web video and WebGL; the picture in AV1 (the CI machine has no sound card, so no sound here). Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD.",
+      "id": "windows-host",
+      "aliases": [
+        "windows-host"
+      ]
+    },
+    {
+      "title": "Windows Server 2025's own Remote Desktop",
+      "src": "demo/windows-rdp.mp4",
+      "poster": "demo/windows-rdp.jpg",
+      "caption": "FreeRDP Web in a browser to Windows Server 2025's own Remote Desktop on a CI machine, through websockify: a session of its own for the user, Notepad from Win+R, then Firefox in the session with web video and WebGL, with sound. Nothing installed on Windows. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD.",
+      "id": "windows-rdp",
+      "aliases": [
+        "windows-rdp"
+      ]
     }
   ],
   "clients": [
@@ -70,13 +90,13 @@
       "title": "xrdp + GNOME Wayland, AV1, freerdp-tk release",
       "src": "demo/freerdp-tk-release.mp4",
       "poster": "demo/freerdp-tk-release.jpg",
-      "caption": "freerdp-tk, the connection window that comes with the kit's native clients, on a Linux desktop (Debian 13): the Linux client unpacked from the kit's release, freerdp-tk started from it (it takes the release's own FreeRDP, though Debian's is installed too), a connection filled in and saved, the password kept in the system keyring. The kit's FreeRDP connects in AV1 to rdp-release-kit's xrdp with GNOME on Wayland (Fedora 45); then freerdp-tk is started again and a double-click on the saved connection logs in, the password from the keyring."
+      "caption": "freerdp-tk, the connection window that comes with the kit's native clients, on a Linux desktop (Debian 13): the Linux client unpacked from the kit's release, freerdp-tk started from it (it takes the release's own FreeRDP, though Debian's is installed too), a connection filled in and saved, the password kept in the system keyring. The kit's FreeRDP connects in AV1 to rdp-release-kit's xrdp with GNOME on Wayland (Fedora 45): a terminal, then Firefox there with web video and WebGL, with sound; then freerdp-tk is started again and a double-click on the saved connection logs in, the password from the keyring. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD."
     },
     {
       "title": "xrdp + GNOME Wayland, H.264, freerdp-tk uvx",
       "src": "demo/freerdp-tk-uvx.mp4",
       "poster": "demo/freerdp-tk-uvx.jpg",
-      "caption": "freerdp-tk from PyPI with plain uvx on a Linux desktop (Debian 13) whose Python has no Tk: freerdp-tk starts again with uv's own Python, which has it. With Debian's FreeRDP 3 client: the same connection, saved with its password in the system keyring, to rdp-release-kit's xrdp with GNOME on Wayland (Fedora 45). Debian's client has no AV1, so xrdp sends H.264."
+      "caption": "freerdp-tk from PyPI with plain uvx on a Linux desktop (Debian 13) whose Python has no Tk: freerdp-tk starts again with uv's own Python, which has it. With Debian's FreeRDP 3 client: the same connection, saved with its password in the system keyring, to rdp-release-kit's xrdp with GNOME on Wayland (Fedora 45): a terminal, then Firefox there with web video and WebGL, with sound. Debian's client has no AV1, so xrdp sends H.264. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD."
     }
   ],
   "windows": [
@@ -84,7 +104,13 @@
       "title": "FreeRDP Web on a Windows host, AV1",
       "src": "demo/windows-host.mp4",
       "poster": "demo/windows-host.jpg",
-      "caption": "FreeRDP Web in a browser on a Windows Server 2025 machine of the CI, through websockify, to FreeRDP's shadow server run by freerdp-shadow-service as SYSTEM on the console session: the Start menu, Notepad, typing; the picture in AV1."
+      "caption": "FreeRDP Web in a browser on a Windows Server 2025 machine of the CI, through websockify, to FreeRDP's shadow server run by freerdp-shadow-service as SYSTEM on the console session: Notepad from Win+R, typing, then Firefox there with web video and WebGL; the picture in AV1 (the CI machine has no sound card, so no sound here). Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD."
+    },
+    {
+      "title": "FreeRDP Web to Windows' own Remote Desktop",
+      "src": "demo/windows-rdp.mp4",
+      "poster": "demo/windows-rdp.jpg",
+      "caption": "FreeRDP Web in a browser to Windows Server 2025's own Remote Desktop on a CI machine, through websockify: a session of its own for the user, Notepad from Win+R, then Firefox in the session with web video and WebGL, with sound. Nothing installed on Windows. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD."
     }
   ]
 }
