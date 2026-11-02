@@ -63,4 +63,21 @@ test("demo.json's freerdp-tk videos: files in demo/ only, a title and a video ea
   assert.deepEqual(S.clips({windows: [{title: "on Windows", src: "demo/windows-host.mp4"}, {title: "x", src: "https://e/x.mp4"}]}, "windows"),
     [{title: "on Windows", src: "demo/windows-host.mp4", poster: "", caption: ""}]);
   assert.deepEqual(S.clips({windows: [{title: "on Windows", src: "demo/windows-host.mp4"}]}), []);
+  // and the Mac host's, under "mac"
+  assert.deepEqual(S.clips({mac: [{title: "on a Mac", src: "demo/mac-host.mp4", poster: "demo/mac-host.jpg"}]}, "mac"),
+    [{title: "on a Mac", src: "demo/mac-host.mp4", poster: "demo/mac-host.jpg", caption: ""}]);
+});
+test("install.json's mac: an entry per processor with an https link and a command; the restart command alone", () => {
+  const k = S.parse(sample);
+  assert.deepEqual(k.mac.map((m) => [m.platform, m.file]), [
+    ["Apple Silicon", "freerdp-host-20261102.2-macos-arm64.zip"], ["Intel", "freerdp-host-20261102.2-macos-x86_64.zip"]]);
+  assert.match(k.mac[0].command, /launchctl bootstrap gui\/\$\(id -u\)/);
+  // the kit's "then" is a sentence that ends with the command; the page keeps the command
+  assert.equal(k.mac[0].kickstart, "launchctl kickstart -k gui/$(id -u)/org.freerdp.shadow");
+  assert.match(k.mac[0].remove, /^launchctl bootout /);
+  const one = {platform: "Intel", file: "f.zip", url: "https://example.com/f.zip", command: "c"};
+  assert.equal(S.parse({...sample, mac: [{...one, kickstart: "k", then: "Then run: x"}]}).mac[0].kickstart, "k");
+  assert.equal(S.parse({...sample, mac: [{...one, then: "Then allow it."}]}).mac[0].kickstart, "");
+  for (const bad of [undefined, "x", {}, [{...one, url: "http://example.com/f.zip"}], [{...one, command: ""}], [{...one, platform: ""}], [null]])
+    assert.deepEqual(S.parse({...sample, mac: bad}).mac, [], JSON.stringify(bad));
 });

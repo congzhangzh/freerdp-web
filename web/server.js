@@ -5,6 +5,12 @@
 //     clients: [{ platform, file, url }], windows: { file, url, command, remove } }
 // "windows" is the Windows host (since kit 2026-10-30): FreeRDP's shadow server and
 // freerdp-shadow-service, which share a Windows PC's own screen; Get a server shows it after xrdp.
+// "mac" is the macOS host (since kit 2026-11-02), one entry per processor:
+//   [{ platform, file, url, command, then, kickstart?, remove }]
+// FreeRDP's shadow server as an app with a LaunchAgent; "command" installs it in Terminal, "then"
+// says (in English) to allow it in System Settings and to restart it with a command at its end
+// ("run: launchctl kickstart …"); the page writes that sentence in its own words and shows only the
+// command ("kickstart" if the kit gives it alone). Get a server shows it after Windows.
 // One entry of "server" per distribution release ("Debian 13", "Ubuntu 26.04", "Fedora 45"…);
 // the page groups them by the name's first word. Without the file, or with one it cannot read
 // (a local build), each page keeps its one line that links to the kit's latest release.
@@ -42,14 +48,20 @@
     const w = data.windows;
     const windows = w && typeof w === "object" && text(w.command) && https(w.url)
       ? { file: text(w.file), url: https(w.url), command: text(w.command), remove: text(w.remove) } : null;
+    // the macOS host: an entry per processor with an https link and a command
+    const restart = (m) => text(m?.kickstart) || (text(m?.then).match(/\brun:\s*(\S.*)$/) || [])[1] || "";
+    const mac = (Array.isArray(data.mac) ? data.mac : [])
+      .map((m) => ({ platform: text(m?.platform), file: text(m?.file), url: https(m?.url), command: text(m?.command),
+        then: text(m?.then), kickstart: restart(m), remove: text(m?.remove) }))
+      .filter((m) => m.platform && m.url && m.command);
     // AV2 for xrdp: the line that turns it on, when the release's packages have it
     const a = data.av2;
     const av2 = a && typeof a === "object" && text(a.command) ? { what: text(a.what), command: text(a.command) } : null;
-    return { release: text(data.release), url: https(data.url) || LATEST, families, start: text(data.start), clients, windows, av2 };
+    return { release: text(data.release), url: https(data.url) || LATEST, families, start: text(data.start), clients, windows, mac, av2 };
   }
 
-  // demo.json's videos of a kind: "clients" (freerdp-tk, Get a client) or "windows" (the
-  // Windows host, Get a server): [{ title, src, poster, caption }], files next to the page in
+  // demo.json's videos of a kind: "clients" (freerdp-tk, Get a client), "windows" or "mac" (the
+  // Windows and macOS hosts, Get a server): [{ title, src, poster, caption }], files next to the page in
   // demo/ only; anything else is skipped
   const local = (v, ext) => (new RegExp("^demo/[\\w.-]+\\." + ext + "$").test(text(v)) ? text(v) : "");
   function clips(demo, kind = "clients") {
@@ -98,13 +110,14 @@
   const all = (k) => el("p", {}, t("srv.all", "All files and checksums: "), link(k.url, k.url));
 
   // Get a server: a card per distribution, grouped by family, and the start command
-  function renderServer(k, into, videos = []) {
+  function renderServer(k, into, videos = {}) {
     const out = document.createDocumentFragment();
     out.append(from(k), el("h2", { text: t("srv.install", "Install xrdp") }));
-    if (k.families.length > 1 || k.windows) {
+    if (k.families.length > 1 || k.windows || k.mac.length) {
       const jump = el("p", { class: "row families", "aria-label": t("srv.distros", "Distributions") });
       for (const f of k.families) jump.append(el("a", { href: "#" + f.id, class: "button", text: f.name }));
       if (k.windows) jump.append(el("a", { href: "#windows", class: "button", text: "Windows" }));
+      if (k.mac.length) jump.append(el("a", { href: "#macos", class: "button", text: "macOS" }));
       out.append(jump);
     }
     for (const f of k.families) {
@@ -137,7 +150,27 @@
       if (w.remove) out.append(el("p", { class: "hint", text: t("srv.winRemove", "To remove it, in the same folder:") }), copyable(w.remove));
       out.append(el("p", { class: "hint" }, t("srv.winMore", "If Windows' own Remote Desktop is on, it holds 3389: add /port:3388. How to reach it through SSH, and the rest: README.txt in the archive, "),
         link(w.url, w.file || w.url), t("punct.period", ".")));
-      if (videos.length) out.append(shelf(videos));
+      if (videos.windows?.length) out.append(shelf(videos.windows));
+    }
+    if (k.mac.length) {
+      const first = k.mac[0];
+      out.append(el("h2", { id: "macos", text: "macOS" }),
+        el("h3", { text: t("srv.macShadow", "Share this Mac's own screen: FreeRDP's shadow server") }),
+        el("p", { text: t("srv.macWhy", "FreeRDP's shadow server for macOS shares the Mac's own screen and its sound: the desktop of the user who is logged in, in their session (not the login window). It shares that one desktop and starts no sessions of its own. The picture is AV2 for the clients that offer it (the kit's FreeRDP clients and FreeRDP Web), AV1 for the others that have it, else H.264 from the Mac's own VideoToolbox; the login is your macOS account.") }),
+        el("p", { text: t("srv.macInstall", "In Terminal, for your Mac's processor: download, unpack, copy the app to Applications and its LaunchAgent, which starts it now and at each login, on 127.0.0.1:3389:") }));
+      const list = el("div", { class: "distros" });
+      for (const m of k.mac) list.append(el("section", { class: "distro", "aria-label": "macOS " + m.platform }, el("h4", { text: m.platform }), copyable(m.command)));
+      out.append(list);
+      // the same for both processors: the permissions, the restart, the removal
+      if (first.kickstart) out.append(el("p", { text: t("srv.macAllow", "The first start asks for two permissions: in System Settings, Privacy & Security, allow FreeRDP Shadow under Screen & System Audio Recording (the picture and the sound) and under Accessibility (the keyboard and the mouse). Then restart it:") }),
+        copyable(first.kickstart));
+      else if (first.then) out.append(el("p", { text: first.then }));
+      if (first.remove) out.append(el("p", { class: "hint", text: t("srv.macRemove", "To remove it:") }), copyable(first.remove));
+      const files = el("p", { class: "hint" }, t("srv.macMore", "After an update, macOS asks for both permissions again (the app is signed ad hoc, so macOS knows only that build): remove FreeRDP Shadow from both lists, then allow the new one. How to reach it through SSH, and the rest: README.txt in the archive, "));
+      k.mac.forEach((m, i) => files.append(i ? t("list.sep", ", ") : "", link(m.url, m.file || m.url)));
+      files.append(t("punct.period", "."));
+      out.append(files);
+      if (videos.mac?.length) out.append(shelf(videos.mac));
     }
     out.append(all(k));
     into.replaceChildren(out);
@@ -172,7 +205,7 @@
     .then(([data, d]) => {
       const k = parse(data); if (!k) throw new Error("install.json: no distribution in it");
       if (native && !k.clients.length) throw new Error("install.json: no client in it");
-      const videos = clips(d, server ? "windows" : "clients");
+      const videos = server ? { windows: clips(d, "windows"), mac: clips(d, "mac") } : clips(d, "clients");
       const show = () => (server ? renderServer(k, into, videos) : renderClients(k, into, videos));
       show();
       root.FreeRDPi18n?.onChange(show);   // a new language: the page's part again

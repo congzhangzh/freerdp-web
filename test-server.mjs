@@ -53,7 +53,9 @@ const demoJson = JSON.stringify({ videos: [{ title: "the splash's", src: "demo/x
     caption: "Unpacked from the release, saved, connected." },
   { title: "xrdp + GNOME Wayland, H.264, freerdp-tk uvx", src: "demo/freerdp-tk-uvx.mp4", poster: "demo/freerdp-tk-uvx.jpg" }],
   windows: [{ title: "FreeRDP Web on a Windows host, AV1", src: "demo/windows-host.mp4", poster: "demo/windows-host.jpg",
-    caption: "The Start menu, Notepad, typing." }] });
+    caption: "The Start menu, Notepad, typing." }],
+  mac: [{ title: "FreeRDP shadow server + macOS, AV1", src: "demo/mac-host.mp4", poster: "demo/mac-host.jpg",
+    caption: "Apps open and close." }] });
 function serve(m) {
   const path = decodeURIComponent(new URL(m.params.request.url).pathname).replace(/\/$/, "/index.html");
   let body = null, type = TYPES[extname(path)] || "application/octet-stream";
@@ -92,11 +94,11 @@ const want = JSON.parse(readFileSync(sample, "utf8"));
 // with the kit's install.json, at phone width
 await send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
 await open(sample);
-const cards = await ev("[...document.querySelectorAll('#kit .distro')].map((c) => c.querySelector('h4').textContent)");
+const cards = await ev("[...document.querySelectorAll('#kit .distro:not([aria-label^=macOS])')].map((c) => c.querySelector('h4').textContent)");
 check("a card per distribution with a name and a command", JSON.stringify(cards) === JSON.stringify(["Debian 13", "Ubuntu 26.04", "Fedora 45", "Fedora 44"]), JSON.stringify(cards));
 check("grouped by family, with a link to each", JSON.stringify(await ev("[...document.querySelectorAll('#kit h3[id^=server-]')].map((h) => h.id + ':' + h.textContent)"))
   === JSON.stringify(["server-debian:Debian", "server-ubuntu:Ubuntu", "server-fedora:Fedora"])
-  && JSON.stringify(await ev("[...document.querySelectorAll('#kit .families a')].map((a) => a.hash)")) === JSON.stringify(["#server-debian", "#server-ubuntu", "#server-fedora", "#windows"]));
+  && JSON.stringify(await ev("[...document.querySelectorAll('#kit .families a')].map((a) => a.hash)")) === JSON.stringify(["#server-debian", "#server-ubuntu", "#server-fedora", "#windows", "#macos"]));
 const first = await ev("document.querySelector('#kit .distro')?.innerText") || "";
 check("a card shows its sessions, a line per kind, and its more commands",
   first.replace(/\n+/g, "\n").includes("Wayland: GNOME, KDE Plasma, sway\nXorg: the default session") && first.includes(want.server[0].more[0].what + ":"),
@@ -105,7 +107,8 @@ const old = await ev("document.querySelectorAll('#kit .distro')[1]?.innerText") 
 check("an older install.json's sessions stay one line", old.includes("Sessions: " + want.server[1].sessions), old.split("\n").slice(0, 2).join(" | "));
 const pres = await ev("[...document.querySelectorAll('#kit .copyable')].map((c) => [c.querySelector('pre').textContent, !!c.querySelector('button[data-copy]')])");
 const commands = [want.server[0].command, want.server[0].more[0].command, want.server[1].command, want.server[2].command, want.server[3].command, want.start,
-  ...(want.av2 ? [want.av2.command] : []), want.windows.command, want.windows.remove];
+  ...(want.av2 ? [want.av2.command] : []), want.windows.command, want.windows.remove,
+  want.mac[0].command, want.mac[1].command, "launchctl kickstart -k gui/$(id -u)/org.freerdp.shadow", want.mac[0].remove];
 check("every command, the more ones and the start one, has a Copy button", JSON.stringify(pres) === JSON.stringify(commands.map((c) => [c, true])),
   `${pres.length} commands`);
 // what the button hands the clipboard (the system clipboard stays untouched)
@@ -124,9 +127,15 @@ check("Windows: its own section after Start it (and AV2), a link to it among the
   await ev(`document.querySelector('#kit h2#windows')?.previousElementSibling?.matches(${JSON.stringify(want.av2 ? "p.hint" : ".copyable")})`) === true
   && await ev("[...document.querySelectorAll('#kit .families a')].some((a) => a.hash === '#windows')")
   && await ev(`[...document.querySelectorAll('#kit a')].some((a) => a.href === ${JSON.stringify(want.windows.url)})`));
-check("the Windows host's video in its section, only that one",
-  JSON.stringify(await ev("[...document.querySelectorAll('#kit video')].map((v) => v.getAttribute('src'))")) === JSON.stringify(["demo/windows-host.mp4"])
-  && await ev("document.querySelector('#kit video').compareDocumentPosition(document.getElementById('windows')) === Node.DOCUMENT_POSITION_PRECEDING"));
+check("the Windows host's video in its section, the Mac host's in its own",
+  JSON.stringify(await ev("[...document.querySelectorAll('#kit video')].map((v) => v.getAttribute('src'))")) === JSON.stringify(["demo/windows-host.mp4", "demo/mac-host.mp4"])
+  && await ev("document.querySelector('#kit video').compareDocumentPosition(document.getElementById('windows')) === Node.DOCUMENT_POSITION_PRECEDING")
+  && await ev("document.querySelector('#kit video').compareDocumentPosition(document.getElementById('macos')) === Node.DOCUMENT_POSITION_FOLLOWING")
+  && await ev("document.querySelectorAll('#kit video')[1].compareDocumentPosition(document.getElementById('macos')) === Node.DOCUMENT_POSITION_PRECEDING"));
+check("macOS: after Windows, a card per processor (a link that is not https left out), both archives linked",
+  await ev("document.getElementById('windows').compareDocumentPosition(document.getElementById('macos')) === Node.DOCUMENT_POSITION_FOLLOWING")
+  && JSON.stringify(await ev("[...document.querySelectorAll('#kit section.distro[aria-label^=macOS] h4')].map((h) => h.textContent)")) === JSON.stringify(["Apple Silicon", "Intel"])
+  && await ev(`${JSON.stringify(want.mac.slice(0, 2).map((m) => m.url))}.every((u) => [...document.querySelectorAll('#kit a')].some((a) => a.href === u))`));
 check("no client, no freerdp-tk: they are on Get a client", await ev("document.querySelectorAll('#clients, #freerdp-tk').length") === 0
   && await ev("!!document.querySelector('main a[href=\"client.html\"]:not(nav a)')"));
 const w = await ev("document.documentElement.scrollWidth");

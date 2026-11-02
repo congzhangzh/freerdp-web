@@ -61,6 +61,30 @@
     "command": "Invoke-WebRequest https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.2/freerdp-host-20261030.1-windows-x86_64.zip -OutFile freerdp-host.zip; Expand-Archive freerdp-host.zip; Set-Location freerdp-host\\freerdp-host-*; .\\freerdp-shadow-service.exe install --allow-sas -- /bind-address:127.0.0.1 /gfx-av1",
     "remove": ".\\freerdp-shadow-service.exe uninstall"
   },
+  "mac": [
+    {
+      "platform": "Apple Silicon",
+      "file": "freerdp-host-20261102.2-macos-arm64.zip",
+      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.2/freerdp-host-20261102.2-macos-arm64.zip",
+      "command": "curl -LO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.2/freerdp-host-20261102.2-macos-arm64.zip && ditto -x -k freerdp-host-20261102.2-macos-arm64.zip . && cd freerdp-host-20261102.2-macos-arm64 && cp -R FreeRDP-Shadow.app /Applications/ && xattr -dr com.apple.quarantine /Applications/FreeRDP-Shadow.app && cp org.freerdp.shadow.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/org.freerdp.shadow.plist",
+      "then": "Then allow FreeRDP Shadow in System Settings > Privacy & Security, under Screen Recording and Accessibility, and run: launchctl kickstart -k gui/$(id -u)/org.freerdp.shadow",
+      "remove": "launchctl bootout gui/$(id -u)/org.freerdp.shadow; rm ~/Library/LaunchAgents/org.freerdp.shadow.plist; rm -rf /Applications/FreeRDP-Shadow.app"
+    },
+    {
+      "platform": "Intel",
+      "file": "freerdp-host-20261102.2-macos-x86_64.zip",
+      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.2/freerdp-host-20261102.2-macos-x86_64.zip",
+      "command": "curl -LO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261028.2/freerdp-host-20261102.2-macos-x86_64.zip && ditto -x -k freerdp-host-20261102.2-macos-x86_64.zip . && cd freerdp-host-20261102.2-macos-x86_64 && cp -R FreeRDP-Shadow.app /Applications/ && xattr -dr com.apple.quarantine /Applications/FreeRDP-Shadow.app && cp org.freerdp.shadow.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/org.freerdp.shadow.plist",
+      "then": "Then allow FreeRDP Shadow in System Settings > Privacy & Security, under Screen Recording and Accessibility, and run: launchctl kickstart -k gui/$(id -u)/org.freerdp.shadow",
+      "remove": "launchctl bootout gui/$(id -u)/org.freerdp.shadow; rm ~/Library/LaunchAgents/org.freerdp.shadow.plist; rm -rf /Applications/FreeRDP-Shadow.app"
+    },
+    {
+      "platform": "Skipped",
+      "file": "x.zip",
+      "url": "javascript:alert(1)",
+      "command": "c"
+    }
+  ],
   "av2": {
     "what": "AV2: xrdp sends it to the clients that offer it (the kit's FreeRDP clients and FreeRDP Web) once it is first in the codec order",
     "command": "sudo sed -i 's/^order = \\[ \"AV1\"/order = [ \"AV2\", \"AV1\"/' /etc/xrdp/gfx.toml && sudo systemctl restart xrdp"

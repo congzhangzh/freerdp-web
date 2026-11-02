@@ -6,14 +6,20 @@ const I = require("../i18n.js");
 const web = join(__dirname, "..");
 const files = (ext) => readdirSync(web).filter((f) => f.endsWith(ext)).map((f) => [f, readFileSync(join(web, f), "utf8")]);
 
-test("the language: a saved choice wins; Auto takes the browser's first English or Chinese, zh of any region is Simplified Chinese", () => {
+test("the language: a saved choice wins; Auto takes the browser's first of the four, of any region", () => {
   assert.equal(I.pick("en", ["zh-CN"]), "en");
   assert.equal(I.pick("zh", ["en-US"]), "zh");
+  assert.equal(I.pick("ja", ["fr-FR"]), "ja");
+  assert.equal(I.pick("fr", ["ja-JP"]), "fr");
   for (const l of ["zh-CN", "zh-TW", "zh-HK", "zh", "zh-Hans", "ZH-cn"]) assert.equal(I.pick("auto", [l]), "zh", l);
+  for (const l of ["ja", "ja-JP", "JA-jp"]) assert.equal(I.pick("auto", [l]), "ja", l);
+  for (const l of ["fr", "fr-FR", "fr-CA", "fr-BE", "FR-ch"]) assert.equal(I.pick("auto", [l]), "fr", l);
   assert.equal(I.pick("auto", ["en-US"]), "en");
-  assert.equal(I.pick("auto", ["fr-FR", "zh-CN", "en"]), "zh");   // the first of the two that is there
-  assert.equal(I.pick("auto", ["ja", "en-GB", "zh-CN"]), "en");
-  for (const l of [["fr"], ["ja"], ["zhx-ab"], [], undefined]) assert.equal(I.pick("auto", l), "en", JSON.stringify(l));
+  assert.equal(I.pick("auto", ["de-DE", "fr-FR", "zh-CN", "en"]), "fr");   // the first of the four that is there
+  assert.equal(I.pick("auto", ["ja", "en-GB", "zh-CN"]), "ja");
+  assert.equal(I.pick("auto", ["en-GB", "ja"]), "en");
+  for (const l of [["de"], ["ko-KR"], ["zhx-ab"], ["jav"], ["fry"], [], undefined]) assert.equal(I.pick("auto", l), "en", JSON.stringify(l));
+  assert.equal(I.pick("de", ["ja"]), "ja");   // a choice that is no language of the page is Auto
 });
 test("t(): the Chinese in Chinese, its vars filled; the English given otherwise, also for a key the table lacks", () => {
   assert.equal(I.translate("zh", "nav.server", "Get a server"), "获取服务器");
@@ -24,7 +30,26 @@ test("t(): the Chinese in Chinese, its vars filled; the English given otherwise,
   // node has no localStorage and the English of the browser it mimics: English until set
   assert.equal(I.t("nav.server", "Get a server"), I.lang === "zh" ? "获取服务器" : "Get a server");
   I.set("zh"); assert.equal(I.t("nav.server", "Get a server"), "获取服务器");
+  I.set("ja"); assert.equal(I.t("nav.server", "Get a server"), I.JA["nav.server"]);
+  I.set("fr"); assert.equal(I.t("nav.server", "Get a server"), I.FR["nav.server"]);
   I.set("en"); assert.equal(I.t("nav.server", "Get a server"), "Get a server");
+});
+test("Japanese and French: the same keys as Chinese, each with the same placeholders", () => {
+  const ph = (v) => [...v.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join();
+  for (const [name, table] of [["JA", I.JA], ["FR", I.FR]]) {
+    assert.deepEqual(Object.keys(table).filter((k) => !Object.hasOwn(I.ZH, k)), [], name + ": keys Chinese lacks");
+    assert.deepEqual(Object.keys(I.ZH).filter((k) => !Object.hasOwn(table, k)), [], name + ": keys missing");
+    for (const k of Object.keys(I.ZH)) assert.equal(ph(table[k]), ph(I.ZH[k]), `${name} ${k}`);
+  }
+  assert.equal(I.translate("ja", "punct.period", "."), "。");
+  assert.equal(I.translate("fr", "punct.period", "."), ".");
+});
+test("every page's language menu: Auto, then the four, each in its own words", () => {
+  for (const [f, s] of files(".html")) {
+    const m = s.match(/<select id="lang"[^>]*>([\s\S]*?)<\/select>/);
+    if (!m) continue;
+    assert.deepEqual([...m[1].matchAll(/<option value="(\w+)"/g)].map((o) => o[1]), ["auto", "en", "zh", "ja", "fr"], f);
+  }
 });
 test("every placeholder of a Chinese line is one its caller fills", () => {
   const call = /\b(?:t\(\s*"([^"]+)",\s*(?:`[^`]*`|"[^"]*"|[^,`"]+)|(?:say|status|screensSay)\((?:`[^`]*`|"[^"]*"|[^,`"]+),\s*"([^"]+)"),\s*\{([^}]*)\}\s*\)/g;
@@ -66,8 +91,8 @@ test("no Chinese line that nothing uses", () => {
   const {marked, named} = used();
   assert.deepEqual(Object.keys(I.ZH).filter((k) => !marked.has(k) && !named.has(k)), []);
 });
-test("no markup, and no empty line, in the table: the page sets text only (Trusted Types)", () => {
-  for (const [k, v] of Object.entries(I.ZH)) {
+test("no markup, and no empty line, in the tables: the page sets text only (Trusted Types)", () => {
+  for (const [k, v] of [I.ZH, I.JA, I.FR].flatMap((t) => Object.entries(t))) {
     assert.ok(typeof v === "string" && v.length, k);
     assert.ok(!/<[a-z/]/i.test(v) || k === "safety.checkMode" || k === "safety.runUser", `${k}: ${v}`);
   }

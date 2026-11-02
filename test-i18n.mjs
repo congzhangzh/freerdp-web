@@ -1,7 +1,7 @@
-// The page in English and in Chinese (web/i18n.js), without any server: headless Chrome answers
-// the page's requests itself (DevTools Fetch interception) from web/, and install.json from
-// test-server-install.json. Two browsers, one that asks for Chinese (--lang=zh-CN, Accept-Language
-// and navigator.languages zh-CN) and one for English (en-US).
+// The page in English, Chinese, Japanese and French (web/i18n.js), without any server: headless
+// Chrome answers the page's requests itself (DevTools Fetch interception) from web/, and
+// install.json from test-server-install.json. A browser per language, each asking for it
+// (--lang=zh-CN, Accept-Language and navigator.languages zh-CN; ja-JP; fr-FR; en-US).
 //
 //   node test-i18n.mjs [out dir]
 //
@@ -9,13 +9,17 @@
 // the slogan's Chinese line first; the Language select switches to English and back at once, and
 // English after the switch reads as a page loaded in English; a saved choice wins over the
 // browser; no sideways scrolling at 390 px on any page. In English: every marked element and
-// attribute is exactly as the HTML has it, <html lang="en">. Screenshots go to the out dir
+// attribute is exactly as the HTML has it, <html lang="en">. In Japanese and French: the header,
+// the safety notice, the form, Get a server with its macOS host, in that language, <html lang>
+// ja and fr, the menu switching to English and back, every page fitting 390 px. Screenshots go to the out dir
 // (default out/). CHROME=<binary> picks another Chrome or Chromium.
 import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { extname, join, resolve } from "node:path";
+import { createRequire } from "node:module";
 
 const web = new URL("web/", import.meta.url).pathname;
+const I = createRequire(import.meta.url)("./web/i18n.js");   // the tables, for what each language should say
 const sample = new URL("test-server-install.json", import.meta.url).pathname;
 const out = resolve(process.argv[2] || new URL("out/", import.meta.url).pathname);
 mkdirSync(out, { recursive: true });
@@ -203,6 +207,41 @@ for (const page of PAGES) {
 }
 check("zh: release-notes.html says, in Chinese, that its entries are English", await zh.ev("!document.querySelector('[data-i18n=\"notes.english\"]').hidden"));
 zh.close();
+
+// ---- Japanese and French: what a browser that asks for ja-JP or fr-FR shows
+for (const [asks, code, table] of [["ja-JP", "ja", I.JA], ["fr-FR", "fr", I.FR]]) {
+  const b = await browser(asks);
+  await b.width(1280);
+  await b.open("index.html");
+  check(`${code}: index.html is <html lang="${code}">, the menu on Auto`, await b.ev("document.documentElement.lang") === code
+    && await b.ev("document.getElementById('lang').value") === "auto");
+  check(`${code}: the header, the safety notice and the form in ${code}`, await b.ev(text('nav a[href="server.html"]')) === table["nav.server"]
+    && await b.ev(text("#route b")) === table["route.duty"] && await b.ev(text("#route p span")) === table["route.notice"]
+    && await b.ev(text("#hostLabel")) === table["hop.gateway"] && await b.ev(text("#sessionPanel > summary span")) === table["set.title"],
+    await b.ev(text("#route p")));
+  await b.screenshot(`i18n-index-${code}-wide.png`);
+  await b.ev("(() => { const s = document.getElementById('lang'); s.value = 'en'; s.dispatchEvent(new Event('change')); return true; })()"); await sleep(300);
+  check(`${code} → English: every marked element as written`, await b.ev("document.documentElement.lang") === "en" && await b.ev(asWritten) === "same");
+  await b.ev(`(() => { const s = document.getElementById('lang'); s.value = '${code}'; s.dispatchEvent(new Event('change')); return true; })()`); await sleep(300);
+  check(`English → ${code} again`, await b.ev("document.documentElement.lang") === code && await b.ev(text('nav a[href="server.html"]')) === table["nav.server"]);
+  await b.ev("localStorage.setItem('freerdp-web-lang', 'auto'), true");
+  await b.open("server.html");
+  const kit = await b.ev("document.getElementById('kit').innerText") || "";
+  check(`${code}: server.html's title, the macOS host and its permissions in ${code}, the commands as they are`,
+    await b.ev("document.title") === table["srv.pageTitle"] && [table["srv.install"], table["srv.macShadow"], table["srv.macRemove"]].every((s) => kit.includes(s))
+    && kit.includes("launchctl kickstart -k gui/$(id -u)/org.freerdp.shadow")
+    && await b.ev("[...document.querySelectorAll('#kit .copyable button')].every((x) => x.textContent === " + JSON.stringify(table["copy"]) + ")"));
+  await b.screenshot(`i18n-server-${code}-wide.png`);
+  await b.width(390);
+  for (const page of PAGES) {
+    await b.open(page);
+    const w = await b.ev("document.documentElement.scrollWidth");
+    check(`${code}: ${page} fits 390 px`, w <= 390 && await b.ev("document.documentElement.lang") === code, `${w} px`);
+    if (page === "index.html") await b.screenshot(`i18n-index-${code}-phone.png`);
+  }
+  check(`${code}: release-notes.html says that its entries are English`, await b.ev("!document.querySelector('[data-i18n=\"notes.english\"]').hidden"));
+  b.close();
+}
 
 check("no page errors", !logs.some((l) => l.includes("EXCEPTION")), logs.filter((l) => l.includes("EXCEPTION")).join("; "));
 writeFileSync(join(out, "i18n.log"), logs.join("\n") + "\n");

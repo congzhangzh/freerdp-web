@@ -15,6 +15,40 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261102.1
+
+聪哥's four requests for the page, passed on by the release kit:
+
+- **Four languages: English, 中文, 日本語, Français.** `web/i18n.js` holds the tables `JA`
+  and `FR` next to `ZH`, with the same 604 keys and the same `{placeholders}`. A unit test
+  holds them to that. The header's Language menu on every page lists the four. Auto takes the
+  browser's first language that is one of them, of any region (`fr-CA`, `ja-JP`…), and English
+  otherwise. `<html lang>` is `ja` or `fr`. The release-note line that says the entries stay
+  English now shows in all three. The two new tables were drafted by translator agents from
+  the English and the Chinese, piece by piece where a sentence is joined around a link.
+  Japanese uses です/ます and 「」; French uses vous, « », and a no-break space before
+  `: ; ? !`. Open points: Chrome's own wording of the Local Network Access prompt
+  (`safety.lna`) is not checked against a Japanese or French Chrome, and in French
+  `screens.span` is capitalised when it sits mid-sentence.
+- **Get a server: the macOS host.** `install.json`'s new `mac` list (kit fd5b633: FreeRDP's
+  shadow server as `FreeRDP-Shadow.app` with a LaunchAgent, one entry per processor) gets a
+  section after Windows. It has a card per processor with its Terminal line, then the two
+  permissions to allow (Screen & System Audio Recording, Accessibility) in the page's own
+  words, the restart command alone (`kickstart`, or the end of the kit's English `then`
+  after "run:"), the removal, both archives, and demo.json's `mac` video. The lead line names
+  the Mac next to Windows.
+- **The Mac demo in the Intro too.** No change was needed: the splash shows every entry of
+  demo.json's `videos`, where the kit appends the Mac video (checked with kit 20261102.8's
+  demo.json: 8 tabs, the last one "FreeRDP shadow server + macOS, AV1").
+- **The safety banner says whose duty security is.** "Your security is your own duty", in
+  bold. Then: an unofficial community client, as is, with no warranty, not written by
+  security professionals. Its author always keeps RDP behind SSH: every server the release
+  kit ships listens on 127.0.0.1 only, and the gateway is SSH plus websockify. Do the same:
+  never open an RDP port to a network.
+- Tests run here before the tag: unit 77/77 (`node --test web/tests/*.test.cjs`),
+  `test-i18n.mjs` 64 checks (ja-JP and fr-FR browsers added), `test-server.mjs` (with the
+  macOS host in `test-server-install.json`), no failures.
+
 ## 20261031.1
 
 - **Get a server: Windows' own Remote Desktop, and AV2.** The Windows section starts with

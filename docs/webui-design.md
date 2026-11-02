@@ -266,6 +266,8 @@ which the kit writes next to the page when it publishes the site:
 | Start | the `start` command once, after the cards |
 | Clients | on Get a client since 20261030.2 (below) |
 | Windows | since 20261030.3: `install.json`'s `windows` (the kit's Windows host: FreeRDP's shadow server and freerdp-shadow-service) gets a section after Start it, with its install and remove commands and the archive; taken only with an https link and a command |
+| macOS | since 20261102.1: `install.json`'s `mac` (the kit's macOS host: FreeRDP's shadow server as `FreeRDP-Shadow.app` with a LaunchAgent, kit fd5b633) gets a section after Windows: a card per processor (Apple Silicon, Intel) with its Terminal line, then the two permissions to allow (Screen & System Audio Recording, Accessibility) in the page's own words with the restart command alone (from `kickstart`, or the end of the kit's English `then`, after "run:"), the removal, both archives, and demo.json's `mac` video. An entry is taken only with a platform, an https link and a command |
+| Videos | demo.json's `windows` under Windows, `mac` under macOS (the files next to the page in `demo/`, titles and captions as the kit wrote them); the splash (the Intro) shows every entry of `videos`, where the kit appends the same Mac video |
 | Without the file | a missing, broken or empty `install.json` (a local build) leaves the page's one static line, a link to the kit's latest release. The cards replace that line only once the file has been read and checked, so the page never breaks |
 | Safety | built with `textContent` only (the installed app requires Trusted Types); links only to `https:` addresses; an entry without a name or a command is skipped |
 | Phone | long commands wrap inside their own box; no sideways scrolling at 390 px |
@@ -305,13 +307,15 @@ A row whose file is missing (a local build has no `MANIFEST` or `RELEASE`) is le
 ## Languages
 
 Added on 2026-10-28: English and Simplified Chinese, following the browser, English by default.
+Japanese and French added on 2026-11-02 (聪哥's four languages).
 
 | Part | Decision |
 |---|---|
-| Choice | the header's **Language** select, before Theme: Auto (the default), English, 中文, kept in this browser (`freerdp-web-lang`). Auto takes the first of `navigator.languages` that is English or Chinese; any `zh` (zh-TW and zh-HK too) gives Simplified Chinese, anything else English. A change applies at once, no reload |
+| Choice | the header's **Language** select, before Theme: Auto (the default), English, 中文, 日本語, Français, kept in this browser (`freerdp-web-lang`). Auto takes the first of `navigator.languages` that is one of the four, of any region: any `zh` (zh-TW and zh-HK too) gives Simplified Chinese, any `ja` Japanese, any `fr` (fr-CA, fr-BE…) French; a browser with none of them gets English. A change applies at once, no reload |
 | English | the HTML and the scripts as written: in English `i18n.js` touches nothing, so the page reads exactly as before |
 | Chinese | `web/i18n.js` holds the table. Leaf elements carry `data-i18n="key"` (and `data-i18n-attr` for title, aria-label, placeholder); a sentence with a link or bold text has a span per piece. Scripts translate what they build with `FreeRDPi18n.t(key, English, vars)` and redo it on `onChange()`. `<html lang="zh-Hans">` |
-| Stays English | log lines, FreeRDP options, commands, paths, codec names, versions, install.json's sessions, the demos' titles and captions (demo.json), the release-note entries (a line in Chinese says so), host names already stored ("My server") |
+| Japanese, French | the tables `JA` and `FR` next to `ZH` in `web/i18n.js`, with the same keys and the same `{placeholders}` (a unit test holds them to it). Japanese: です/ます in sentences, 「」 around names; French: vous, a no-break space before `: ; ? !`, « » around names. `<html lang="ja">`, `<html lang="fr">` |
+| Stays English | log lines, FreeRDP options, commands, paths, codec names, versions, install.json's sessions, the demos' titles and captions (demo.json), the release-note entries (a line in Chinese, Japanese or French says so), host names already stored ("My server") |
 | Safety | `textContent` and `setAttribute` only (the installed app enforces Trusted Types) |
 
 ## Verification
