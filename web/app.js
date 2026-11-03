@@ -1136,8 +1136,12 @@ function updateInfo() {
       const aspect = (bw / bh).toFixed(2), picture = (c.width / c.height).toFixed(2);
       return same ? t("info.canvasSame", `${bw} × ${bh} on screen, matches`, { w: bw, h: bh }) :
         t("info.canvasOff", `⚠ ${bw} × ${bh} on screen, aspect ${aspect} vs picture ${picture}`, { w: bw, h: bh, aspect, picture }); })()],
+    // per codec, what the server sent: counted by FreeRDP's _freerdp_web_codec_stats, which only the
+    // old wasm-vault FreeRDP exported; the release client has none, so the row hides (null) rather
+    // than show "–" for ever (the AV1 counters had the same cause, 20261103.1)
     [t("info.codecs", "Video codecs"), (() => {
-      const f = Module._freerdp_web_codec_stats?.(); if (!f) return "–";
+      if (typeof Module._freerdp_web_codec_stats !== "function") return null;
+      const f = Module._freerdp_web_codec_stats(); if (!f) return "–";
       const now = Array.from(HEAPU32.subarray(f >> 2, (f >> 2) + 32));
       const prev = last.codecs || now.map(() => 0);
       // with the colour each codec carries: AV1's from its stream, H.264's from the RDP codec
@@ -1186,7 +1190,7 @@ function updateInfo() {
     [t("info.session", "Session"), `${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, "0")}`],
   ];
   const tbl = $("infoTable"); tbl.textContent = "";
-  for (const [k, v] of rows) { const tr = tbl.insertRow(); tr.insertCell().textContent = k; tr.insertCell().textContent = v; }
+  for (const [k, v] of rows) { if (v === null) continue; const tr = tbl.insertRow(); tr.insertCell().textContent = k; tr.insertCell().textContent = v; }
   last = { t: now, rx: net.rx, tx: net.tx, video, codecs: last.codecsNext };
 }
 setInterval(updateInfo, 1000);
