@@ -1096,7 +1096,10 @@ window.freerdpScreens = {
   },
 };
 
-let last = { t: performance.now(), rx: 0, tx: 0, frames: 0, ms: 0 };
+let last = { t: performance.now(), rx: 0, tx: 0, video: {} };
+// the frames of a codec family ("av01", "avc1"): counted by the page (decode-stats.js); a client
+// whose FreeRDP keeps its own AV1 counters (Module.freerdpAv1.stats) is read instead
+const decodeStats = (family) => (family === "av01" && Module.freerdpAv1?.stats) || window.freerdpDecodeStats?.[family];
 // the AV1 stream's profile, from its last sequence header (av1_webcodecs.js): 0 = Main, 4:2:0;
 // 1 = High, 4:4:4
 const av1Profile = () => { let p = -1; for (const d of Module.freerdpAv1?.decoders?.values() ?? []) if (d.profile >= 0) p = d.profile; return p; };
@@ -1107,9 +1110,19 @@ function updateInfo() {
   if ($("info").hidden) return;
   const now = performance.now(), dt = (now - last.t) / 1000 || 1;
   const net = window.freerdpNet || { rx: 0, tx: 0 };
-  const av1 = Module.freerdpAv1?.stats || { frames: 0, keyFrames: 0, bytes: 0, decodeMs: 0 };
-  const fps = (av1.frames - last.frames) / dt;
-  const dms = av1.frames > last.frames ? (av1.decodeMs - last.ms) / (av1.frames - last.frames) : 0;
+  // "12.0 /s, 345 total (3 key)" and "4.1 ms/frame (avg 4.5)" for a codec family, "–" before its first frame
+  const video = {};
+  const frameRows = (family) => {
+    const c = decodeStats(family); if (!c?.frames) return ["–", "–"];
+    const p = last.video[family] || { frames: 0, decodeMs: 0 };
+    video[family] = { frames: c.frames, decodeMs: c.decodeMs };
+    const fps = (c.frames - p.frames) / dt;
+    const dms = c.frames > p.frames ? (c.decodeMs - p.decodeMs) / (c.frames - p.frames) : 0;
+    return [t("info.frames", `${fps.toFixed(1)} /s, ${c.frames} total (${c.keyFrames} key)`, { fps: fps.toFixed(1), n: c.frames, key: c.keyFrames }),
+      t("info.decodeMs", `${dms.toFixed(1)} ms/frame (avg ${(c.decodeMs / c.frames).toFixed(1)})`,
+        { ms: dms.toFixed(1), avg: (c.decodeMs / c.frames).toFixed(1) })];
+  };
+  const [av1Frames, av1Decode] = frameRows("av01"), [h264Frames, h264Decode] = frameRows("avc1");
   const kbit = (b) => (b * 8 / 1000 / dt).toFixed(0) + " kbit/s";
   const mb = (b) => (b / 1e6).toFixed(1) + " MB";
   const net2 = (rate, total) => t("info.net", `${rate}, ${total} total`, { rate, total });
@@ -1161,10 +1174,9 @@ function updateInfo() {
       if (!tag) return t("info.noAudio", "no audio yet");
       const name = { 0x0001: "PCM", 0x704F: "Opus", 0xA106: "AAC", 0x0002: "ADPCM", 0x0011: "IMA ADPCM" }[tag] ?? "0x" + tag.toString(16);
       return `${name}, ${rate / 1000} kHz, ${ch === 2 ? t("info.stereo", "stereo") : ch === 1 ? t("info.mono", "mono") : t("info.channels", ch + " ch", { n: ch })}`; })()],
-    [t("info.av1Frames", "AV1 frames"), t("info.frames", `${fps.toFixed(1)} /s, ${av1.frames} total (${av1.keyFrames} key)`,
-      { fps: fps.toFixed(1), n: av1.frames, key: av1.keyFrames })],
-    [t("info.av1Decode", "AV1 decode"), av1.frames ? t("info.decodeMs", `${dms.toFixed(1)} ms/frame (avg ${(av1.decodeMs / av1.frames).toFixed(1)})`,
-      { ms: dms.toFixed(1), avg: (av1.decodeMs / av1.frames).toFixed(1) }) : "–"],
+    [t("info.av1Frames", "AV1 frames"), av1Frames], [t("info.av1Decode", "AV1 decode"), av1Decode],
+    // H.264's rows only once H.264 pictures arrive (most sessions are AV1)
+    ...(h264Frames === "–" ? [] : [[t("info.h264Frames", "H.264 frames"), h264Frames], [t("info.h264Decode", "H.264 decode"), h264Decode]]),
     [t("info.audio", "Audio"), (() => { const c = Module.freerdpAudioContext, a = Module.freerdpAudio;
       if (!c) return "–";
       const q = a ? Math.max(0, Math.round((a.next - c.currentTime) * 1000)) : 0;
@@ -1175,7 +1187,7 @@ function updateInfo() {
   ];
   const tbl = $("infoTable"); tbl.textContent = "";
   for (const [k, v] of rows) { const tr = tbl.insertRow(); tr.insertCell().textContent = k; tr.insertCell().textContent = v; }
-  last = { t: now, rx: net.rx, tx: net.tx, frames: av1.frames, ms: av1.decodeMs, codecs: last.codecsNext };
+  last = { t: now, rx: net.rx, tx: net.tx, video, codecs: last.codecsNext };
 }
 setInterval(updateInfo, 1000);
 // In full screen the toolbar hides. It comes back when the mouse rests TB_DWELL ms at the top

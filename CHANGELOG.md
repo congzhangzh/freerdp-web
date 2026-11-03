@@ -15,6 +15,24 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261103.1
+
+- **Info counts the video frames again.** "AV1 frames" said "0 total" on every server while the
+  pictures arrived (the release kit saw it on its macOS host: 448 AV1 frames sent, 0 counted).
+  The page read `Module.freerdpAv1.stats`, which only the old wasm-vault FreeRDP filled (commit
+  "[codec,av1] count WebCodecs frames and decode time for the page"); the FreeRDP the kit has
+  built since 2026-10-27 does not carry it. Now the page counts by itself: `web/decode-stats.js`
+  wraps the browser's `VideoDecoder` before the client starts, so every decoder FreeRDP's
+  WebCodecs glue makes reports its chunks, key chunks, bytes, pictures and the time from
+  `decode()` to the picture, per codec (AV1 4:2:0 or 4:4:4, H.264), with no FreeRDP patch. A
+  client whose FreeRDP keeps its own AV1 counters is read instead. Info shows "H.264 frames" and
+  "H.264 decode" too, once H.264 pictures arrive; dav1d (the software fallback inside the
+  client) is not a `VideoDecoder` and leaves the AV1 rows at "–". The "Video codecs" row stays
+  "–" (its counters, `freerdp_web_codec_stats`, are FreeRDP's and not in the release either).
+- Tests: a unit test of the counter (`web/tests/decode-stats.test.cjs`); by hand, Chrome's own
+  AV1 and H.264 encoders feeding the wrapped decoder the way FreeRDP does (one picture in flight,
+  timestamp 0, `copyTo`): 12 of 12 pictures counted for each, with their bytes and decode time.
+
 ## 20261102.1
 
 聪哥's four requests for the page, passed on by the release kit:
