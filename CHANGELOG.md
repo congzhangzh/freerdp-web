@@ -15,6 +15,22 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261103.2
+
+- **The demo videos speak the page's language.** Their titles and captions come from the release
+  kit's `demo.json`, which since kit release 20261103.9 carries them in Chinese, Japanese and
+  French as well (`i18n.zh` / `.ja` / `.fr` on each entry, each with an optional `title` and
+  `caption`). The intro's tabs and caption, and the videos in Get a server (Windows and macOS
+  hosts) and Get a client, now show the kit's words in the page's language, field by field, and
+  English where the kit left a field out: a name such as "xrdp + GNOME Wayland, AV1" stays
+  English in every language. A change of language on the open page redraws them. One helper,
+  `kit(entry, field)` in `i18n.js`, does the choosing for every page.
+- Tests: `i18n.test.cjs` (each language; a missing, blank or non-text field; an entry from an
+  older kit with no `i18n`), `server.test.cjs` (`clips()` per language; a translated title lets
+  nothing through that the English one would not). Checked in Chrome against the kit's real
+  `demo.json` and `install.json` of release 20261103.9: the intro, Get a server and Get a client
+  in English, Chinese, Japanese and French, and a switch of language on an open page (26 of 26).
+
 ## 20261103.1
 
 - **Info counts the video frames again.** "AV1 frames" said "0 total" on every server while the
