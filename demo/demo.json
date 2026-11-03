@@ -1,8 +1,8 @@
 {
   "recorded": {
-    "kit": "5454928e37fb25bf0823fc1409f9b6d9a5e26a48",
-    "web": "web-20261101.2-5454928e37fb",
-    "xrdp": "xrdp-20261101.2-5454928e37fb",
+    "kit": "0465ecbc8a6c8784599df9703b3d750cbbd8facc",
+    "web": "web-20261103.8-0465ecbc8a6c",
+    "xrdp": "xrdp-20261103.8-0465ecbc8a6c",
     "pipewire-module-xrdp": "pipewire-module-xrdp-20261031.1-1b78a2c01cc2"
   },
   "videos": [
@@ -83,6 +83,16 @@
       "aliases": [
         "windows-rdp"
       ]
+    },
+    {
+      "title": "FreeRDP shadow server + macOS, AV1",
+      "src": "demo/mac-host.mp4",
+      "poster": "demo/mac-host.jpg",
+      "caption": "FreeRDP Web in a browser on a GitHub macOS runner, through websockify, to the kit's macOS host (FreeRDP-Shadow.app, ScreenCaptureKit) sharing that Mac's screen: Firefox there with web video and WebGL; the picture in AV1. The browser runs headless, so the Mac's screen shows only its own desktop. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD.",
+      "id": "mac-host",
+      "aliases": [
+        "mac-host"
+      ]
     }
   ],
   "clients": [
@@ -111,6 +121,14 @@
       "src": "demo/windows-rdp.mp4",
       "poster": "demo/windows-rdp.jpg",
       "caption": "FreeRDP Web in a browser to Windows Server 2025's own Remote Desktop on a CI machine, through websockify: a session of its own for the user, Notepad from Win+R, then Firefox in the session with web video and WebGL, with sound. Nothing installed on Windows. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD."
+    }
+  ],
+  "mac": [
+    {
+      "title": "FreeRDP Web on a macOS host, AV1",
+      "src": "demo/mac-host.mp4",
+      "poster": "demo/mac-host.jpg",
+      "caption": "FreeRDP Web in a browser on a GitHub macOS runner, through websockify, to the kit's macOS host (FreeRDP-Shadow.app, ScreenCaptureKit) sharing that Mac's screen: Firefox there with web video and WebGL; the picture in AV1. The browser runs headless, so the Mac's screen shows only its own desktop. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD."
     }
   ]
 }

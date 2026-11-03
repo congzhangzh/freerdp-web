@@ -1,71 +1,71 @@
 {
-  "release": "20261101.1",
-  "url": "https://github.com/congzhangzh/rdp-release-kit/releases/tag/20261101.1",
+  "release": "20261103.5",
+  "url": "https://github.com/congzhangzh/rdp-release-kit/releases/tag/20261103.5",
   "server": [
     {
       "name": "Debian testing (forky)",
       "sessions": "Wayland: GNOME, KDE Plasma, sway; Xorg: the default session",
-      "command": "cd /tmp && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/xrdp_0.10.80.20261030.1.4986f5c7-0kit257.debian-forky_$(dpkg --print-architecture).deb && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/xorgxrdp_0.10.80.20261018.1.59d0735c-0kit257.debian-forky_$(dpkg --print-architecture).deb && sudo apt install ./xrdp_*.deb ./xorgxrdp_*.deb pipewire-module-xrdp",
+      "command": "cd /tmp && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/xrdp_0.10.80.20261030.1.4986f5c7-0kit304.debian-forky_$(dpkg --print-architecture).deb && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/xorgxrdp_0.10.80.20261018.1.59d0735c-0kit304.debian-forky_$(dpkg --print-architecture).deb && sudo apt install ./xrdp_*.deb ./xorgxrdp_*.deb pipewire-module-xrdp",
       "more": []
     },
     {
       "name": "Debian 13",
       "sessions": "Wayland: GNOME; Xorg: the default session",
-      "command": "cd /tmp && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/xrdp_0.10.80.20261030.1.4986f5c7-0kit257.debian-13_$(dpkg --print-architecture).deb && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/xorgxrdp_0.10.80.20261018.1.59d0735c-0kit257.debian-13_$(dpkg --print-architecture).deb && sudo apt install ./xrdp_*.deb ./xorgxrdp_*.deb pipewire-module-xrdp",
+      "command": "cd /tmp && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/xrdp_0.10.80.20261030.1.4986f5c7-0kit304.debian-13_$(dpkg --print-architecture).deb && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/xorgxrdp_0.10.80.20261018.1.59d0735c-0kit304.debian-13_$(dpkg --print-architecture).deb && sudo apt install ./xrdp_*.deb ./xorgxrdp_*.deb pipewire-module-xrdp",
       "more": []
     },
     {
       "name": "Ubuntu 26.10",
       "sessions": "Wayland: GNOME, KDE Plasma, sway; Xorg: the default session",
-      "command": "cd /tmp && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/xrdp_0.10.80.20261030.1.4986f5c7-0kit257.ubuntu-26.10_$(dpkg --print-architecture).deb && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/xorgxrdp_0.10.80.20261018.1.59d0735c-0kit257.ubuntu-26.10_$(dpkg --print-architecture).deb && sudo apt install ./xrdp_*.deb ./xorgxrdp_*.deb pipewire-module-xrdp",
+      "command": "cd /tmp && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/xrdp_0.10.80.20261030.1.4986f5c7-0kit304.ubuntu-26.10_$(dpkg --print-architecture).deb && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/xorgxrdp_0.10.80.20261018.1.59d0735c-0kit304.ubuntu-26.10_$(dpkg --print-architecture).deb && sudo apt install ./xrdp_*.deb ./xorgxrdp_*.deb pipewire-module-xrdp",
       "more": []
     },
     {
       "name": "Ubuntu 26.04",
       "sessions": "Wayland: GNOME, sway; Xorg: the default session",
-      "command": "cd /tmp && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/xrdp_0.10.80.20261030.1.4986f5c7-0kit257.ubuntu-26.04_$(dpkg --print-architecture).deb && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/xorgxrdp_0.10.80.20261018.1.59d0735c-0kit257.ubuntu-26.04_$(dpkg --print-architecture).deb && sudo apt install ./xrdp_*.deb ./xorgxrdp_*.deb pipewire-module-xrdp",
+      "command": "cd /tmp && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/xrdp_0.10.80.20261030.1.4986f5c7-0kit304.ubuntu-26.04_$(dpkg --print-architecture).deb && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/xorgxrdp_0.10.80.20261018.1.59d0735c-0kit304.ubuntu-26.04_$(dpkg --print-architecture).deb && sudo apt install ./xrdp_*.deb ./xorgxrdp_*.deb pipewire-module-xrdp",
       "more": []
     },
     {
       "name": "Ubuntu 24.04",
       "sessions": "Wayland: GNOME; Xorg: the default session",
-      "command": "cd /tmp && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/xrdp_0.10.80.20261030.1.4986f5c7-0kit257.ubuntu-24.04_$(dpkg --print-architecture).deb && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/xorgxrdp_0.10.80.20261018.1.59d0735c-0kit257.ubuntu-24.04_$(dpkg --print-architecture).deb && sudo apt install ./xrdp_*.deb ./xorgxrdp_*.deb pipewire-module-xrdp",
+      "command": "cd /tmp && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/xrdp_0.10.80.20261030.1.4986f5c7-0kit304.ubuntu-24.04_$(dpkg --print-architecture).deb && curl -fLO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/xorgxrdp_0.10.80.20261018.1.59d0735c-0kit304.ubuntu-24.04_$(dpkg --print-architecture).deb && sudo apt install ./xrdp_*.deb ./xorgxrdp_*.deb pipewire-module-xrdp",
       "more": []
     },
     {
       "name": "Fedora 45",
       "sessions": "Wayland: GNOME (the default), KDE Plasma, sway; Xorg: with xorgxrdp, below",
-      "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/xrdp-0.10.80.20261030.1.4986f5c7-0kit257.fc45.$(uname -m).rpm https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/pipewire-module-xrdp-0.2-0kit257.fc45.$(uname -m).rpm",
+      "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/xrdp-0.10.80.20261030.1.4986f5c7-0kit304.fc45.$(uname -m).rpm https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/pipewire-module-xrdp-0.2-0kit304.fc45.$(uname -m).rpm",
       "more": [
         {
           "what": "Xorg session (xorgxrdp)",
-          "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/xorgxrdp-0.10.80.20261018.1.59d0735c-0kit257.fc45.$(uname -m).rpm"
+          "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/xorgxrdp-0.10.80.20261018.1.59d0735c-0kit304.fc45.$(uname -m).rpm"
         },
         {
           "what": "Optional: GNOME's Mutter with our fix for windows on the wrong monitor (GNOME/mutter!5438)",
-          "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/mutter-51.0-1.0kit1.fc45.$(uname -m).rpm https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/mutter-common-51.0-1.0kit1.fc45.noarch.rpm"
+          "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/mutter-51.0-1.0kit1.fc45.$(uname -m).rpm https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/mutter-common-51.0-1.0kit1.fc45.noarch.rpm"
         }
       ]
     },
     {
       "name": "Fedora 44",
       "sessions": "Wayland: GNOME (the default), KDE Plasma, sway; Xorg: with xorgxrdp, below",
-      "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/xrdp-0.10.80.20261030.1.4986f5c7-0kit257.fc44.$(uname -m).rpm https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/pipewire-module-xrdp-0.2-0kit257.fc44.$(uname -m).rpm",
+      "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/xrdp-0.10.80.20261030.1.4986f5c7-0kit304.fc44.$(uname -m).rpm https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/pipewire-module-xrdp-0.2-0kit304.fc44.$(uname -m).rpm",
       "more": [
         {
           "what": "Xorg session (xorgxrdp)",
-          "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/xorgxrdp-0.10.80.20261018.1.59d0735c-0kit257.fc44.$(uname -m).rpm"
+          "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/xorgxrdp-0.10.80.20261018.1.59d0735c-0kit304.fc44.$(uname -m).rpm"
         }
       ]
     },
     {
       "name": "Fedora 43",
       "sessions": "Wayland: GNOME (the default), KDE Plasma, sway; Xorg: with xorgxrdp, below",
-      "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/xrdp-0.10.80.20261030.1.4986f5c7-0kit257.fc43.$(uname -m).rpm https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/pipewire-module-xrdp-0.2-0kit257.fc43.$(uname -m).rpm",
+      "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/xrdp-0.10.80.20261030.1.4986f5c7-0kit304.fc43.$(uname -m).rpm https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/pipewire-module-xrdp-0.2-0kit304.fc43.$(uname -m).rpm",
       "more": [
         {
           "what": "Xorg session (xorgxrdp)",
-          "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/xorgxrdp-0.10.80.20261018.1.59d0735c-0kit257.fc43.$(uname -m).rpm"
+          "command": "sudo dnf install https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/xorgxrdp-0.10.80.20261018.1.59d0735c-0kit304.fc43.$(uname -m).rpm"
         }
       ]
     }
@@ -78,39 +78,59 @@
   "clients": [
     {
       "platform": "Linux ARM64",
-      "file": "sdl3-freerdp-20261031.9-linux-aarch64.tar.xz",
-      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/sdl3-freerdp-20261031.9-linux-aarch64.tar.xz"
+      "file": "sdl3-freerdp-20261102.4-linux-aarch64.tar.xz",
+      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/sdl3-freerdp-20261102.4-linux-aarch64.tar.xz"
     },
     {
       "platform": "Linux x86_64",
-      "file": "sdl3-freerdp-20261031.9-linux-x86_64.tar.xz",
-      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/sdl3-freerdp-20261031.9-linux-x86_64.tar.xz"
+      "file": "sdl3-freerdp-20261102.4-linux-x86_64.tar.xz",
+      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/sdl3-freerdp-20261102.4-linux-x86_64.tar.xz"
     },
     {
       "platform": "macOS Apple Silicon",
-      "file": "sdl3-freerdp-20261031.9-macos-arm64.tar.xz",
-      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/sdl3-freerdp-20261031.9-macos-arm64.tar.xz"
+      "file": "sdl3-freerdp-20261102.4-macos-arm64.tar.xz",
+      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/sdl3-freerdp-20261102.4-macos-arm64.tar.xz"
     },
     {
       "platform": "macOS Intel",
-      "file": "sdl3-freerdp-20261031.9-macos-x86_64.tar.xz",
-      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/sdl3-freerdp-20261031.9-macos-x86_64.tar.xz"
+      "file": "sdl3-freerdp-20261102.4-macos-x86_64.tar.xz",
+      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/sdl3-freerdp-20261102.4-macos-x86_64.tar.xz"
     },
     {
       "platform": "Windows ARM64",
-      "file": "sdl3-freerdp-20261031.9-windows-aarch64.zip",
-      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/sdl3-freerdp-20261031.9-windows-aarch64.zip"
+      "file": "sdl3-freerdp-20261102.4-windows-aarch64.zip",
+      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/sdl3-freerdp-20261102.4-windows-aarch64.zip"
     },
     {
       "platform": "Windows x86_64",
-      "file": "sdl3-freerdp-20261031.9-windows-x86_64.zip",
-      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/sdl3-freerdp-20261031.9-windows-x86_64.zip"
+      "file": "sdl3-freerdp-20261102.4-windows-x86_64.zip",
+      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/sdl3-freerdp-20261102.4-windows-x86_64.zip"
     }
   ],
   "windows": {
-    "file": "freerdp-host-20261031.8-windows-x86_64.zip",
-    "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/freerdp-host-20261031.8-windows-x86_64.zip",
-    "command": "Invoke-WebRequest https://github.com/congzhangzh/rdp-release-kit/releases/download/20261101.1/freerdp-host-20261031.8-windows-x86_64.zip -OutFile freerdp-host.zip; Expand-Archive freerdp-host.zip; Set-Location freerdp-host\\freerdp-host-*; .\\freerdp-shadow-service.exe install --allow-sas -- /bind-address:127.0.0.1 /gfx-av1 /gfx-av2",
+    "file": "freerdp-host-20261102.4-windows-x86_64.zip",
+    "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/freerdp-host-20261102.4-windows-x86_64.zip",
+    "command": "Invoke-WebRequest https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/freerdp-host-20261102.4-windows-x86_64.zip -OutFile freerdp-host.zip; Expand-Archive freerdp-host.zip; Set-Location freerdp-host\\freerdp-host-*; .\\freerdp-shadow-service.exe install --allow-sas -- /bind-address:127.0.0.1 /gfx-av1 /gfx-av2 -gfx-avc444",
     "remove": ".\\freerdp-shadow-service.exe uninstall"
-  }
+  },
+  "mac": [
+    {
+      "platform": "Apple Silicon",
+      "file": "freerdp-host-20261102.4-macos-arm64.zip",
+      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/freerdp-host-20261102.4-macos-arm64.zip",
+      "command": "curl -LO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/freerdp-host-20261102.4-macos-arm64.zip && ditto -x -k freerdp-host-20261102.4-macos-arm64.zip . && cd freerdp-host-20261102.4-macos-arm64 && cp -R FreeRDP-Shadow.app /Applications/ && xattr -dr com.apple.quarantine /Applications/FreeRDP-Shadow.app && cp org.freerdp.shadow.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/org.freerdp.shadow.plist",
+      "then": "Then allow FreeRDP Shadow in System Settings > Privacy & Security, under Screen Recording and Accessibility, and run: launchctl kickstart -k gui/$(id -u)/org.freerdp.shadow",
+      "kickstart": "launchctl kickstart -k gui/$(id -u)/org.freerdp.shadow",
+      "remove": "launchctl bootout gui/$(id -u)/org.freerdp.shadow; rm ~/Library/LaunchAgents/org.freerdp.shadow.plist; rm -rf /Applications/FreeRDP-Shadow.app"
+    },
+    {
+      "platform": "Intel",
+      "file": "freerdp-host-20261102.4-macos-x86_64.zip",
+      "url": "https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/freerdp-host-20261102.4-macos-x86_64.zip",
+      "command": "curl -LO https://github.com/congzhangzh/rdp-release-kit/releases/download/20261103.5/freerdp-host-20261102.4-macos-x86_64.zip && ditto -x -k freerdp-host-20261102.4-macos-x86_64.zip . && cd freerdp-host-20261102.4-macos-x86_64 && cp -R FreeRDP-Shadow.app /Applications/ && xattr -dr com.apple.quarantine /Applications/FreeRDP-Shadow.app && cp org.freerdp.shadow.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/org.freerdp.shadow.plist",
+      "then": "Then allow FreeRDP Shadow in System Settings > Privacy & Security, under Screen Recording and Accessibility, and run: launchctl kickstart -k gui/$(id -u)/org.freerdp.shadow",
+      "kickstart": "launchctl kickstart -k gui/$(id -u)/org.freerdp.shadow",
+      "remove": "launchctl bootout gui/$(id -u)/org.freerdp.shadow; rm ~/Library/LaunchAgents/org.freerdp.shadow.plist; rm -rf /Applications/FreeRDP-Shadow.app"
+    }
+  ]
 }
