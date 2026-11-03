@@ -1962,6 +1962,13 @@
   let lang = pick(choice, browserLanguages());
   const listeners = [];
   const t = (key, text, vars) => translate(lang, key, text, vars);
+  // the release kit's own words in demo.json (a video's "title", "caption"): the entry's
+  // i18n[lang][field] where the kit wrote one, else its English (a name such as "xrdp + GNOME
+  // Wayland, AV1" may stay English in every language)
+  const kit = (entry, field, l = lang) => {
+    const v = entry?.i18n?.[l]?.[field];
+    return typeof v === "string" && v.trim() ? v : entry?.[field];
+  };
 
   // the HTML's own words, before the first change: what English goes back to
   const original = new WeakMap();
@@ -1998,7 +2005,7 @@
   }
 
   const api = {
-    KEY, ZH, JA, FR, TABLES, LANGS, pick, translate, t, set,
+    KEY, ZH, JA, FR, TABLES, LANGS, pick, translate, t, kit, set,
     get lang() { return lang; },
     get choice() { return choice; },
     // fn(lang) once the page is in a new language (its HTML already is)

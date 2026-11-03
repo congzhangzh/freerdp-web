@@ -67,6 +67,18 @@ test("demo.json's freerdp-tk videos: files in demo/ only, a title and a video ea
   assert.deepEqual(S.clips({mac: [{title: "on a Mac", src: "demo/mac-host.mp4", poster: "demo/mac-host.jpg"}]}, "mac"),
     [{title: "on a Mac", src: "demo/mac-host.mp4", poster: "demo/mac-host.jpg", caption: ""}]);
 });
+test("demo.json's videos in the page's language: the kit's i18n.<lang>, field by field, else English", () => {
+  require("../i18n.js");   // i18n.js's kit(), as on the page
+  const mac = {mac: [{title: "FreeRDP Web on a macOS host, AV1", src: "demo/mac-host.mp4", poster: "demo/mac-host.jpg",
+    caption: "On a Mac.", i18n: {zh: {title: "FreeRDP Web 连接 macOS 主机，AV1", caption: "在 Mac 上。"}, fr: {caption: "Sur un Mac."}}}]};
+  assert.deepEqual(S.clips(mac, "mac", "zh"),
+    [{title: "FreeRDP Web 连接 macOS 主机，AV1", src: "demo/mac-host.mp4", poster: "demo/mac-host.jpg", caption: "在 Mac 上。"}]);
+  assert.deepEqual(S.clips(mac, "mac", "fr").map((c) => [c.title, c.caption]), [["FreeRDP Web on a macOS host, AV1", "Sur un Mac."]]);
+  assert.deepEqual(S.clips(mac, "mac", "ja").map((c) => [c.title, c.caption]), [["FreeRDP Web on a macOS host, AV1", "On a Mac."]]);
+  assert.deepEqual(S.clips(mac, "mac", "en").map((c) => [c.title, c.caption]), [["FreeRDP Web on a macOS host, AV1", "On a Mac."]]);
+  // a translated title never lets an entry through that the English one would not (no src: skipped)
+  assert.deepEqual(S.clips({mac: [{title: "", i18n: {zh: {title: "有标题"}}}]}, "mac", "zh"), []);
+});
 test("install.json's mac: an entry per processor with an https link and a command; the restart command alone", () => {
   const k = S.parse(sample);
   assert.deepEqual(k.mac.map((m) => [m.platform, m.file]), [

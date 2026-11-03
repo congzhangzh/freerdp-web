@@ -102,3 +102,20 @@ test("a marked element holds text only, so translating it never drops a child", 
     for (const m of s.matchAll(/<(\w+)\b[^>]*\sdata-i18n="[^"]*"[^>]*>([\s\S]*?)<\/\1>/g))
       assert.ok(!/<[a-z]/i.test(m[2]), `${f}: <${m[1]}> with ${m[2].slice(0, 60)}`);
 });
+test("the kit's words in demo.json: the entry's i18n.<lang> where the kit wrote one, else its English", () => {
+  const v = {title: "FreeRDP Web on a macOS host, AV1", caption: "In a browser on a Mac.",
+    i18n: {zh: {title: "FreeRDP Web 连接 macOS 主机，AV1", caption: "在 Mac 上的浏览器里。"}, ja: {caption: "Mac のブラウザーで。"}, fr: {title: "  ", caption: 7}}};
+  assert.equal(I.kit(v, "title", "zh"), "FreeRDP Web 连接 macOS 主机，AV1");
+  assert.equal(I.kit(v, "caption", "zh"), "在 Mac 上的浏览器里。");
+  // a field the kit left out (a name that stays English), a blank one or one that isn't text: English
+  assert.equal(I.kit(v, "title", "ja"), "FreeRDP Web on a macOS host, AV1");
+  assert.equal(I.kit(v, "caption", "ja"), "Mac のブラウザーで。");
+  assert.equal(I.kit(v, "title", "fr"), "FreeRDP Web on a macOS host, AV1");
+  assert.equal(I.kit(v, "caption", "fr"), "In a browser on a Mac.");
+  // English, and an entry from an older kit with no i18n at all
+  assert.equal(I.kit(v, "caption", "en"), "In a browser on a Mac.");
+  assert.equal(I.kit({title: "older"}, "title", "zh"), "older");
+  assert.equal(I.kit(null, "title", "zh"), undefined);
+  // without a language given: the page's own
+  assert.equal(I.kit(v, "title"), I.kit(v, "title", I.lang));
+});

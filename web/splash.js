@@ -13,7 +13,9 @@
 (function () {
   "use strict";
   const $ = (id) => document.getElementById(id);
-  const t = (key, text) => globalThis.FreeRDPi18n?.t(key, text) ?? text;   // i18n.js; the demos' own titles stay English
+  const t = (key, text) => globalThis.FreeRDPi18n?.t(key, text) ?? text;   // i18n.js
+  // a demo's title or caption in the page's language, as the kit wrote it in demo.json (i18n.js)
+  const kitWords = (v, field) => globalThis.FreeRDPi18n?.kit(v, field) ?? v[field];
   const KEY = "freerdp-web-splash", SOUND_KEY = "freerdp-web-splash-sound";
   let videos = [], current = 0, opener = null;
   // the demos' sound is part of the show: on, unless the viewer turned it off once
@@ -53,7 +55,7 @@
     const v = videos[i], video = $("splashVideo");
     document.querySelectorAll("#splashTabs [role=tab]").forEach((t, j) => t.setAttribute("aria-selected", String(j === i)));
     video.poster = v.poster; video.src = v.src;
-    $("splashCaption").textContent = v.caption;
+    $("splashCaption").textContent = kitWords(v, "caption");
     setHash("#" + idOf(v));
     // the demo's address in full, also where there is no address bar (the installed app)
     $("splashLink").href = location.href;
@@ -118,7 +120,7 @@
     // links, so a demo's address can be copied or opened in a new tab; a plain click stays here
     tabs.replaceChildren(...videos.map((v, i) => {
       const a = document.createElement("a");
-      a.className = "button"; a.href = "#" + idOf(v); a.setAttribute("role", "tab"); a.textContent = v.title;
+      a.className = "button"; a.href = "#" + idOf(v); a.setAttribute("role", "tab"); a.textContent = kitWords(v, "title");
       a.onclick = (e) => {
         if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
         e.preventDefault(); choose(i);
@@ -133,4 +135,9 @@
     if (asked >= 0) open(asked);
     else if (!seen && !new URLSearchParams(location.search).has("autoconnect")) open(0);
   }).catch(() => {});
+  // a new language: the tabs and the caption in it
+  globalThis.FreeRDPi18n?.onChange(() => {
+    document.querySelectorAll("#splashTabs [role=tab]").forEach((a, i) => { if (videos[i]) a.textContent = kitWords(videos[i], "title"); });
+    if (videos[current]) $("splashCaption").textContent = kitWords(videos[current], "caption");
+  });
 })();
