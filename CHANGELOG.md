@@ -15,6 +15,18 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261103.3
+
+- **Info hides "Video codecs" while the client has no codec counters.** The row showed, per RDP
+  graphics codec, how many updates the server sent and at what rate. It read FreeRDP's
+  `_freerdp_web_codec_stats`, which only the old wasm-vault FreeRDP exported: the same cause as
+  the AV1 counters fixed in 20261103.1. The release client has none, so the row said "–" in every
+  session. It now hides when the export is missing. The counters are coming back in the release
+  FreeRDP as a new client-side export (a new layout, with AV1 and AV2 told apart), and the page
+  will read it in a release of its own.
+- Checked with the real client: the row is gone and the other rows stay; with an export present,
+  the row is there again. Unit tests and the page test (`test-page.mjs`) pass.
+
 ## 20261103.2
 
 - **The demo videos speak the page's language.** Their titles and captions come from the release
