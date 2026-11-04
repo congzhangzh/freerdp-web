@@ -374,6 +374,8 @@
     "info.av1Frames": "AV1 帧",
     "info.frames": "{fps} 帧/秒，共 {n} 帧（关键帧 {key}）",
     "info.av1Decode": "AV1 解码",
+    "info.h264Frames": "H.264 帧",
+    "info.h264Decode": "H.264 解码",
     "info.decodeMs": "{ms} 毫秒/帧（平均 {avg}）",
     "info.audio": "音频",
     "info.queued": "缓冲 {ms} 毫秒",
@@ -1011,6 +1013,8 @@
     "info.av1Frames": "AV1 フレーム",
     "info.frames": "{fps} フレーム/秒、合計 {n} フレーム（キーフレーム {key}）",
     "info.av1Decode": "AV1 デコード",
+    "info.h264Frames": "H.264 フレーム",
+    "info.h264Decode": "H.264 デコード",
     "info.decodeMs": "{ms} ミリ秒/フレーム（平均 {avg}）",
     "info.audio": "オーディオ",
     "info.queued": "キュー {ms} ミリ秒",
@@ -1648,6 +1652,8 @@
     "info.av1Frames": "Images AV1",
     "info.frames": "{fps} /s, {n} au total ({key} images clés)",
     "info.av1Decode": "Décodage AV1",
+    "info.h264Frames": "Images H.264",
+    "info.h264Decode": "Décodage H.264",
     "info.decodeMs": "{ms} ms/image (moyenne {avg})",
     "info.audio": "Audio",
     "info.queued": "{ms} ms en file d’attente",
@@ -1956,6 +1962,13 @@
   let lang = pick(choice, browserLanguages());
   const listeners = [];
   const t = (key, text, vars) => translate(lang, key, text, vars);
+  // the release kit's own words in demo.json (a video's "title", "caption"): the entry's
+  // i18n[lang][field] where the kit wrote one, else its English (a name such as "xrdp + GNOME
+  // Wayland, AV1" may stay English in every language)
+  const kit = (entry, field, l = lang) => {
+    const v = entry?.i18n?.[l]?.[field];
+    return typeof v === "string" && v.trim() ? v : entry?.[field];
+  };
 
   // the HTML's own words, before the first change: what English goes back to
   const original = new WeakMap();
@@ -1992,7 +2005,7 @@
   }
 
   const api = {
-    KEY, ZH, JA, FR, TABLES, LANGS, pick, translate, t, set,
+    KEY, ZH, JA, FR, TABLES, LANGS, pick, translate, t, kit, set,
     get lang() { return lang; },
     get choice() { return choice; },
     // fn(lang) once the page is in a new language (its HTML already is)

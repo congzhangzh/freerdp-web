@@ -1096,7 +1096,10 @@ window.freerdpScreens = {
   },
 };
 
-let last = { t: performance.now(), rx: 0, tx: 0, frames: 0, ms: 0 };
+let last = { t: performance.now(), rx: 0, tx: 0, video: {} };
+// the frames of a codec family ("av01", "avc1"): counted by the page (decode-stats.js); a client
+// whose FreeRDP keeps its own AV1 counters (Module.freerdpAv1.stats) is read instead
+const decodeStats = (family) => (family === "av01" && Module.freerdpAv1?.stats) || window.freerdpDecodeStats?.[family];
 // the AV1 stream's profile, from its last sequence header (av1_webcodecs.js): 0 = Main, 4:2:0;
 // 1 = High, 4:4:4
 const av1Profile = () => { let p = -1; for (const d of Module.freerdpAv1?.decoders?.values() ?? []) if (d.profile >= 0) p = d.profile; return p; };
@@ -1107,9 +1110,19 @@ function updateInfo() {
   if ($("info").hidden) return;
   const now = performance.now(), dt = (now - last.t) / 1000 || 1;
   const net = window.freerdpNet || { rx: 0, tx: 0 };
-  const av1 = Module.freerdpAv1?.stats || { frames: 0, keyFrames: 0, bytes: 0, decodeMs: 0 };
-  const fps = (av1.frames - last.frames) / dt;
-  const dms = av1.frames > last.frames ? (av1.decodeMs - last.ms) / (av1.frames - last.frames) : 0;
+  // "12.0 /s, 345 total (3 key)" and "4.1 ms/frame (avg 4.5)" for a codec family, "–" before its first frame
+  const video = {};
+  const frameRows = (family) => {
+    const c = decodeStats(family); if (!c?.frames) return ["–", "–"];
+    const p = last.video[family] || { frames: 0, decodeMs: 0 };
+    video[family] = { frames: c.frames, decodeMs: c.decodeMs };
+    const fps = (c.frames - p.frames) / dt;
+    const dms = c.frames > p.frames ? (c.decodeMs - p.decodeMs) / (c.frames - p.frames) : 0;
+    return [t("info.frames", `${fps.toFixed(1)} /s, ${c.frames} total (${c.keyFrames} key)`, { fps: fps.toFixed(1), n: c.frames, key: c.keyFrames }),
+      t("info.decodeMs", `${dms.toFixed(1)} ms/frame (avg ${(c.decodeMs / c.frames).toFixed(1)})`,
+        { ms: dms.toFixed(1), avg: (c.decodeMs / c.frames).toFixed(1) })];
+  };
+  const [av1Frames, av1Decode] = frameRows("av01"), [h264Frames, h264Decode] = frameRows("avc1");
   const kbit = (b) => (b * 8 / 1000 / dt).toFixed(0) + " kbit/s";
   const mb = (b) => (b / 1e6).toFixed(1) + " MB";
   const net2 = (rate, total) => t("info.net", `${rate}, ${total} total`, { rate, total });
@@ -1123,22 +1136,16 @@ function updateInfo() {
       const aspect = (bw / bh).toFixed(2), picture = (c.width / c.height).toFixed(2);
       return same ? t("info.canvasSame", `${bw} × ${bh} on screen, matches`, { w: bw, h: bh }) :
         t("info.canvasOff", `⚠ ${bw} × ${bh} on screen, aspect ${aspect} vs picture ${picture}`, { w: bw, h: bh, aspect, picture }); })()],
+    // per RDP graphics codec, what the server sent: the client's own counters, read by
+    // codec-stats.js (layout 2); the row hides with a client that has none, or a layout this page
+    // doesn't know
     [t("info.codecs", "Video codecs"), (() => {
-      const f = Module._freerdp_web_codec_stats?.(); if (!f) return "–";
-      const now = Array.from(HEAPU32.subarray(f >> 2, (f >> 2) + 32));
-      const prev = last.codecs || now.map(() => 0);
-      // with the colour each codec carries: AV1's from its stream, H.264's from the RDP codec
-      // (AVC444 sends two 4:2:0 streams that make one 4:4:4 picture)
-      const av1 = AV1_CHROMA[av1Profile()];
-      const names = { 0: "Uncompressed", 1: av1 ? `AV1 ${av1}` : "AV1", 3: "RemoteFX", 8: "ClearCodec", 9: "Progressive", 10: "Planar",
-                      11: "H.264 4:2:0 (AVC420)", 12: "Alpha", 14: "H.264 4:4:4 (AVC444)", 15: "H.264 4:4:4 (AVC444v2)" };
+      const cs = window.freerdpCodecStats;
+      if (!cs || typeof Module._freerdp_web_codec_stats !== "function") return null;
+      const now = cs.read(Module.HEAPU8, Module._freerdp_web_codec_stats()); if (!now) return null;
+      const prev = last.codecs?.length === now.length ? last.codecs : null;
       last.codecsNext = now;
-      const parts = [];
-      for (let i = 0; i < 16; i++) if (now[i]) {
-        const rate = (now[i] - prev[i]) / dt, kb = (now[16 + i] - prev[16 + i]) * 8 / 1000 / dt;
-        parts.push(`${names[i] ?? "codec " + i} ${rate.toFixed(0)}/s ${kb.toFixed(0)} kbit/s`);
-      }
-      return parts.join(" · ") || t("info.noUpdates", "no updates yet"); })()],
+      return cs.describe(now, prev, dt, AV1_CHROMA[av1Profile()]) || t("info.noUpdates", "no updates yet"); })()],
     [t("info.screens", "Screens"), (() => {
       if (!multiOn()) return t("info.thisScreen", "this one");
       const n = multi.wins.size + 1, w = multi.box.width, h = multi.box.height;
@@ -1155,16 +1162,21 @@ function updateInfo() {
       // the stream's own codec string is not kept; a High profile one (level 4.0) stands for it
       const hw = hwText(hardware("avc1.640028"));
       return t("info.h264WebCodecs", `WebCodecs (browser), ${hw}`, { hw }); })()],
+    // the sound format the server chose: FreeRDP's _freerdp_web_audio_format() (format tag, rate,
+    // channels), which only the old wasm-vault FreeRDP exported, so the row hides without it (as
+    // "Video codecs" did, 20261103.3). The client is a module: read through Module.HEAPU8, its
+    // HEAPU32 is not the page's
     [t("info.audioCodec", "Audio codec"), (() => {
-      const a = Module._freerdp_web_audio_format?.(); if (!a) return "–";
-      const [tag, rate, ch] = HEAPU32.subarray(a >> 2, (a >> 2) + 3);
+      if (typeof Module._freerdp_web_audio_format !== "function") return null;
+      const a = Module._freerdp_web_audio_format(), heap = Module.HEAPU8;
+      if (!a || a % 4 || !heap?.buffer || heap.byteOffset + a + 12 > heap.buffer.byteLength) return "–";
+      const [tag, rate, ch] = new Uint32Array(heap.buffer, heap.byteOffset + a, 3);
       if (!tag) return t("info.noAudio", "no audio yet");
       const name = { 0x0001: "PCM", 0x704F: "Opus", 0xA106: "AAC", 0x0002: "ADPCM", 0x0011: "IMA ADPCM" }[tag] ?? "0x" + tag.toString(16);
       return `${name}, ${rate / 1000} kHz, ${ch === 2 ? t("info.stereo", "stereo") : ch === 1 ? t("info.mono", "mono") : t("info.channels", ch + " ch", { n: ch })}`; })()],
-    [t("info.av1Frames", "AV1 frames"), t("info.frames", `${fps.toFixed(1)} /s, ${av1.frames} total (${av1.keyFrames} key)`,
-      { fps: fps.toFixed(1), n: av1.frames, key: av1.keyFrames })],
-    [t("info.av1Decode", "AV1 decode"), av1.frames ? t("info.decodeMs", `${dms.toFixed(1)} ms/frame (avg ${(av1.decodeMs / av1.frames).toFixed(1)})`,
-      { ms: dms.toFixed(1), avg: (av1.decodeMs / av1.frames).toFixed(1) }) : "–"],
+    [t("info.av1Frames", "AV1 frames"), av1Frames], [t("info.av1Decode", "AV1 decode"), av1Decode],
+    // H.264's rows only once H.264 pictures arrive (most sessions are AV1)
+    ...(h264Frames === "–" ? [] : [[t("info.h264Frames", "H.264 frames"), h264Frames], [t("info.h264Decode", "H.264 decode"), h264Decode]]),
     [t("info.audio", "Audio"), (() => { const c = Module.freerdpAudioContext, a = Module.freerdpAudio;
       if (!c) return "–";
       const q = a ? Math.max(0, Math.round((a.next - c.currentTime) * 1000)) : 0;
@@ -1174,8 +1186,8 @@ function updateInfo() {
     [t("info.session", "Session"), `${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, "0")}`],
   ];
   const tbl = $("infoTable"); tbl.textContent = "";
-  for (const [k, v] of rows) { const tr = tbl.insertRow(); tr.insertCell().textContent = k; tr.insertCell().textContent = v; }
-  last = { t: now, rx: net.rx, tx: net.tx, frames: av1.frames, ms: av1.decodeMs, codecs: last.codecsNext };
+  for (const [k, v] of rows) { if (v === null) continue; const tr = tbl.insertRow(); tr.insertCell().textContent = k; tr.insertCell().textContent = v; }
+  last = { t: now, rx: net.rx, tx: net.tx, video, codecs: last.codecsNext };
 }
 setInterval(updateInfo, 1000);
 // In full screen the toolbar hides. It comes back when the mouse rests TB_DWELL ms at the top

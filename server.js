@@ -62,11 +62,13 @@
 
   // demo.json's videos of a kind: "clients" (freerdp-tk, Get a client), "windows" or "mac" (the
   // Windows and macOS hosts, Get a server): [{ title, src, poster, caption }], files next to the page in
-  // demo/ only; anything else is skipped
+  // demo/ only; anything else is skipped. Title and caption in the page's language where the kit
+  // wrote one (the entry's i18n.<lang>, i18n.js's kit()), else in English.
   const local = (v, ext) => (new RegExp("^demo/[\\w.-]+\\." + ext + "$").test(text(v)) ? text(v) : "");
-  function clips(demo, kind = "clients") {
+  function clips(demo, kind = "clients", lang = root.FreeRDPi18n?.lang) {
+    const kitWords = (c, field) => text(root.FreeRDPi18n?.kit ? root.FreeRDPi18n.kit(c, field, lang) : c?.[field]);
     return (Array.isArray(demo?.[kind]) ? demo[kind] : [])
-      .map((c) => ({ title: text(c?.title), src: local(c?.src, "mp4"), poster: local(c?.poster, "jpg"), caption: text(c?.caption) }))
+      .map((c) => ({ title: kitWords(c, "title"), src: local(c?.src, "mp4"), poster: local(c?.poster, "jpg"), caption: kitWords(c, "caption") }))
       .filter((c) => c.title && c.src);
   }
 
@@ -94,7 +96,7 @@
     });
   };
 
-  // the videos' titles and captions are the kit's, as written
+  // the videos' titles and captions are the kit's, in the page's language where it wrote one
   function shelf(videos) {
     const s = el("div", { class: "clips" });
     for (const v of videos) {
@@ -205,8 +207,9 @@
     .then(([data, d]) => {
       const k = parse(data); if (!k) throw new Error("install.json: no distribution in it");
       if (native && !k.clients.length) throw new Error("install.json: no client in it");
-      const videos = server ? { windows: clips(d, "windows"), mac: clips(d, "mac") } : clips(d, "clients");
-      const show = () => (server ? renderServer(k, into, videos) : renderClients(k, into, videos));
+      // the videos read again in each language: their titles and captions follow it
+      const videos = () => (server ? { windows: clips(d, "windows"), mac: clips(d, "mac") } : clips(d, "clients"));
+      const show = () => (server ? renderServer(k, into, videos()) : renderClients(k, into, videos()));
       show();
       root.FreeRDPi18n?.onChange(show);   // a new language: the page's part again
     })
