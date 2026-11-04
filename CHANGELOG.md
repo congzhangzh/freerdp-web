@@ -15,6 +15,28 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261103.4
+
+- **Info's "Video codecs" is back, with what the server really sends.** The release FreeRDP's
+  web client now counts, per RDP graphics codec, the updates the server sends and their bytes,
+  and exports them as `_freerdp_web_codec_stats()` (FreeRDP commit 736f42cab, in its SDL3 client,
+  web build only). `web/codec-stats.js` reads them and the row says, for example,
+  "AV2 30/s 2400 kbit/s · Progressive 2/s 40 kbit/s · CacheToSurface 12/s": a rate and kbit/s per
+  codec, AV2 told apart from AV1, and the paints that carry no codec (solid fills, copies within a
+  surface, paints from the cache), so a server that paints mostly from its caches no longer looks
+  idle. Rates come from unsigned differences, so a counter that wraps past 2^32 still reads right.
+  The row hides with a client that has no counters (any FreeRDP before that commit) or with a
+  layout the page doesn't know.
+- Why it matters: the Windows Remote Desktop demo opened two H.264 decoders and decoded no H.264
+  picture; only the per-codec counts can show which codecs Windows sent instead.
+- The client is built as a module and exports only `Module.HEAPU8`, so the counters are read
+  through its buffer; the old reader used a `HEAPU32` that the page never had.
+- Tests: `codec-stats.test.cjs` (the layout and bounds checks, rates, a wrapped counter, AV1 or
+  AV2, the paints, nothing yet). Checked with FreeRDP 79d692b40 + 736f42cab built for the web: the
+  export reports layout 2 at run time, the row shows, and the page test (`test-page.mjs`) passes.
+  The counts in live sessions are the release kit's round, which records xrdp (AV2), Windows'
+  Remote Desktop and the macOS and Windows hosts.
+
 ## 20261103.3
 
 - **Info hides "Video codecs" while the client has no codec counters.** The row showed, per RDP
