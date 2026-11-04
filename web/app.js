@@ -1136,26 +1136,16 @@ function updateInfo() {
       const aspect = (bw / bh).toFixed(2), picture = (c.width / c.height).toFixed(2);
       return same ? t("info.canvasSame", `${bw} × ${bh} on screen, matches`, { w: bw, h: bh }) :
         t("info.canvasOff", `⚠ ${bw} × ${bh} on screen, aspect ${aspect} vs picture ${picture}`, { w: bw, h: bh, aspect, picture }); })()],
-    // per codec, what the server sent: counted by FreeRDP's _freerdp_web_codec_stats, which only the
-    // old wasm-vault FreeRDP exported; the release client has none, so the row hides (null) rather
-    // than show "–" for ever (the AV1 counters had the same cause, 20261103.1)
+    // per RDP graphics codec, what the server sent: the client's own counters, read by
+    // codec-stats.js (layout 2); the row hides with a client that has none, or a layout this page
+    // doesn't know
     [t("info.codecs", "Video codecs"), (() => {
-      if (typeof Module._freerdp_web_codec_stats !== "function") return null;
-      const f = Module._freerdp_web_codec_stats(); if (!f) return "–";
-      const now = Array.from(HEAPU32.subarray(f >> 2, (f >> 2) + 32));
-      const prev = last.codecs || now.map(() => 0);
-      // with the colour each codec carries: AV1's from its stream, H.264's from the RDP codec
-      // (AVC444 sends two 4:2:0 streams that make one 4:4:4 picture)
-      const av1 = AV1_CHROMA[av1Profile()];
-      const names = { 0: "Uncompressed", 1: av1 ? `AV1 ${av1}` : "AV1", 3: "RemoteFX", 8: "ClearCodec", 9: "Progressive", 10: "Planar",
-                      11: "H.264 4:2:0 (AVC420)", 12: "Alpha", 14: "H.264 4:4:4 (AVC444)", 15: "H.264 4:4:4 (AVC444v2)" };
+      const cs = window.freerdpCodecStats;
+      if (!cs || typeof Module._freerdp_web_codec_stats !== "function") return null;
+      const now = cs.read(Module.HEAPU8, Module._freerdp_web_codec_stats()); if (!now) return null;
+      const prev = last.codecs?.length === now.length ? last.codecs : null;
       last.codecsNext = now;
-      const parts = [];
-      for (let i = 0; i < 16; i++) if (now[i]) {
-        const rate = (now[i] - prev[i]) / dt, kb = (now[16 + i] - prev[16 + i]) * 8 / 1000 / dt;
-        parts.push(`${names[i] ?? "codec " + i} ${rate.toFixed(0)}/s ${kb.toFixed(0)} kbit/s`);
-      }
-      return parts.join(" · ") || t("info.noUpdates", "no updates yet"); })()],
+      return cs.describe(now, prev, dt, AV1_CHROMA[av1Profile()]) || t("info.noUpdates", "no updates yet"); })()],
     [t("info.screens", "Screens"), (() => {
       if (!multiOn()) return t("info.thisScreen", "this one");
       const n = multi.wins.size + 1, w = multi.box.width, h = multi.box.height;
