@@ -1162,9 +1162,15 @@ function updateInfo() {
       // the stream's own codec string is not kept; a High profile one (level 4.0) stands for it
       const hw = hwText(hardware("avc1.640028"));
       return t("info.h264WebCodecs", `WebCodecs (browser), ${hw}`, { hw }); })()],
+    // the sound format the server chose: FreeRDP's _freerdp_web_audio_format() (format tag, rate,
+    // channels), which only the old wasm-vault FreeRDP exported, so the row hides without it (as
+    // "Video codecs" did, 20261103.3). The client is a module: read through Module.HEAPU8, its
+    // HEAPU32 is not the page's
     [t("info.audioCodec", "Audio codec"), (() => {
-      const a = Module._freerdp_web_audio_format?.(); if (!a) return "–";
-      const [tag, rate, ch] = HEAPU32.subarray(a >> 2, (a >> 2) + 3);
+      if (typeof Module._freerdp_web_audio_format !== "function") return null;
+      const a = Module._freerdp_web_audio_format(), heap = Module.HEAPU8;
+      if (!a || a % 4 || !heap?.buffer || heap.byteOffset + a + 12 > heap.buffer.byteLength) return "–";
+      const [tag, rate, ch] = new Uint32Array(heap.buffer, heap.byteOffset + a, 3);
       if (!tag) return t("info.noAudio", "no audio yet");
       const name = { 0x0001: "PCM", 0x704F: "Opus", 0xA106: "AAC", 0x0002: "ADPCM", 0x0011: "IMA ADPCM" }[tag] ?? "0x" + tag.toString(16);
       return `${name}, ${rate / 1000} kHz, ${ch === 2 ? t("info.stereo", "stereo") : ch === 1 ? t("info.mono", "mono") : t("info.channels", ch + " ch", { n: ch })}`; })()],
