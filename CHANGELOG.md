@@ -15,6 +15,24 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261104.1
+
+- **Info's "Audio codec" says what the server sends again**, e.g. "Opus, 48 kHz, stereo". The row
+  reads FreeRDP's `_freerdp_web_audio_format()`: the format tag, sample rate and channels of the
+  sound as it comes over the wire, before the client decodes it. Only the old wasm-vault FreeRDP had
+  that export, so the row said "–" in every session. The release FreeRDP's web sound device now
+  exports it again (FreeRDP commit 6fce777b1). The device itself only ever plays 16-bit PCM, so it
+  keeps the format FreeRDP asked it about just before opening it, which is the format on the wire.
+- The row hides with a client that has no such export, as "Video codecs" did in 20261103.3, and
+  says "no audio yet" until the first sound arrives.
+- The row read its numbers through a `HEAPU32` the page never had (the client is a module and
+  exports only `Module.HEAPU8`); it now reads through `Module.HEAPU8`, with bounds checks.
+- Checked with FreeRDP ecd4af2ba (release-20261104.2) + 6fce777b1 built for the web: the export
+  reads [0, 0, 0] before a session and the row says "no audio yet"; formats written in its layout
+  show as "Opus, 48 kHz, stereo" and "PCM, 44.1 kHz, mono"; the page test (`test-page.mjs`) passes.
+  The sound in live sessions is the release kit's round (xrdp, xrdp on GNOME, Windows' Remote
+  Desktop).
+
 ## 20261103.4
 
 - **Info's "Video codecs" is back, with what the server really sends.** The release FreeRDP's
