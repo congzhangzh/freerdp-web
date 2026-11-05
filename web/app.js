@@ -29,6 +29,53 @@ const t = (key, text, vars) => globalThis.FreeRDPi18n?.t(key, text, vars) ?? tex
   }
 }
 const logEl = $("log");
+// The Log follows new lines until you look at something: Pause, scrolling up or selecting text
+// stops it, the lines go on arriving below, and Resume goes back to the end. Pause holds until
+// Resume; a stop from scrolling also ends by scrolling back to the end. A line is appended as a
+// node of its own, because rewriting the text would lose what is selected. The <pre> takes focus
+// on a click, or the keys go to the page: Ctrl + A would select all of it.
+const logView = { following: true, held: false, unseen: 0 };
+const logSelected = () => { const s = getSelection(); return !s.isCollapsed && logEl.contains(s.anchorNode); };
+function showLogView() {
+  $("logFollow").textContent = logView.following ? t("log.pause", "Pause") : t("log.resume", "Resume");
+  $("logNew").textContent = logView.unseen ? t("log.new", `New lines: ${logView.unseen}`, { n: logView.unseen }) : "";
+}
+function stopLog(held) {
+  logView.held ||= held; logView.following = false; showLogView();
+}
+function followLog() {
+  if (logSelected()) getSelection().removeAllRanges();
+  logView.held = false; logView.following = true; logView.unseen = 0;
+  logEl.scrollTop = logEl.scrollHeight; showLogView();
+}
+function logLine(s) {
+  logEl.append(s + "\n");
+  if (logView.following) logEl.scrollTop = logEl.scrollHeight;
+  else { logView.unseen++; showLogView(); }
+}
+logEl.addEventListener("scroll", () => {
+  if (!logEl.clientHeight) return;   // the panel is closed
+  const atEnd = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 4;
+  if (!atEnd) { if (logView.following) stopLog(false); }
+  else if (!logView.following && !logView.held && !logSelected()) followLog();
+});
+document.addEventListener("selectionchange", () => { if (logView.following && logSelected()) stopLog(false); });
+logEl.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "a") {
+    e.preventDefault(); getSelection().selectAllChildren(logEl);
+  }
+});
+$("logPanel").addEventListener("toggle", () => { if ($("logPanel").open && logView.following) logEl.scrollTop = logEl.scrollHeight; });
+$("logFollow").onclick = () => {
+  if (logView.following) { stopLog(true); logEl.focus(); }
+  else { followLog(); if (document.body.classList.contains("session")) backToCanvas(); }
+};
+$("logCopy").onclick = () => {
+  const said = (text) => { $("logCopy").textContent = text; setTimeout(() => { $("logCopy").textContent = t("log.copy", "Copy all"); }, 1500); };
+  navigator.clipboard.writeText(logEl.textContent).then(() => said(t("copied", "Copied")),
+    () => { logEl.focus(); getSelection().selectAllChildren(logEl); said(t("log.selected", "Selected: copy it now")); });
+};
+showLogView();
 const info = { started: 0, decoder: "–", transport: "–", server: "–" };
 // Crash capture: the last log lines are kept and, while a session runs, saved to localStorage
 // every few seconds. A clean end (Disconnect, FreeRDP's disconnect hotkey) marks them "clean"; anything else
@@ -91,7 +138,7 @@ const log = (s) => {
   // keys come back too): the client does not exit after it in a browser, see below
   if (/pressed, disconnecting RDP session/.test(s)) { endCapture(); disconnect(); }
   else if (CLEAN_END.test(s) && crash.running && !crash.endWatch) crash.endWatch = setTimeout(clientStuck, 5000);
-  logEl.textContent += s + "\n"; logEl.scrollTop = logEl.scrollHeight; console.log(s);
+  logLine(s); console.log(s);
   const m = /AV1 decoder: ([^,\n]+)/.exec(s);
   if (m) info.decoder = m[1].trim();
   if (/WebCodecs AV1 decode failed|using dav1d/.test(s)) info.decoder = "dav1d (fallback)";
@@ -1396,7 +1443,7 @@ const reconnected = () => { retry.count = 0; $("endBar").hidden = true; };
   $("lastlogText").textContent = t("lastlog.text", `The last session ended unexpectedly (${why}, ${when}). Its log is saved in this browser.`, { why: whyText, when });
   $("lastlog").hidden = false;
   const text = `FreeRDP Web: last session ended unexpectedly (${why}, ${when})\n` + saved.lines.join("\n");
-  const show = () => { logEl.textContent = text + "\n\n--- current page ---\n" + logEl.textContent; $("logPanel").open = true; };
+  const show = () => { logEl.prepend(text + "\n\n--- current page ---\n"); stopLog(true); $("logPanel").open = true; logEl.scrollTop = 0; };
   $("lastlogCopy").onclick = () => navigator.clipboard.writeText(text).then(
     () => { $("lastlogCopy").textContent = t("copied", "Copied"); }, () => { show(); $("lastlogCopy").textContent = t("lastlog.shown", "Shown below"); });
   $("lastlogShow").onclick = show;
@@ -1416,7 +1463,7 @@ function showMicTitle() {
 }
 function showFsButton() { $("tbFs").textContent = document.fullscreenElement ? t("tb.window", "Window") : t("tb.fullscreen", "Full screen"); }
 globalThis.FreeRDPi18n?.onChange(() => {
-  showTargetLabel(); showGo(); showMicTitle(); showFsButton(); showPinTitle(); showScreensButton(); showDirectHint();
+  showTargetLabel(); showGo(); showMicTitle(); showFsButton(); showPinTitle(); showScreensButton(); showDirectHint(); showLogView();
   updateSessionText(); showHotkeys(); updateRoute(); status(...statusLine);
 });
 

@@ -12,7 +12,7 @@ function fixture({search="", extra="", direct=true}={}) {
   const classList={add:k=>classes.add(k),remove:k=>classes.delete(k),contains:k=>classes.has(k),toggle:(k,on)=>on?classes.add(k):classes.delete(k)};
   const element=id=>{
     if(!elements.has(id)) elements.set(id,{value:"",checked:false,disabled:false,textContent:"",hidden:true,
-      firstChild:{textContent:""},classList,addEventListener(){},appendChild(){},focus(){},
+      firstChild:{textContent:""},classList,addEventListener(){},appendChild(){},append(s){this.textContent+=s;},focus(){},
       getBoundingClientRect:()=>({top:0,width:1024,height:600}),offsetHeight:64,style:{setProperty(){}},
       matches:()=>false,contains:()=>false,replaceChildren(){},dispatchEvent(){},parentElement:{textContent:id}});
     return elements.get(id);

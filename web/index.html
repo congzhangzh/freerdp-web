@@ -299,7 +299,9 @@
 <div id="captureToast" role="status" hidden><span data-i18n="cap.toast">Mouse and keyboard captured · </span><kbd>Ctrl</kbd> + <kbd>Alt</kbd><span data-i18n="cap.toastEnd"> releases them</span></div>
 <!-- what this client was built with (about.js); the toolbar's Info shows the live session -->
 <details id="aboutPanel"><summary data-i18n="about.title">About this client</summary><table id="aboutTable"></table></details>
-<details id="logPanel"><summary data-i18n="tb.log">Log</summary><pre id="log"></pre></details>
+<details id="logPanel"><summary data-i18n="tb.log">Log</summary>
+  <div class="log-bar"><button id="logFollow" class="small" type="button">Pause</button><button id="logCopy" class="small" type="button" data-i18n="log.copy">Copy all</button><span id="logNew"></span></div>
+  <pre id="log" tabindex="0" aria-label="Log" data-i18n-attr="aria-label:tb.log"></pre></details>
 </div>
 <script src="tt-policy.js"></script>
 <script src="tcp-shim.js"></script>
