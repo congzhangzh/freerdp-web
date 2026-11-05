@@ -62,6 +62,17 @@ test("lock before ready runtime cancels selected-host connection",async()=>{
   const f=fixture(),pending=f.context.connect();f.context.FreeRDPHostsUI.lock();f.context.Module.onRuntimeInitialized();await pending;
   assert.equal(f.calls.length,0);assert.match(f.elements.get("status").textContent,/Selected host changed/);
 });
+test("the page's own retry leaves a Log someone is reading open; any other connect closes it", async () => {
+  for (const [ticked,retrying,staysOpen] of [[false,true,true],[true,true,false],[false,false,false],[true,false,false]]) {
+    const f=fixture();
+    f.context.Module.onRuntimeInitialized?.();
+    f.elements.get("status").textContent="ready";
+    vm.runInContext(`logView.following=${ticked}`,f.context);
+    f.elements.get("logPanel").open=true;
+    await f.context.connect("retry-secret",retrying);
+    assert.equal(f.elements.get("logPanel").open,staysOpen,`ticked ${ticked}, retrying ${retrying}`);
+  }
+});
 test("password URL and credential-bearing extra URL options are removed, ignored and never persisted",()=>{
   const f=fixture({search:"?p=url-secret&extra=%2Fp%3Aextra-secret&u=user"});
   assert.equal(f.elements.get("pass").value,"");assert.equal(f.elements.get("extra").value,"");

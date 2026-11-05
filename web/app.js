@@ -29,16 +29,26 @@ const t = (key, text, vars) => globalThis.FreeRDPi18n?.t(key, text, vars) ?? tex
   }
 }
 const logEl = $("log");
-// The Log follows new lines until you look at something: Pause, scrolling up or selecting text
-// stops it, the lines go on arriving below, and Resume goes back to the end. Pause holds until
-// Resume; a stop from scrolling also ends by scrolling back to the end. A line is appended as a
+// The Log follows new lines while Auto-scroll is ticked, as it is at first. Unticking it, scrolling
+// up or selecting text unticks it and stops that; the lines go on arriving below, and ticking it
+// goes back to the end. Unticked by hand it stays so; unticked by a scroll, it also comes back by
+// scrolling to the end. A line is appended as a
 // node of its own, because rewriting the text would lose what is selected. The <pre> takes focus
 // on a click, or the keys go to the page: Ctrl + A would select all of it.
-const logView = { following: true, held: false, unseen: 0 };
+const logView = { following: true, held: false, unseen: 0, last: false };
 const logSelected = () => { const s = getSelection(); return !s.isCollapsed && logEl.contains(s.anchorNode); };
 function showLogView() {
-  $("logFollow").textContent = logView.following ? t("log.pause", "Pause") : t("log.resume", "Resume");
+  $("logFollow").checked = logView.following;
   $("logNew").textContent = logView.unseen ? t("log.new", `New lines: ${logView.unseen}`, { n: logView.unseen }) : "";
+  $("logLastTab").textContent = logView.last ? t("log.now", "This page") : t("log.last", "Last session");
+  $("logFollow").parentElement.hidden = $("logNew").hidden = logView.last;
+}
+// The last session's log has a tab of its own, inside the closed Log panel and with nothing to
+// announce it: a session you ended yourself may still be the one that went wrong (the page can't
+// tell a Disconnect from giving up on a frozen picture), and most of the time nobody needs it.
+function showLastLog(on) {
+  logView.last = on; logEl.hidden = on; $("logLast").hidden = !on; showLogView();
+  if (on) $("logLast").scrollTop = 0; else if (logView.following) logEl.scrollTop = logEl.scrollHeight;
 }
 function stopLog(held) {
   logView.held ||= held; logView.following = false; showLogView();
@@ -60,27 +70,29 @@ logEl.addEventListener("scroll", () => {
   else if (!logView.following && !logView.held && !logSelected()) followLog();
 });
 document.addEventListener("selectionchange", () => { if (logView.following && logSelected()) stopLog(false); });
-logEl.addEventListener("keydown", (e) => {
+for (const pre of [logEl, $("logLast")]) pre.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "a") {
-    e.preventDefault(); getSelection().selectAllChildren(logEl);
+    e.preventDefault(); getSelection().selectAllChildren(pre);
   }
 });
-$("logPanel").addEventListener("toggle", () => { if ($("logPanel").open && logView.following) logEl.scrollTop = logEl.scrollHeight; });
-$("logFollow").onclick = () => {
-  if (logView.following) { stopLog(true); logEl.focus(); }
-  else { followLog(); if (document.body.classList.contains("session")) backToCanvas(); }
+$("logLastTab").onclick = () => showLastLog(!logView.last);
+$("logPanel").addEventListener("toggle", () => { if ($("logPanel").open && logView.following && !logView.last) logEl.scrollTop = logEl.scrollHeight; });
+$("logFollow").onchange = () => {
+  if ($("logFollow").checked) { followLog(); if (document.body.classList.contains("session")) backToCanvas(); }
+  else { stopLog(true); logEl.focus(); }
 };
 $("logCopy").onclick = () => {
   const said = (text) => { $("logCopy").textContent = text; setTimeout(() => { $("logCopy").textContent = t("log.copy", "Copy all"); }, 1500); };
-  navigator.clipboard.writeText(logEl.textContent).then(() => said(t("copied", "Copied")),
-    () => { logEl.focus(); getSelection().selectAllChildren(logEl); said(t("log.selected", "Selected: copy it now")); });
+  const pre = logView.last ? $("logLast") : logEl;
+  navigator.clipboard.writeText(pre.textContent).then(() => said(t("copied", "Copied")),
+    () => { pre.focus(); getSelection().selectAllChildren(pre); said(t("log.selected", "Selected: copy it now")); });
 };
 showLogView();
 const info = { started: 0, decoder: "–", transport: "–", server: "–" };
 // Crash capture: the last log lines are kept and, while a session runs, saved to localStorage
 // every few seconds. A clean end (Disconnect, FreeRDP's disconnect hotkey) marks them "clean"; anything else
 // (wasm abort, connection lost, tab crash or reload) leaves "running" or "crashed", and the next
-// start offers the log. Only the page log is kept: it never contains the password (/p:***), the
+// start offers the log. Either way the Log's Last session tab holds it. Only the page log is kept: it never contains the password (/p:***), the
 // user (/u:***) or clipboard content.
 const CRASH_KEY = "freerdp-web-lastlog", CRASH_LINES = 300;
 const crash = { lines: [], running: false, userEnded: false, timer: 0, endWatch: 0 };
@@ -1278,7 +1290,7 @@ window.addEventListener("resize", syncHeader); syncHeader();
 
 let audioContext = null;
 // again: a reconnection with the password kept in memory (no passkey, no typing)
-async function connect(againPassword = null) {
+async function connect(againPassword = null, retrying = false) {
   if (connectStarted || runtimeFailed) return;
   try { HostsUI.check(); } catch (e) { status(e.message); return; }
   if (!storeFields()) { status("Fix the host's settings first.", "status.fixHost"); return; }
@@ -1354,7 +1366,9 @@ async function connect(againPassword = null) {
     $("go").disabled = true; status("connecting…", "status.connecting");
     log("[page] sdl-freerdp " + args.map(a => a.startsWith("/p:") ? "/p:***" : a.startsWith("/u:") ? "/u:***" : a).join(" "));
     $("pass").value = "";
-    placeToolbar(); $("logPanel").open = false; $("canvas").focus();
+    placeToolbar();
+    // the page's own retry leaves someone reading the Log alone: a drop is when it matters most
+    if (!retrying || logView.following) { $("logPanel").open = false; $("canvas").focus(); }
     crash.running = true; crash.userEnded = false; crashStore("running"); connLog.length = 0;
     crash.timer = setInterval(() => crashStore("running"), 5000);
     // callMain is one-shot. FreeRDP copies argv into its runtime settings; JS drops its copies.
@@ -1423,7 +1437,7 @@ async function reconnect(automatic = false) {
   if (crash.running) { for (const s of sockets) try { s.close(); } catch (e) { /* closed */ } sockets.clear(); return; }
   $("endText").textContent = t("end.reconnecting", "Reconnecting…"); $("endReconnect").hidden = true;
   const password = await again.take(HostsUI.selected);
-  await connect(password ?? "");
+  await connect(password ?? "", automatic);
   if (crash.running) { $("endBar").hidden = true; }
 }
 $("endReconnect").onclick = () => reconnect();
@@ -1431,19 +1445,22 @@ $("endClose").onclick = () => { clearTimeout(retry.timer); again.forget(); locat
 // a session that came back (FreeRDP's own reconnect, or a new client) resets the count
 const reconnected = () => { retry.count = 0; $("endBar").hidden = true; };
 
-// The last session ended unexpectedly: offer its log (copy, or show it in the log panel).
+// The last session's log, in the Log's own tab. Only an unexpected end is announced: copy, or show.
 (() => {
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem(CRASH_KEY) || "null"); } catch (e) {}
-  if (!saved || saved.state === "clean" || !saved.lines?.length) return;
+  if (!saved || !saved.lines?.length) return;
   const when = new Date(saved.time).toLocaleString();
+  const keep = (head) => { $("logLast").textContent = head + "\n" + saved.lines.join("\n") + "\n"; $("logLastTab").hidden = false; };
+  if (saved.state === "clean") { keep(`FreeRDP Web: last session, ended ${when}`); return; }
   const why = saved.reason || (saved.state === "running" ? "the page was closed, reloaded or crashed during the session" : "unknown");
   // the log keeps the English reason; the notice says it in the visitor's language
   const whyText = saved.reason || (saved.state === "running" ? t("lastlog.closed", why) : t("lastlog.unknown", why));
   $("lastlogText").textContent = t("lastlog.text", `The last session ended unexpectedly (${why}, ${when}). Its log is saved in this browser.`, { why: whyText, when });
   $("lastlog").hidden = false;
   const text = `FreeRDP Web: last session ended unexpectedly (${why}, ${when})\n` + saved.lines.join("\n");
-  const show = () => { logEl.prepend(text + "\n\n--- current page ---\n"); stopLog(true); $("logPanel").open = true; logEl.scrollTop = 0; };
+  keep(`FreeRDP Web: last session ended unexpectedly (${why}, ${when})`);
+  const show = () => { $("logPanel").open = true; showLastLog(true); };
   $("lastlogCopy").onclick = () => navigator.clipboard.writeText(text).then(
     () => { $("lastlogCopy").textContent = t("copied", "Copied"); }, () => { show(); $("lastlogCopy").textContent = t("lastlog.shown", "Shown below"); });
   $("lastlogShow").onclick = show;
