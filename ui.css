@@ -187,7 +187,11 @@ label.check { font-size:14px; }
 #aboutTable { margin-top:6px; border-collapse:collapse; font-size:12px; }
 #aboutTable td { padding:2px 12px 2px 0; vertical-align:top; overflow-wrap:anywhere; }
 #aboutTable td:first-child { color:var(--muted); white-space:nowrap; }
-pre#log { max-height:40vh; overflow:auto; font-size:12px; background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:8px; }
+.log-bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:6px 0 0; }
+.log-follow { display:inline-flex; gap:4px; align-items:center; font-size:12px; cursor:pointer; }
+.log-follow[hidden] { display:none; }
+#logNew { color:var(--muted); font-size:12px; }
+pre#log, pre#logLast { max-height:40vh; overflow:auto; font-size:12px; background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:8px; }
 
 /* ---- during the session: only the remote desktop, the toolbar and the overlays ---- */
 /* the stylesheet sizes the canvas, so SDL treats its size as external and follows it:
