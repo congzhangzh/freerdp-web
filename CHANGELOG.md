@@ -15,6 +15,26 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261105.2
+
+- **The Log's Auto-scroll is a check box**, ticked at first, in place of 20261105.1's Pause and
+  Resume buttons, so what it is doing is always in view. Untick it to read from the start; ticking
+  it goes back to the end and hands the keys to the remote desktop. Scrolling up or selecting text
+  unticks it too. Under a flood of lines the view stays where you put it.
+- **The page's own retry leaves a Log you are reading alone.** After a dropped session each retry
+  closed the Log and took the keys. With Auto-scroll unticked it now does neither.
+- **The last session's log is kept however the session ended, one tab away.** A Disconnect marked
+  the session as ended cleanly and reloaded the page, so its log could not be reached. But the page
+  can't tell that from you giving up on a frozen picture. The Log now has a **Last session** tab
+  after any end, with Copy all and Ctrl + A working on it. Nothing announces it: the Log stays
+  closed, and only an unexpected end still shows its notice, whose Show opens the same tab. This
+  page's own log no longer has a saved log mixed into it.
+- It holds the session's last 300 lines, as the crash log always did, with the password and the
+  user masked. It stays in this browser until the next session replaces it.
+- Checked: `test-log.mjs` (38 checks), the unit tests, `test-i18n.mjs` and `test-page.mjs` with kit
+  client web-20261105.4-5645c7916906, and once a real Disconnect and the check box in an xrdp
+  session. The retry is checked by a unit test only: in two real drops FreeRDP reconnected by itself.
+
 ## 20261105.1
 
 - **The Log can be paused, so you can read and copy it.** It still follows new lines. **Pause**,
