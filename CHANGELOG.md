@@ -15,6 +15,18 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261104.2
+
+- **The safety notice's SSH line shows `user@server`, never your user name.** The line took its
+  user from the User field, which fills from your saved hosts, a `?u=` link and the browser's
+  autofill, and the notice sits at the top of the page: a screen share or a recording showed the
+  name. It is fixed text now, like every command in *Safety and tunnels*. The local port still
+  follows the gateway.
+- Copy gives that same line, so the hint under it now says to replace `user@server` with your user
+  and server, not only `server`, in all four languages.
+- Checked: the unit tests, `test-i18n.mjs` and `test-page.mjs` with kit client
+  web-20261105.2-2840f29d5946; the page test types a user and expects the fixed line.
+
 ## 20261104.1
 
 - **Info's "Audio codec" says what the server sends again**, e.g. "Opus, 48 kHz, stereo". The row
