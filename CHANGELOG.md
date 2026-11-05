@@ -15,6 +15,16 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261105.3
+
+- **The release notes have caught up.** `web/release-notes.html` stopped at 20261102.1: the nine
+  versions from 20261103.1 to 20261105.2 each changed `CHANGELOG.md` and the manifest and skipped
+  it, though `docs/hosting.md` asks for all three. They now have their entries. Nothing else on the
+  page changes.
+- `web/tests/release-notes.test.cjs` (new) keeps it that way: the manifest, `CHANGELOG.md` and the
+  notes must start with the same version, and every version since 20261021.3 needs a notes entry.
+  It failed on 20261105.2 before this commit.
+
 ## 20261105.2
 
 - **The Log's Auto-scroll is a check box**, ticked at first, in place of 20261105.1's Pause and
