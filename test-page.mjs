@@ -157,6 +157,8 @@ check("New host: a second host, selected, named as typed", JSON.stringify(await 
 check("the SSH line: local port from the gateway, websockify on the server's 3390, never the typed user",
   await ev("document.getElementById('sshCmd').textContent") === "ssh -tt -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -L 127.0.0.1:13390:127.0.0.1:3390 user@server websockify 127.0.0.1:3390 127.0.0.1:3389");
 check("the SSH line's hint says what to replace", await ev("document.querySelector('.cmd + .hint code').textContent") === "user@server");
+check("the host bar shows the gateway, never a user", await (async () => { const bar = await ev("document.getElementById('hostList').textContent");
+  return bar.includes("127.0.0.1:13390") && !/lab-user|synthetic-user/.test(bar); })());
 await ev("document.querySelector('#hostList .host').click(), true");
 check("selecting a host shows its own settings", await ev("document.getElementById('user').value") === "synthetic-user"
   && await ev("document.getElementById('host').value") === "127.0.0.1:3390");
@@ -294,6 +296,7 @@ await sleep(4000);
 const cmd = logs.find((l) => l.startsWith("[page] sdl-freerdp ")) || "";
 check("the client gets the settings", cmd.endsWith(expected + " +auto-reconnect"), cmd.slice(19));
 check("the password is masked in the log", cmd.includes("/p:***") && !logs.some((l) => l.includes("synthetic-password")));
+check("the user is masked in the log", cmd.includes("/u:***") && !logs.some((l) => l.includes("synthetic-user")));
 check("the password field is cleared", await ev("document.getElementById('pass').value") === "");
 check("the client tried to connect", logs.some((l) => /ERRCONNECT_|tcp-shim|WebSocket/.test(l)));
 await ev("document.getElementById('canvas').focus(), true");
@@ -306,7 +309,7 @@ check("mstsc: Ctrl + Alt + End sends Ctrl + Alt + Delete", logs.includes("[page]
 // a host not selected now, with an address no other host has (the checks above changed some)
 const pick = await ev(`(() => {
   const all = [...document.querySelectorAll('#hostList .host')].map((b, i) => ({ i, on: b.getAttribute('aria-checked') === 'true',
-    where: b.querySelector('span').textContent.split(' @ ').pop() }));
+    where: b.querySelector('span').textContent }));
   return all.find((h) => !h.on && all.filter((o) => o.where === h.where).length === 1);
 })()`);
 await send("Page.navigate", { url: `${ORIGIN}/index.html?v=${pick.where}` }); await sleep(1500);

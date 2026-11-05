@@ -33,8 +33,8 @@ const info = { started: 0, decoder: "–", transport: "–", server: "–" };
 // Crash capture: the last log lines are kept and, while a session runs, saved to localStorage
 // every few seconds. A clean end (Disconnect, FreeRDP's disconnect hotkey) marks them "clean"; anything else
 // (wasm abort, connection lost, tab crash or reload) leaves "running" or "crashed", and the next
-// start offers the log. Only the page log is kept: it never contains the password (/p:***) or
-// clipboard content.
+// start offers the log. Only the page log is kept: it never contains the password (/p:***), the
+// user (/u:***) or clipboard content.
 const CRASH_KEY = "freerdp-web-lastlog", CRASH_LINES = 300;
 const crash = { lines: [], running: false, userEnded: false, timer: 0, endWatch: 0 };
 // the log lines of a session that ended cleanly (clientStuck(), below)
@@ -1305,7 +1305,7 @@ async function connect(againPassword = null) {
     info.started = Date.now(); info.server = host.host;
     info.transport = host.direct ? t("info.direct", "direct TCP (IWA)") : t("info.gateway", "WebSocket gateway");
     $("go").disabled = true; status("connecting…", "status.connecting");
-    log("[page] sdl-freerdp " + args.map(a => a.startsWith("/p:") ? "/p:***" : a).join(" "));
+    log("[page] sdl-freerdp " + args.map(a => a.startsWith("/p:") ? "/p:***" : a.startsWith("/u:") ? "/u:***" : a).join(" "));
     $("pass").value = "";
     placeToolbar(); $("logPanel").open = false; $("canvas").focus();
     crash.running = true; crash.userEnded = false; crashStore("running"); connLog.length = 0;

@@ -24,7 +24,8 @@ reading anything. Expert controls exist, but out of the way.
 
 ## Hosts
 
-Decided on 2026-10-18 (0.3.0). A bar under the safety notice lists the saved hosts; the form
+Decided on 2026-10-18 (0.3.0). A bar under the safety notice lists the saved hosts, each with
+its name and gateway, never its user (a screen share shows this bar; since 20261104.3); the form
 and both panels below show and edit the **selected** host, and every edit is saved into it
 as it is typed. **New host** starts from the defaults, **Duplicate** from the selected one
 (without its saved password), **Delete** asks for a second click. A first visit has one host,
