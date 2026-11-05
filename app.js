@@ -33,8 +33,8 @@ const info = { started: 0, decoder: "–", transport: "–", server: "–" };
 // Crash capture: the last log lines are kept and, while a session runs, saved to localStorage
 // every few seconds. A clean end (Disconnect, FreeRDP's disconnect hotkey) marks them "clean"; anything else
 // (wasm abort, connection lost, tab crash or reload) leaves "running" or "crashed", and the next
-// start offers the log. Only the page log is kept: it never contains the password (/p:***) or
-// clipboard content.
+// start offers the log. Only the page log is kept: it never contains the password (/p:***), the
+// user (/u:***) or clipboard content.
 const CRASH_KEY = "freerdp-web-lastlog", CRASH_LINES = 300;
 const crash = { lines: [], running: false, userEnded: false, timer: 0, endWatch: 0 };
 // the log lines of a session that ended cleanly (clientStuck(), below)
@@ -407,14 +407,15 @@ function showHotkeys() {
 showHotkeys();
 
 // ---- the one-line SSH command of the safety notice: the local end follows the gateway's
-// port; on the server, websockify stays on 3390, next to RDP on 3389
+// port; on the server, websockify stays on 3390, next to RDP on 3389. user@server is fixed
+// text, never the User field: the notice is what a screen share or a recording shows first
 function updateRoute() {
   const m = /^(?:127\.0\.0\.1|localhost|\[::1\]):(\d{1,5})$/.exec($("host").value.trim());
   const port = m ? m[1] : "3390";
   $("hopGateway").textContent = $("direct").checked ? t("hop.none", "none (direct TCP)") : $("host").value.trim() || "127.0.0.1:3390";
-  $("sshCmd").textContent = `ssh -tt -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -L 127.0.0.1:${port}:127.0.0.1:3390 ${$("user").value.trim() || "user"}@server websockify 127.0.0.1:3390 127.0.0.1:3389`;
+  $("sshCmd").textContent = `ssh -tt -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -L 127.0.0.1:${port}:127.0.0.1:3390 user@server websockify 127.0.0.1:3390 127.0.0.1:3389`;
 }
-$("host").addEventListener("input", updateRoute); $("user").addEventListener("input", updateRoute);
+$("host").addEventListener("input", updateRoute);
 $("copyCmd").onclick = () => navigator.clipboard.writeText($("sshCmd").textContent).then(
   () => { $("copyCmd").textContent = t("copied", "Copied"); setTimeout(() => { $("copyCmd").textContent = t("copy", "Copy"); }, 1500); },
   () => { getSelection().selectAllChildren($("sshCmd")); $("copyCmd").textContent = t("copyPress", "Press Ctrl+C"); });
@@ -1304,7 +1305,7 @@ async function connect(againPassword = null) {
     info.started = Date.now(); info.server = host.host;
     info.transport = host.direct ? t("info.direct", "direct TCP (IWA)") : t("info.gateway", "WebSocket gateway");
     $("go").disabled = true; status("connecting…", "status.connecting");
-    log("[page] sdl-freerdp " + args.map(a => a.startsWith("/p:") ? "/p:***" : a).join(" "));
+    log("[page] sdl-freerdp " + args.map(a => a.startsWith("/p:") ? "/p:***" : a.startsWith("/u:") ? "/u:***" : a).join(" "));
     $("pass").value = "";
     placeToolbar(); $("logPanel").open = false; $("canvas").focus();
     crash.running = true; crash.userEnded = false; crashStore("running"); connLog.length = 0;

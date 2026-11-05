@@ -27,7 +27,7 @@
       b.setAttribute("aria-checked", String(h.id === state.selected));
       const name = document.createElement("b"), where = document.createElement("span");
       name.textContent = h.name;
-      where.textContent = [h.user, target(h)].filter(Boolean).join(" @ ") || t("hosts.notSet", "not set up yet");
+      where.textContent = target(h) || t("hosts.notSet", "not set up yet");   // never the user: a screen share shows this bar
       b.append(name, where);
       b.onclick = () => select(h.id);
       list.append(b);
