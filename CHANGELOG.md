@@ -15,6 +15,24 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261105.1
+
+- **The Log can be paused, so you can read and copy it.** It still follows new lines. **Pause**,
+  scrolling up or selecting text stops that; the lines keep arriving below, with a count of them,
+  and **Resume** goes back to the end. Pause holds until Resume; a stop from scrolling also ends
+  by scrolling back to the end.
+- **What you select in the Log stays selected.** Each new line used to rewrite the whole text,
+  which dropped any selection: a drag that picked 59 characters had 0 after the next line.
+- **Ctrl + A (Cmd + A) selects the Log, not the whole page.** The log could not take the keyboard,
+  so a click left the keys on the page. Click in the log first: while the remote desktop has the
+  keys, Ctrl + A is the remote desktop's, as it should be. Resume hands them back to it.
+- **Copy all** copies the whole log without selecting anything. The password and the user stay
+  masked, as they are in the log.
+- A saved crash log (Show) now opens at its start, paused, under a running log.
+- Checked: `test-log.mjs` (new, 23 checks), the unit tests, `test-i18n.mjs` and `test-page.mjs`
+  with kit client web-20261105.4-5645c7916906, and once in a real xrdp session: with Ctrl + A held
+  in the Log the X server sees no key down, with a key held on the remote desktop it does.
+
 ## 20261104.3
 
 - **The host bar and the Log no longer show your user name**, after the SSH line in 20261104.2. The
