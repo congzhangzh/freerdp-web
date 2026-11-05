@@ -154,8 +154,9 @@ await type("user", "synthetic-user");
 await ev("document.getElementById('hostNew').click(), true");
 await type("hostName", "Lab"); await type("host", "127.0.0.1:13390"); await type("user", "lab-user");
 check("New host: a second host, selected, named as typed", JSON.stringify(await hosts()) === JSON.stringify(["My server", "Lab*"]));
-check("the SSH line: local port from the gateway, websockify on the server's 3390",
-  await ev("document.getElementById('sshCmd').textContent") === "ssh -tt -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -L 127.0.0.1:13390:127.0.0.1:3390 lab-user@server websockify 127.0.0.1:3390 127.0.0.1:3389");
+check("the SSH line: local port from the gateway, websockify on the server's 3390, never the typed user",
+  await ev("document.getElementById('sshCmd').textContent") === "ssh -tt -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -L 127.0.0.1:13390:127.0.0.1:3390 user@server websockify 127.0.0.1:3390 127.0.0.1:3389");
+check("the SSH line's hint says what to replace", await ev("document.querySelector('.cmd + .hint code').textContent") === "user@server");
 await ev("document.querySelector('#hostList .host').click(), true");
 check("selecting a host shows its own settings", await ev("document.getElementById('user').value") === "synthetic-user"
   && await ev("document.getElementById('host').value") === "127.0.0.1:3390");
