@@ -15,6 +15,17 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261104.3
+
+- **The host bar and the Log no longer show your user name**, after the SSH line in 20261104.2. The
+  bar under the safety notice listed `user @ gateway` for each saved host; it now shows the gateway
+  alone. The Log printed the client's command line with `/u:<name>`, and the crash report keeps that
+  log; it now says `/u:***`, as it does for the password. The client still gets the real user.
+- The User field itself still shows what you typed: it is the field you edit.
+- Checked: the unit tests, `test-i18n.mjs` and `test-page.mjs` with kit client
+  web-20261105.2-2840f29d5946; the page test finds no saved user in the bar, and none anywhere in
+  the log, FreeRDP's own lines included.
+
 ## 20261104.2
 
 - **The safety notice's SSH line shows `user@server`, never your user name.** The line took its
