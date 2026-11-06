@@ -299,6 +299,17 @@ check("the password is masked in the log", cmd.includes("/p:***") && !logs.some(
 check("the user is masked in the log", cmd.includes("/u:***") && !logs.some((l) => l.includes("synthetic-user")));
 check("the password field is cleared", await ev("document.getElementById('pass').value") === "");
 check("the client tried to connect", logs.some((l) => /ERRCONNECT_|tcp-shim|WebSocket/.test(l)));
+// FreeRDP's own counters (client-stats.js): the names a client has, read in the browser from the
+// real client. No session here, so every value is 0; a client without the list skips this
+const stats = await ev(`(() => { const names = window.freerdpClientStats.index(Module); if (!names) return null;
+  const now = window.freerdpClientStats.read(Module, names);
+  return { names: names.size, need: ["NETWORK_RTT_AVERAGE_MS", "NETWORK_BANDWIDTH_KBPS", "AUDIO_WAVES", "AUDIO_DELAY_MS", "RDPGFX_DECODER_AV1_PICTURES", "RDPGFX_DECODER_AV1_FAILED"].every((n) => names.has(n)),
+    numbers: Object.values(now).every((v) => typeof v === "number"), unused: names.has("FREERDP_CLIENT_STATS_UNUSED") || names.has("RDPGFX_CODECID_UNKNOWN") }; })()`);
+if (stats) check("FreeRDP's counters are read by name in the browser", stats.names > 50 && stats.need && stats.numbers && !stats.unused, JSON.stringify(stats));
+else console.log("SKIP  this client has no counters list");
+// Info with those counters, or without (a client that has none): it draws, and hides what it lacks
+const infoText = await ev(`(() => { const i = document.getElementById('info'), was = i.hidden; i.hidden = false; updateInfo(); const s = document.getElementById('infoTable').innerText; i.hidden = was; return s; })()`);
+check("Info draws with this client", /Network in/.test(infoText || "") && (stats ? /Round trip\s+not measured/.test(infoText) : !/Round trip/.test(infoText)), stats ? "with counters" : "without counters");
 await ev("document.getElementById('canvas').focus(), true");
 await key("rawKeyDown", "Control", "ControlLeft", 17, 2); await key("rawKeyDown", "Alt", "AltLeft", 18, 3);
 await key("rawKeyDown", "End", "End", 35, 3); await key("keyUp", "End", "End", 35, 3);

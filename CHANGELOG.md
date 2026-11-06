@@ -15,6 +15,24 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261106.3
+
+- **Info reads FreeRDP's own counters**, which live in its libraries for every client (FreeRDP
+  discussion #14051), so the page only shows them. New rows: each video decoder's results (pictures,
+  failed, without a picture, key frames, mean ms per attempt, longest, hardware or software,
+  fallbacks), Audio received (rate, total, dropped, delay), Round trip and Bandwidth.
+- `web/client-stats.js` (new) looks the counters up by name, once per client: the list has no layout
+  version and an index means nothing between clients. A name a client lacks hides its row, so older
+  clients look as before; Info's other rows are unchanged.
+- A decoder's time is per attempt, failed ones included, as FreeRDP adds it up. A counter that went
+  down is a new channel after FreeRDP's reconnect, so its rate shows "–", never a negative number.
+  Round trip and bandwidth are the server's measurements: "not measured" can be for good, and
+  was on the xrdp tested here.
+- `test-stats.mjs` (new): a real login that opens Info and prints every counter that isn't 0. Run
+  against an xrdp that sends Planar and Progressive: 104 names, 261 surface commands, 185400 bytes
+  received, matching the page's own count. It sent no AV1 or H.264, so the decoder rows have not yet
+  been seen with real numbers; the kit's servers do send them.
+
 ## 20261106.2
 
 - **A new page, `web/story.html`: how we got here**, in the header after Release notes. The text is
