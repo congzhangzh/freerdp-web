@@ -34,7 +34,9 @@ const check = (name, ok, detail = "") => { console.log(`${ok ? "PASS" : "FAIL"} 
 const ORIGIN = "http://localhost:1";
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".json": "application/json",
   ".webmanifest": "application/manifest+json", ".webp": "image/webp", ".mp4": "video/mp4" };
-const PAGES = ["index.html", "safety.html", "keyboard.html", "server.html", "client.html", "install.html", "release-notes.html"];
+// story.html: the language of each article a reader can see, joined
+const storyShown = "[...document.querySelectorAll('article')].filter((a) => a.offsetParent !== null).map((a) => a.dataset.i18nOnly).join()";
+const PAGES = ["index.html", "safety.html", "keyboard.html", "server.html", "client.html", "install.html", "release-notes.html", "story.html"];
 
 // a headless Chrome that asks for these languages; its page, driven over DevTools
 async function browser(lang) {
@@ -123,6 +125,7 @@ for (const page of PAGES) {
   check(`en: ${page} is as written, <html lang="en">`, same === "same" && await en.ev("document.documentElement.lang") === "en", same);
   english[page] = await en.ev("document.body.innerText");
 }
+check("en: story.html shows the English article alone", (await en.open("story.html"), await en.ev(storyShown)) === "en");
 await en.open("index.html");
 check("en: the form and the settings in English", await en.ev(text("#hostLabel")) === "Gateway" && await en.ev(text("#sessionSummary")) === "recommended"
   && await en.ev(text("#codecHint")) === "The server picks from every codec the client offers (AV1 4:4:4 included).");
@@ -205,7 +208,15 @@ for (const page of PAGES) {
   if (page === "index.html") await zh.screenshot("i18n-index-phone.png");
   if (page === "server.html") await zh.screenshot("i18n-server-phone.png");
 }
+await zh.open("release-notes.html");
 check("zh: release-notes.html says, in Chinese, that its entries are English", await zh.ev("!document.querySelector('[data-i18n=\"notes.english\"]').hidden"));
+await zh.open("story.html");
+check("zh: story.html shows the Chinese article alone, its title in Chinese", await zh.ev(storyShown) === "zh" && await zh.ev("document.title") === I.ZH["story.pageTitle"], await zh.ev(storyShown));
+await zh.ev("(() => { const s = document.getElementById('lang'); s.value = 'en'; s.dispatchEvent(new Event('change')); return true; })()"); await sleep(300);
+check("story.html, switched to English: the English article alone", await zh.ev(storyShown) === "en" && await zh.ev("document.title") === "How we got here · FreeRDP Web", await zh.ev(storyShown));
+await zh.ev("(() => { const s = document.getElementById('lang'); s.value = 'zh'; s.dispatchEvent(new Event('change')); return true; })()"); await sleep(300);
+check("story.html, and back: the Chinese article alone", await zh.ev(storyShown) === "zh", await zh.ev(storyShown));
+await zh.ev("localStorage.setItem('freerdp-web-lang', 'auto'), true");
 zh.close();
 
 // ---- Japanese and French: what a browser that asks for ja-JP or fr-FR shows
@@ -239,7 +250,10 @@ for (const [asks, code, table] of [["ja-JP", "ja", I.JA], ["fr-FR", "fr", I.FR]]
     check(`${code}: ${page} fits 390 px`, w <= 390 && await b.ev("document.documentElement.lang") === code, `${w} px`);
     if (page === "index.html") await b.screenshot(`i18n-index-${code}-phone.png`);
   }
+  await b.open("release-notes.html");
   check(`${code}: release-notes.html says that its entries are English`, await b.ev("!document.querySelector('[data-i18n=\"notes.english\"]').hidden"));
+  await b.open("story.html");
+  check(`${code}: story.html shows the ${code} article alone`, await b.ev(storyShown) === code && await b.ev("document.title") === table["story.pageTitle"], await b.ev(storyShown));
   b.close();
 }
 

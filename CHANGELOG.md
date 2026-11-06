@@ -15,6 +15,21 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261106.2
+
+- **A new page, `web/story.html`: how we got here**, in the header after Release notes. The text is
+  the release manager's, in English first; Chinese, Japanese and French are translations of it.
+- **One article per language, not keys in `i18n.js`.** `i18n.js` is loaded by every page, the
+  client's included, so a long story there would weigh on all of them, and its tables hold no markup.
+  `data-i18n-only` shows the article of the page's language; the other three are `hidden` in the
+  HTML, since an English load runs no `apply()`. The only new keys are `nav.story` and
+  `story.pageTitle`.
+- `web/tests/story.test.cjs` (new) keeps the four articles the same shape (chapters, paragraphs,
+  list items, links), with the same numbers, the page's own slogan and one replaceable
+  `story-open` section, and checks that every page's header links to the story.
+- `test-i18n.mjs`: each language shows its own article alone, and the Language select changes it.
+  `test-page.mjs` and `test-i18n.mjs` have the page in their lists, so it is checked at 390 px.
+
 ## 20261106.1
 
 - **A refused login says so.** A shadow server refuses a wrong password only after the connection
