@@ -15,6 +15,25 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261106.1
+
+- **A refused login says so.** A shadow server refuses a wrong password only after the connection
+  is up, and FreeRDP's clients don't announce the error PDU that would name it, so the page saw
+  `ERRINFO_RPC_INITIATED_DISCONNECT` and called it a dropped connection: it retried, used up the
+  account's attempts and opened the Log. A server hang-up within 60 seconds of Connect with no
+  picture painted (`paintedNothing` in `web/codec-stats.js`, from the client's codec counters) now
+  ends the session as a refused login: no retry, no Log, the password forgotten, and a new message
+  (`end.noPicture`, in all four languages). A server that takes longer than 60 seconds gets one
+  retry, which is then caught the same way.
+- **Reconnecting is shown while FreeRDP reconnects on its own.** FreeRDP's auto-reconnect runs
+  inside the client, so the picture just froze with nothing said. The page now watches for that
+  log line, shows the Reconnecting bar and clears it when paints resume.
+- **Clipboard text from the server gets this system's line ends.** RDP text is CRLF; outside
+  Windows the page now writes LF to the browser's clipboard. On Windows it stays as sent.
+- Tested in a real browser against a headless GNOME session: wrong password, a right password
+  after it, drops of 8 and 41 seconds, line ends. 94 unit tests pass, three of them new. The page
+  on Windows has not been tried.
+
 ## 20261105.3
 
 - **The release notes have caught up.** `web/release-notes.html` stopped at 20261102.1: the nine
