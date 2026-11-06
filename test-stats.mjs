@@ -8,7 +8,8 @@
 // Fails when: no session starts, the client has no counters, no graphics or bytes are counted,
 // or AV1 or H.264 arrived and no decoder counted it (then Info must show its results too). A
 // server that sends neither has no decoder row, which is right: an older xrdp sends Planar and
-// Progressive. Round trip, bandwidth and sound are printed and not failed on: only some servers
+// Progressive. With FreeRDP's counters the page's own AV1 rows are gone, so never two times for one
+// picture. EXTRA replaces the session's FreeRDP options (/gfx), e.g. /gfx:AV2:off,AV1:i444. Round trip, bandwidth and sound are printed and not failed on: only some servers
 // measure, and a silent desktop plays nothing. USER_NAME and PASSWORD pick the login
 // (test / test, the CI container's). CHROME=<binary> picks another Chrome or Chromium.
 import { spawn } from "node:child_process";
@@ -48,7 +49,7 @@ const reading = () => ev("(() => { const s = clientStats(); return s ? JSON.stri
 const nonZero = (s) => Object.fromEntries(Object.entries(s).filter(([, v]) => v));
 
 await send("Runtime.enable");
-await send("Page.navigate", { url: `${PAGE}?v=${GATEWAY}&u=${process.env.USER_NAME || "test"}&extra=/gfx&fs=0` });
+await send("Page.navigate", { url: `${PAGE}?v=${GATEWAY}&u=${process.env.USER_NAME || "test"}&extra=${encodeURIComponent(process.env.EXTRA || "/gfx")}&fs=0` });
 await connectTestSession(send, { password: process.env.PASSWORD || "test" }).catch((e) => { console.error(e, "\n" + logs.slice(-20).join("\n")); done(1); });
 let session = false;
 for (let i = 0; i < 60 && !session; i++) { await sleep(500); session = await ev("document.body.classList.contains('session') && !!document.getElementById('canvas').width"); }
@@ -70,9 +71,10 @@ const tries = sum(/^RDPGFX_DECODER_.*_(PICTURES|FAILED|NO_PICTURE)$/);
 check("the server's graphics were counted", commands > 0, `${commands} surface commands`);
 if (video) {
   check("the decoder counted what arrived", tries > 0, `${video} commands, ${tries} decoder results`);
-  check("Info shows that decoder's results", / results\s+\d+ pictures/.test(info || ""));
+  check("Info shows that decoder's results", / results\s+pictures: \d+/.test(info || ""));
 } else console.log("SKIP  no AV1 or H.264 from this server: no decoder to check");
 // not "grew": an idle desktop sends nothing between two readings
+check("Info has FreeRDP's counters instead of the page's own AV1 rows", !/AV1 frames|AV1 decode\b/.test(info || ""));
 check("the network was counted", second.NETWORK_BYTES_RECEIVED > 0 && second.NETWORK_BYTES_RECEIVED >= first.NETWORK_BYTES_RECEIVED, `${first.NETWORK_BYTES_RECEIVED} -> ${second.NETWORK_BYTES_RECEIVED} bytes`);
 console.log(`${fails ? "FAILED" : "PASSED"}`);
 done(fails ? 1 : 0);

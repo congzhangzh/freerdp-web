@@ -15,6 +15,16 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261106.5
+
+- **Info no longer shows two times for one AV1 picture.** With FreeRDP's counters, the page's own
+  "AV1 frames" and "AV1 decode" rows are gone: FreeRDP's "AV1 results" row covers them. They measured
+  different things, the page's timer only the browser's decoder, FreeRDP's the whole decode call
+  (the wait for the main thread and the copy into the surface too), and nothing said so. A client
+  without the counters keeps the old rows. H.264's rows stay for now.
+- A decoder's row reads "pictures: 1" and no longer "1 pictures".
+- `test-stats.mjs` takes `EXTRA`, the session's FreeRDP options, for a server that needs AV1 asked for.
+
 ## 20261106.4
 
 - **Get a server has tabs**: Linux, Windows, macOS and Notes, and Debian, Ubuntu and Fedora under

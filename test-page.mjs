@@ -309,7 +309,7 @@ if (stats) check("FreeRDP's counters are read by name in the browser", stats.nam
 else console.log("SKIP  this client has no counters list");
 // Info with those counters, or without (a client that has none): it draws, and hides what it lacks
 const infoText = await ev(`(() => { const i = document.getElementById('info'), was = i.hidden; i.hidden = false; updateInfo(); const s = document.getElementById('infoTable').innerText; i.hidden = was; return s; })()`);
-check("Info draws with this client", /Network in/.test(infoText || "") && (stats ? /Round trip\s+not measured/.test(infoText) : !/Round trip/.test(infoText)), stats ? "with counters" : "without counters");
+check("Info draws with this client", /Network in/.test(infoText || "") && (stats ? /Round trip\s+not measured/.test(infoText) && !/AV1 frames|AV1 decode\b/.test(infoText) : !/Round trip/.test(infoText) && /AV1 frames/.test(infoText)), stats ? "with counters" : "without counters");
 await ev("document.getElementById('canvas').focus(), true");
 await key("rawKeyDown", "Control", "ControlLeft", 17, 2); await key("rawKeyDown", "Alt", "AltLeft", 18, 3);
 await key("rawKeyDown", "End", "End", 35, 3); await key("keyUp", "End", "End", 35, 3);

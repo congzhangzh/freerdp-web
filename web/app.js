@@ -1253,7 +1253,9 @@ function updateInfo() {
       if (!tag) return t("info.noAudio", "no audio yet");
       const name = { 0x0001: "PCM", 0x704F: "Opus", 0xA106: "AAC", 0x0002: "ADPCM", 0x0011: "IMA ADPCM" }[tag] ?? "0x" + tag.toString(16);
       return `${name}, ${rate / 1000} kHz, ${ch === 2 ? t("info.stereo", "stereo") : ch === 1 ? t("info.mono", "mono") : t("info.channels", ch + " ch", { n: ch })}`; })()],
-    [t("info.av1Frames", "AV1 frames"), av1Frames], [t("info.av1Decode", "AV1 decode"), av1Decode],
+    // the page's own count, for a client without FreeRDP's: two times for one picture, measured
+    // differently, would explain nothing (FreeRDP's "AV1 results" row is above)
+    ...(stats?.RDPGFX_DECODER_AV1_PICTURES !== undefined ? [] : [[t("info.av1Frames", "AV1 frames"), av1Frames], [t("info.av1Decode", "AV1 decode"), av1Decode]]),
     // H.264's rows only once H.264 pictures arrive (most sessions are AV1)
     ...(h264Frames === "–" ? [] : [[t("info.h264Frames", "H.264 frames"), h264Frames], [t("info.h264Decode", "H.264 decode"), h264Decode]]),
     // each decoder FreeRDP has used, by its own counters: what became a picture and what did not
@@ -1261,7 +1263,7 @@ function updateInfo() {
       const hw = d.hardware === null ? "" : `, ${d.hardware ? t("info.hardware", "hardware") : t("info.software", "software")}`;
       const rate = per(d.perSecond), avg = d.avgMs.toFixed(1), max = d.maxMs.toFixed(1), name = d.label;
       return [t("info.decoderStats", `${name} results`, { name }),
-        t("info.decoderValue", `${d.pictures} pictures (${rate} /s), ${d.failed} failed, ${d.noPicture} without a picture, ${d.keyFrames} key; ${avg} ms per attempt, ${max} ms max`,
+        t("info.decoderValue", `pictures: ${d.pictures} (${rate} /s), failed: ${d.failed}, no picture: ${d.noPicture}, key frames: ${d.keyFrames}; ${avg} ms per attempt, ${max} ms max`,
           { n: d.pictures, rate, failed: d.failed, none: d.noPicture, key: d.keyFrames, avg, max }) + hw +
           (d.fallbacks ? t("info.decoderFallbacks", `, ${d.fallbacks} fallbacks`, { n: d.fallbacks }) : "")];
     }) : []),
