@@ -919,7 +919,9 @@ const queueOut = (part) => {
   clip.out = Object.assign(clip.out || {}, part);
   clearTimeout(clip.outTimer); clip.outTimer = setTimeout(writeOut, 200);
 };
-const clipboardWrite = (text) => queueOut({ text });
+// RDP text has CRLF line ends: a paste into a terminal here would carry the CRs. Windows keeps them
+const onWindows = /^win/i.test(navigator.userAgentData?.platform || navigator.platform || "");
+const clipboardWrite = (text) => queueOut({ text: onWindows ? text : text.replace(/\r\n/g, "\n") });
 // The server's image arrives as a CF_DIB, or as PNG when the server offers PNG only (e.g. GNOME
 // Remote Desktop for a PNG-only source); a PNG needs no conversion.
 const clipboardWriteImage = (bytes, isPng) =>
