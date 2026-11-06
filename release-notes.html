@@ -32,6 +32,82 @@
   <!-- shown only in Chinese (i18n.js): the entries below stay in English -->
   <p class="note" data-i18n="notes.english" data-i18n-only="zh ja fr" hidden></p>
 
+  <h2>20261106.1 <span class="muted">· 6 November 2026</span></h2>
+  <ul>
+    <li>A wrong password now says so. The page used to treat a refusal from a shadow server as a dropped
+      connection and try again; it now stops at once and asks you to check the user name and password.</li>
+    <li>While the connection is being restored on its own, a Reconnecting bar says so, and goes away when
+      the picture comes back.</li>
+    <li>Text copied from the remote desktop now pastes with your system's line ends.</li>
+  </ul>
+
+  <h2>20261105.3 <span class="muted">· 5 November 2026</span></h2>
+  <ul>
+    <li>These notes have caught up: the nine versions below, 20261103.1 to 20261105.2, went out without an
+      entry here. Nothing else changes on the page.</li>
+  </ul>
+
+  <h2>20261105.2 <span class="muted">· 5 November 2026</span></h2>
+  <ul>
+    <li><b>Log</b>: Auto-scroll is a check box, ticked at first. Untick it to read from the start; tick it to go
+      back to the end. Scrolling up or selecting text unticks it too.</li>
+    <li>With Auto-scroll unticked, the page's own retry after a dropped session leaves the Log open.</li>
+    <li>The Log has a <b>Last session</b> tab after any end, a Disconnect included, in case something looked
+      wrong: the last 300 lines, with the password and the user masked. They stay in this browser until the
+      next session replaces them.</li>
+  </ul>
+
+  <h2>20261105.1 <span class="muted">· 5 November 2026</span></h2>
+  <ul>
+    <li><b>Log</b>: Pause and Resume, so you can read it while lines keep arriving. (20261105.2 turned them into
+      the Auto-scroll check box.)</li>
+    <li>What you select in the Log stays selected as new lines arrive.</li>
+    <li>Click in the Log, and Ctrl + A (Cmd + A) selects the Log rather than the whole page. <b>Copy all</b>
+      copies it without selecting anything.</li>
+  </ul>
+
+  <h2>20261104.3 <span class="muted">· 4 November 2026</span></h2>
+  <ul>
+    <li>The bar under the safety notice and the Log no longer show your user name: the bar shows the gateway
+      alone, and the Log says <code>/u:***</code>. The User field still shows what you typed.</li>
+  </ul>
+
+  <h2>20261104.2 <span class="muted">· 4 November 2026</span></h2>
+  <ul>
+    <li>The safety notice's SSH line always says <code>user@server</code>, never your user name, so a screen
+      share or a recording doesn't show it. Replace both with your own when you use the line.</li>
+  </ul>
+
+  <h2>20261104.1 <span class="muted">· 4 November 2026</span></h2>
+  <ul>
+    <li><b>Info</b>: "Audio codec" says what the server sends again, for example "Opus, 48 kHz, stereo", and "no
+      audio yet" until the first sound arrives.</li>
+  </ul>
+
+  <h2>20261103.4 <span class="muted">· 3 November 2026</span></h2>
+  <ul>
+    <li><b>Info</b>: "Video codecs" is back, with what the server really sends: a rate and kbit/s per codec, AV1
+      told apart from AV2, and the paints that carry no codec, so a server painting from its caches no longer
+      looks idle.</li>
+  </ul>
+
+  <h2>20261103.3 <span class="muted">· 3 November 2026</span></h2>
+  <ul>
+    <li><b>Info</b>: "Video codecs" hides, instead of showing "–", when the client has no counters for it.</li>
+  </ul>
+
+  <h2>20261103.2 <span class="muted">· 3 November 2026</span></h2>
+  <ul>
+    <li>The demo videos' titles and captions follow the page's language, and English fills in what has no
+      translation.</li>
+  </ul>
+
+  <h2>20261103.1 <span class="muted">· 3 November 2026</span></h2>
+  <ul>
+    <li><b>Info</b>: "AV1 frames" counts again instead of saying "0 total" while the pictures arrive. "H.264
+      frames" and "H.264 decode" show too, once H.264 pictures arrive.</li>
+  </ul>
+
   <h2>20261102.1 <span class="muted">· 2 November 2026</span></h2>
   <ul>
     <li><b>Four languages</b>: English, 中文, 日本語 and Français, from the header's Language menu; Auto

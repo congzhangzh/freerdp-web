@@ -160,6 +160,8 @@ const log = (s) => {
   // this connection's own log, for how it ended (crash.lines spans reconnections)
   connLog.push(s); if (connLog.length > CRASH_LINES) connLog.shift();
   if (/\[gdi_init_ex\]: Remote framebuffer format|client_auto_reconnect.*(succeeded|success)/i.test(s)) reconnected();
+  // FreeRDP's own reconnect is silent: say so, or the last picture looks like a session that hung
+  if (/\[client_auto_reconnect_ex\]: Network disconnect/.test(s)) droppedNow();
 };
 // "Save the password?" after connecting with a typed one (hosts-ui.js keeps it until answered)
 const saveOffer = { due: false, failed: false, timer: 0 };
@@ -534,11 +536,12 @@ function moduleConfig() {
   onExit(code) {
     if (crash.abandoned === m) { log("[page] the client the page had ended exited now: " + code); return; }
     status("exited: " + code, "status.exited", { code }); log("[page] exit code " + code); window.__freerdpExit = code;
+    conn.refused = refusedBeforePicture();   // read here: the next client brings its own counters
     const over = SESSION_OVER[code];   // the session itself ended: no reconnecting on its own
-    if (code !== 0 && !over) $("logPanel").open = true;   // show the reason
+    if (code !== 0 && !over && !conn.refused) $("logPanel").open = true;   // show the reason
     // exit code 0 also follows a lost connection: look at the log, not only at the code
     const lost = !over && connLog.some((l) => /ERRCONNECT_|Network disconnect|\[tcp-shim\].*(Error|abort)/i.test(l));
-    crashEnd(!crash.userEnded && !over && (code !== 0 || lost), over ? "" : code !== 0 ? "exit code " + code : lost ? "connection lost" : "");
+    crashEnd(!crash.userEnded && !over && !conn.refused && (code !== 0 || lost), over ? "" : code !== 0 ? "exit code " + code : lost ? "connection lost" : "");
     setTimeout(() => sessionEnded(!over && (lost || code !== 0), over), 0);   // after this client's exit is done
   },
   onAbort(what) { runtimeFailed = true; resolveRuntime(false); HostsUI.lock(); log("[page] aborted: " + what); crashEnd(true, "wasm abort: " + what); },
@@ -916,7 +919,9 @@ const queueOut = (part) => {
   clip.out = Object.assign(clip.out || {}, part);
   clearTimeout(clip.outTimer); clip.outTimer = setTimeout(writeOut, 200);
 };
-const clipboardWrite = (text) => queueOut({ text });
+// RDP text has CRLF line ends: a paste into a terminal here would carry the CRs. Windows keeps them
+const onWindows = /^win/i.test(navigator.userAgentData?.platform || navigator.platform || "");
+const clipboardWrite = (text) => queueOut({ text: onWindows ? text : text.replace(/\r\n/g, "\n") });
 // The server's image arrives as a CF_DIB, or as PNG when the server offers PNG only (e.g. GNOME
 // Remote Desktop for a PNG-only source); a PNG needs no conversion.
 const clipboardWriteImage = (bytes, isPng) =>
@@ -1369,7 +1374,7 @@ async function connect(againPassword = null, retrying = false) {
     placeToolbar();
     // the page's own retry leaves someone reading the Log alone: a drop is when it matters most
     if (!retrying || logView.following) { $("logPanel").open = false; $("canvas").focus(); }
-    crash.running = true; crash.userEnded = false; crashStore("running"); connLog.length = 0;
+    crash.running = true; crash.userEnded = false; crashStore("running"); connLog.length = 0; conn.began = Date.now(); conn.paints = codecReading(); conn.refused = false;
     crash.timer = setInterval(() => crashStore("running"), 5000);
     // callMain is one-shot. FreeRDP copies argv into its runtime settings; JS drops its copies.
     handedToWasm = true;
@@ -1400,6 +1405,20 @@ function trackSockets() {
 // FreeRDP itself retries a dropped network (+auto-reconnect, vault.js) within the same client;
 // when that client gives up and ends, the page starts a new one: after 2, 4, 8… s, up to 8 times
 const retry = { count: 0, timer: 0, max: 8 };
+// A server that checks the password after the connection sequence (FreeRDP's shadow server, over
+// TLS) cannot say why: FreeRDP's clients don't announce Set Error Info, so a wrong password only
+// shows as this disconnect, and exit code 131 would read as a drop. What tells it from a drop is
+// that the connection never showed anything, soon after it began. A first start of a session
+// that takes long is no such case: there the connection stays open. Counters cover graphics
+// (RDPGFX) only, so a session without them is judged by nothing but the clock: after this long
+// it was a session, and the normal end applies.
+const HUNG_UP = /ERRINFO_RPC_INITIATED_DISCONNECT/, HUNG_UP_MS = 60000;
+const conn = { began: 0, paints: null };
+const codecReading = () => { const cs = window.freerdpCodecStats;
+  return cs && typeof Module._freerdp_web_codec_stats === "function" ? cs.read(Module.HEAPU8, Module._freerdp_web_codec_stats()) : null; };
+// the server ended this connection before it showed anything: the password, most likely
+const refusedBeforePicture = () => connLog.some((l) => HUNG_UP.test(l)) && Date.now() - conn.began < HUNG_UP_MS &&
+  window.freerdpCodecStats?.paintedNothing(conn.paints, codecReading()) === true;
 const LOGON_FAILED = /ERRCONNECT_(LOGON_FAILURE|WRONG_PASSWORD|ACCESS_DENIED|ACCOUNT_\w+|PASSWORD_\w+|NO_OR_MISSING_CREDENTIALS)|credentials do not work/;
 function showEnd(text, canReconnect) {
   $("endText").textContent = text;
@@ -1408,12 +1427,15 @@ function showEnd(text, canReconnect) {
   $("endBar").hidden = false;
 }
 function sessionEnded(unexpected, why = "") {
+  dropOver();
   if (modularClient()) connectStarted = false;   // an older client runs once
   if (crash.userEnded) { endCapture(); return; }
   if (modularClient()) newClient();   // ready for Reconnect, while the bar says what happened
-  if (connLog.some((l) => LOGON_FAILED.test(l))) {
+  const passwordRefused = connLog.some((l) => LOGON_FAILED.test(l));
+  if (passwordRefused || conn.refused) {
     again.forget(); retry.count = 0; endCapture();
-    showEnd(t("end.refused", "The server refused the password. Connect again with the right one."), false);
+    showEnd(passwordRefused ? t("end.refused", "The server refused the password. Connect again with the right one.")
+      : t("end.noPicture", "The server ended the connection before showing anything. Check the user name and password, and connect again."), false);
     return;
   }
   const canAgain = modularClient() && again.has(HostsUI.selected);
@@ -1443,7 +1465,22 @@ async function reconnect(automatic = false) {
 $("endReconnect").onclick = () => reconnect();
 $("endClose").onclick = () => { clearTimeout(retry.timer); again.forget(); location.reload(); };
 // a session that came back (FreeRDP's own reconnect, or a new client) resets the count
-const reconnected = () => { retry.count = 0; $("endBar").hidden = true; };
+const drop = { timer: 0 };
+const dropOver = () => { clearInterval(drop.timer); drop.timer = 0; };
+const reconnected = () => { dropOver(); retry.count = 0; $("endBar").hidden = true; };
+// the picture coming back is what ends a drop (FreeRDP says nothing when its reconnect works);
+// a client without the counters keeps the bar until its next log line says so
+function droppedNow() {
+  showEnd(t("end.reconnecting", "Reconnecting…"), false);
+  if (drop.timer) return;
+  const cs = window.freerdpCodecStats, before = codecReading();
+  if (!cs || !before) return;
+  drop.timer = setInterval(() => {
+    const now = crash.running ? codecReading() : null;
+    if (!now) { dropOver(); return; }
+    if (!cs.paintedNothing(before, now)) reconnected();
+  }, 500);
+}
 
 // The last session's log, in the Log's own tab. Only an unexpected end is announced: copy, or show.
 (() => {
