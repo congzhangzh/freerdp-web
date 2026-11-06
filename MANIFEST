@@ -1,5 +1,5 @@
 FreeRDP web client (preview), built 2026-11-06 with emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.13 (e13ee988ce3d87a738dd8f3661d02223308c412a)
-page: freerdp-web 0b8350a0ae2d575464b72191e1eadee01f11a861
+page: freerdp-web 3cbc20d723381b573bde464cec9d88725ee3d1c6
 
 sources (sources.lock):
   freerdp          20261106.10 47aab97a39f8388c33b1992526719f44a918285d

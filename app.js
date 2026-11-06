@@ -1169,6 +1169,15 @@ const decodeStats = (family) => (family === "av01" && Module.freerdpAv1?.stats) 
 // 1 = High, 4:4:4
 const av1Profile = () => { let p = -1; for (const d of Module.freerdpAv1?.decoders?.values() ?? []) if (d.profile >= 0) p = d.profile; return p; };
 const AV1_CHROMA = { 0: "4:2:0", 1: "4:4:4" };
+// FreeRDP's own counters (client-stats.js): one reading, or null with a client that has none. The
+// names are looked up once per client
+let statsNames = null;
+function clientStats() {
+  const cs = window.freerdpClientStats;
+  if (!cs) return null;
+  statsNames ??= cs.index(Module);
+  return statsNames ? cs.read(Module, statsNames) : null;
+}
 // Info: the live session only, refreshed every second while shown. What the client was built
 // with (its version, engine, FreeRDP, SDL, the decoders it has) is About's (about.js)
 function updateInfo() {
@@ -1192,6 +1201,11 @@ function updateInfo() {
   const mb = (b) => (b / 1e6).toFixed(1) + " MB";
   const net2 = (rate, total) => t("info.net", `${rate}, ${total} total`, { rate, total });
   const dur = info.started ? Math.floor((Date.now() - info.started) / 1000) : 0;
+  const stats = clientStats(), cs = window.freerdpClientStats;
+  // per second, or "–" for a counter that started again after a reconnect
+  const per = (v) => (v === null ? "–" : v.toFixed(1));
+  const statsNet = stats && cs.network(stats), statsAudio = stats && cs.audio(stats, last.stats, dt);
+  const notMeasured = t("info.notMeasured", "not measured");
   const rows = [
     [t("info.server", "Server"), info.server], [t("info.transport", "Transport"), info.transport],
     [t("info.resolution", "Resolution"), `${$("canvas").width} × ${$("canvas").height}`],
@@ -1242,17 +1256,32 @@ function updateInfo() {
     [t("info.av1Frames", "AV1 frames"), av1Frames], [t("info.av1Decode", "AV1 decode"), av1Decode],
     // H.264's rows only once H.264 pictures arrive (most sessions are AV1)
     ...(h264Frames === "–" ? [] : [[t("info.h264Frames", "H.264 frames"), h264Frames], [t("info.h264Decode", "H.264 decode"), h264Decode]]),
+    // each decoder FreeRDP has used, by its own counters: what became a picture and what did not
+    ...(stats ? cs.decoders(stats, last.stats, dt).map((d) => {
+      const hw = d.hardware === null ? "" : `, ${d.hardware ? t("info.hardware", "hardware") : t("info.software", "software")}`;
+      const rate = per(d.perSecond), avg = d.avgMs.toFixed(1), max = d.maxMs.toFixed(1), name = d.label;
+      return [t("info.decoderStats", `${name} results`, { name }),
+        t("info.decoderValue", `${d.pictures} pictures (${rate} /s), ${d.failed} failed, ${d.noPicture} without a picture, ${d.keyFrames} key; ${avg} ms per attempt, ${max} ms max`,
+          { n: d.pictures, rate, failed: d.failed, none: d.noPicture, key: d.keyFrames, avg, max }) + hw +
+          (d.fallbacks ? t("info.decoderFallbacks", `, ${d.fallbacks} fallbacks`, { n: d.fallbacks }) : "")];
+    }) : []),
     [t("info.audio", "Audio"), (() => { const c = Module.freerdpAudioContext, a = Module.freerdpAudio;
       if (!c) return "–";
       const q = a ? Math.max(0, Math.round((a.next - c.currentTime) * 1000)) : 0;
       return `${c.state}, ${a ? t("info.queued", q + " ms queued", { ms: q }) : t("info.noData", "no data yet")}`; })()],
+    [t("info.audioIn", "Audio received"), statsAudio ? t("info.audioInValue", `${per(statsAudio.perSecond)} /s, ${statsAudio.waves} total, ${statsAudio.dropped} dropped, ${statsAudio.delayMs} ms delay`,
+      { rate: per(statsAudio.perSecond), n: statsAudio.waves, dropped: statsAudio.dropped, ms: statsAudio.delayMs }) : null],
     [t("info.netIn", "Network in"), net2(kbit(net.rx - last.rx), mb(net.rx))],
     [t("info.netOut", "Network out"), net2(kbit(net.tx - last.tx), mb(net.tx))],
+    // the server's own measurements: a client without them hides the rows, and 0 is not measured,
+    // for now or for good: not every server measures (xrdp 0.10 here did not)
+    [t("info.rtt", "Round trip"), statsNet ? (statsNet.rtt ? t("info.rttValue", `${statsNet.rtt} ms (lowest ${statsNet.rttBase})`, { ms: statsNet.rtt, base: statsNet.rttBase }) : notMeasured) : null],
+    [t("info.bandwidth", "Bandwidth"), statsNet ? (statsNet.kbps ? `${statsNet.kbps} kbit/s` : notMeasured) : null],
     [t("info.session", "Session"), `${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, "0")}`],
   ];
   const tbl = $("infoTable"); tbl.textContent = "";
   for (const [k, v] of rows) { if (v === null) continue; const tr = tbl.insertRow(); tr.insertCell().textContent = k; tr.insertCell().textContent = v; }
-  last = { t: now, rx: net.rx, tx: net.tx, video, codecs: last.codecsNext };
+  last = { t: now, rx: net.rx, tx: net.tx, video, codecs: last.codecsNext, stats };
 }
 setInterval(updateInfo, 1000);
 // In full screen the toolbar hides. It comes back when the mouse rests TB_DWELL ms at the top
