@@ -25,6 +25,7 @@
     "nav.server": "获取服务器",
     "nav.client": "获取客户端",
     "nav.notes": "版本说明",
+    "nav.story": "故事",
     "nav.githubTitle": "源代码、问题反馈与发布版本",
     "nav.language": "语言",
     "nav.theme": "主题",
@@ -655,6 +656,9 @@
     "inst.notIsolated": "不可用：服务器必须发送 COOP/COEP 头",
     "inst.inside": "（已安装：你正在应用中）",
 
+    // ---- story.html: its title; the story itself is the page's four articles
+    "story.pageTitle": "我们是怎么走到今天的 · FreeRDP Web",
+
     // ---- release-notes.html: its header; the entries stay English
     "notes.pageTitle": "版本说明 · FreeRDP Web",
     "notes.lead": "这里列出与你相关的变化，最新的在最前面。你正在运行的版本显示在",
@@ -671,6 +675,7 @@
     "nav.server": "サーバーを入手",
     "nav.client": "クライアントを入手",
     "nav.notes": "リリースノート",
+    "nav.story": "ストーリー",
     "nav.githubTitle": "ソースコード、Issue、リリース",
     "nav.language": "言語",
     "nav.theme": "テーマ",
@@ -1301,6 +1306,9 @@
     "inst.notIsolated": "利用不可：サーバーが COOP/COEP ヘッダーを送る必要があります",
     "inst.inside": "（インストール済み：今アプリの中にいます）",
 
+    // ---- story.html: its title; the story itself is the page's four articles
+    "story.pageTitle": "ここまでの道のり · FreeRDP Web",
+
     // ---- release-notes.html: its header; the entries stay English
     "notes.pageTitle": "リリースノート · FreeRDP Web",
     "notes.lead": "あなたに関わる変更を、新しい順に載せています。実行中のバージョンは、接続フォームの下（およびセッションのツールバー）にある",
@@ -1317,6 +1325,7 @@
     "nav.server": "Obtenir un serveur",
     "nav.client": "Obtenir un client",
     "nav.notes": "Notes de version",
+    "nav.story": "Histoire",
     "nav.githubTitle": "Le code source, les tickets et les versions",
     "nav.language": "Langue",
     "nav.theme": "Thème",
@@ -1946,6 +1955,9 @@
     "inst.isolated": "Disponible (isolation cross-origin)",
     "inst.notIsolated": "Indisponible : le serveur doit envoyer les en-têtes COOP/COEP",
     "inst.inside": "(déjà installée : vous êtes dans l’application)",
+
+    // ---- story.html: its title; the story itself is the page's four articles
+    "story.pageTitle": "Comment nous en sommes arrivés là · FreeRDP Web",
 
     // ---- release-notes.html: its header; the entries stay English
     "notes.pageTitle": "Notes de version · FreeRDP Web",

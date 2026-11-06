@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title data-i18n="story.pageTitle">How we got here · FreeRDP Web</title>
+<link rel="icon" href="icon-256.png" type="image/png">
+<link rel="stylesheet" href="ui.css">
+<script src="theme.js"></script>
+<script src="i18n.js"></script>
+</head>
+<body>
+<main class="help">
+  <header class="top">
+    <a class="brand" href="index.html">FreeRDP Web</a>
+    <nav aria-label="Help" data-i18n-attr="aria-label:nav.help">
+      <a href="index.html#intro" data-i18n="nav.intro">▶ Intro</a>
+      <a href="safety.html" data-i18n="nav.safety">Safety and tunnels</a>
+      <a href="keyboard.html" data-i18n="nav.keyboard">Keyboard</a>
+      <a href="server.html" data-i18n="nav.server">Get a server</a>
+      <a href="client.html" data-i18n="nav.client">Get a client</a>
+      <a href="release-notes.html" data-i18n="nav.notes">Release notes</a>
+      <a href="story.html" aria-current="page" data-i18n="nav.story">Story</a>
+      <a href="https://github.com/congzhangzh/freerdp-web" target="_blank" rel="noopener" title="The source, issues and releases" data-i18n-attr="title:nav.githubTitle">GitHub</a>
+      <label class="lang-pick"><span class="lang-label" aria-hidden="true">🌐 <span data-i18n="nav.language">Language</span></span><select id="lang" aria-label="Language" data-i18n-attr="aria-label:nav.language"><option value="auto" data-i18n="lang.auto">Auto</option><option value="en" lang="en">English</option><option value="zh" lang="zh-Hans">中文</option><option value="ja" lang="ja">日本語</option><option value="fr" lang="fr">Français</option></select></label>
+      <label><span class="sr-only" data-i18n="nav.theme">Theme</span><select id="theme" aria-label="Theme" data-i18n-attr="aria-label:nav.theme"><option value="system" data-i18n="theme.system">System</option><option value="light" data-i18n="theme.light">Light</option><option value="dark" data-i18n="theme.dark">Dark</option></select></label>
+    </nav>
+  </header>
+
+  <!-- The story is too long for i18n.js, which every page loads: each language has its own
+       article here, and data-i18n-only shows the one that fits. An English load runs no apply(),
+       so "hidden" must be written on the other three. The text is the release manager's, in
+       English first; the others are translations of it. web/tests/story.test.cjs keeps the four
+       the same shape. "What is still open" is a section of its own (class story-open): it dates
+       fastest, so it is the part to replace, in all four at once. -->
+
+  <article lang="en" data-i18n-only="en">
+    <h1>How we got here</h1>
+    <p class="lead"><em>A remote desktop that works from a browser or a small client, to any computer you own. Its
+      releases took 22 days, in the open. The question behind it is more than four years old. This is the story, the wrong turns included. The full record is in the
+      <a href="https://github.com/congzhangzh/rdp-release-kit/blob/main/CHANGELOG.md" target="_blank" rel="noopener">changelog</a>.</em></p>
+
+    <h2>2022 to 2024: a desktop for a computer with no screen</h2>
+    <p>It started with a question, not with code: how does a team work on a big machine that has no monitor? In May 2022 x2go felt slow, and NoMachine was fast but free for only one session. So we <a href="https://github.com/rustdesk/rustdesk/issues/634" target="_blank" rel="noopener">asked RustDesk for a session manager</a>: something that starts a headless desktop for each person who connects. RustDesk had few contributors and its own road, and the request stayed open for two years before it closed. The idea had to wait.</p>
+    <p>The next step was smaller. A server with no monitor gives you no hardware acceleration, so in March 2023 <a href="https://github.com/congzhangzh/daily-scripts-4-us/blob/main/enable_headness_intel_igpu_4_nomachine.sh" target="_blank" rel="noopener">a short script</a> gave an Intel iGPU a virtual monitor, with display modes dumped from a fake HDMI dongle, and NoMachine got the GPU on a headless machine. A year later <a href="https://github.com/rustdesk/rustdesk/pull/7811" target="_blank" rel="noopener">RustDesk took a small fix</a> that let it run in a container with no systemd, as on Colab or in a data centre.</p>
+
+    <h2>29 September to 20 October 2026: GNOME, Wayland, KDE</h2>
+    <p>GNOME Remote Desktop came next. Without a VAAPI or NVENC GPU it could only send RemoteFX Progressive, which has no temporal prediction, so a server with no GPU paid in full for every change. We <a href="https://gitlab.gnome.org/GNOME/gnome-remote-desktop/-/merge_requests/433" target="_blank" rel="noopener">added software H.264 with x264</a>, then <a href="https://gitlab.gnome.org/GNOME/gnome-remote-desktop/-/merge_requests/434" target="_blank" rel="noopener">AV1</a>. The first AV1 pictures in 4:4:4 had the wrong colours, and the bug was in the client, so the fix went to FreeRDP. Both GNOME requests are still open.</p>
+    <p>xrdp had an older gap: <a href="https://github.com/neutrinolabs/xrdp/issues/2637" target="_blank" rel="noopener">a request for Wayland</a> open since 2017. On 9 October a prototype called wlup logged in to a headless sway, and by the end of the day to a headless GNOME Shell, started by xrdp's own session manager. A day later it went out as <a href="https://github.com/neutrinolabs/xrdp/pull/3904" target="_blank" rel="noopener">a request for comments</a>. Then came a public correction: we had said wlup sent H.264, and it was still sending planar bitmaps, so we said so on the same thread and fixed it.</p>
+    <p>KDE followed on 20 October. KWin only casts its screen with an OpenGL scene, so 6.7 wants a render node, and the headless problem from 2023 was back. KWin 6.8 needs no GPU at all, which is the same question answered by someone else.</p>
+
+    <h2>16 October: one client that runs anywhere</h2>
+    <p>The kit itself began with a small, stubborn problem: a FreeRDP client that starts on any Linux, without hunting for
+      libraries. By the end of the first day there was one, built from pinned sources, running on glibc 2.34 and newer,
+      next to xrdp packages for Debian, Ubuntu and Fedora, each tested by a real login in a fresh container.</p>
+    <p>That habit stayed. Nothing ships because it built. It ships because something logged in.</p>
+
+    <h2>17 to 24 October: FreeRDP in a browser</h2>
+    <p>A day later came a Windows client, and then the idea that gave the project its shape: FreeRDP itself, compiled
+      for the browser, with nothing to install.</p>
+    <p>The browser fought back. About one first session in three died with "table index is out of bounds". A retry
+      would have hidden it, so we chased it: a timer in SDL belonged to the thread that set it, and FreeRDP removed it
+      from another. Before the fix, 9 of 28 sessions failed. After it, 0 of 16.</p>
+    <p>AV1 reached the page, then the microphone, then H.264.</p>
+
+    <h2>25 to 28 October: releases we can stand behind</h2>
+    <p>The rules we still follow came from getting this wrong first. A release is a ripe commit: picked, frozen, never
+      changed. A fix is a new pick. The kit builds what we chose, not an upstream schedule.</p>
+    <p>Two xrdp lines meant that "Latest" offered Fedora no Wayland session, so they became one. The site once pulled
+      files from the kit while the kit pulled from the site, so a renamed video had to cross twice; now it flows one
+      way. The page learned Chinese, then gained 蛮蛮, its mascot. A line appeared beside the name:
+      <em>You here, you in the cloud: one desktop.</em></p>
+    <p>And one more rule, the first: the live site never breaks.</p>
+
+    <h2>30 October: a computer you already own is a server</h2>
+    <p>Until now the server was xrdp. Then FreeRDP's shadow server came to Windows: your own screen, the login and lock
+      screens, Ctrl+Alt+Del included. AV2, the next video codec, arrived the same day, in every client and the Windows
+      host. A day later the Mac followed, and the three products moved onto one FreeRDP, so one fix reaches all of them
+      in one pick.</p>
+
+    <h2>1 November: twenty releases in a day</h2>
+    <p>The picture on a Windows host looked blocky, and it did not look like anybody's fault. It took a chain of small,
+      exact findings: a wrong view compared for changes, regions that started on the wrong pixel, chroma rows read at
+      the wrong height. Each one went out on its own, and each one made the picture sharper. Fixing the macroblock grid
+      alone cut the data from 2.85 to 1.86 Mbit/s at the same quality.</p>
+    <p>AV1 had been running at its slowest setting, on one thread, with its screen tools off. Turned on properly it ran
+      up to ten times faster, with text 12 dB cleaner on fewer bits. Colour conversion for the sharpest picture got ten
+      times faster again.</p>
+    <p>A new Mac test on CI then found a crash at the start of every AV2 session, and a deadlock that came from one of
+      our own fixes. Twenty FreeRDP releases shipped in one day, and each one says what it fixed.</p>
+
+    <h2>2 to 5 November: Linux desktops, and the small things</h2>
+    <p>The page learned Japanese and French. GNOME got a host of its own, with no portal and no dialog, then ARM64, then
+      sound. A session manager arrived: one port for every user of a computer, each landing on their own desktop, with
+      a desktop started for them if they have none. It was what we had asked for in May 2022.</p>
+    <p>Some of the best findings were not in the product at all. Slow Windows demos turned out to be a storage service,
+      not the page. A TLS race dropped sessions while you typed. A page that showed your user name in a command stopped
+      doing that.</p>
+
+    <h2>6 November: the day we started to live in it</h2>
+    <p>We decided to move our own daily work onto this, and using it changed the list at once. In one day:</p>
+    <ul>
+      <li>a shared clipboard, sound and a microphone on the Linux host</li>
+      <li>a wrong password that ends the attempt, instead of trying again forever</li>
+      <li>a desktop that takes your window's size, and follows it when you resize</li>
+      <li>a closed laptop that no longer holds the screen size hostage</li>
+      <li>a whole GNOME session, not just a shell</li>
+      <li>updates that reach a running session without a logout</li>
+      <li>a locked desktop that wakes for you</li>
+      <li>statistics in FreeRDP's libraries, for every client to read</li>
+    </ul>
+
+    <h2>What goes upstream</h2>
+    <p>We build on FreeRDP and xrdp, and fixes belong there. 80 of our pull requests are merged in FreeRDP so far, and
+      two in xrdp. The fork is a waiting room, not a home.</p>
+
+    <section class="story-open">
+      <h2>What is still open</h2>
+      <p>AV2 is the future and not yet the present. On the day we moved in, some AV2 sessions stayed black: at its fastest
+        settings the encoder skipped a bookkeeping step at the edge of the frame, and wrote a first key frame the decoder
+        refused. Our tests counted frames, so they passed anyway. The fix is in, and so is the check that would have
+        caught it. If a session still stays black, choose AV1 and tell us.</p>
+      <p>Moving our own work onto all this is not finished either, and every day of use adds to the list.</p>
+    </section>
+
+    <p>The sparks are not over.</p>
+  </article>
+
+  <article lang="zh-Hans" data-i18n-only="zh" hidden>
+    <h1>我们是怎么走到今天的</h1>
+    <p class="lead"><em>一个远程桌面，从浏览器或一个小巧的客户端，就能连到你自己的任何一台电脑。它的发布用了 22 天，全程公开，而它背后的问题已有四年多了。这里讲的是它的经过，走过的弯路也在内。完整的记录在<a href="https://github.com/congzhangzh/rdp-release-kit/blob/main/CHANGELOG.md" target="_blank" rel="noopener">更新日志</a>里。</em></p>
+
+    <h2>2022年至2024年：给没有屏幕的电脑一个桌面</h2>
+    <p>它始于一个问题，而不是代码：一个团队要怎样在一台没有显示器的大机器上工作？2022年5月，x2go 用起来很慢，NoMachine 很快，但免费的只有一个会话。于是我们<a href="https://github.com/rustdesk/rustdesk/issues/634" target="_blank" rel="noopener">请 RustDesk 加一个会话管理器</a>：为每个连接进来的人启动一个无头桌面。RustDesk 贡献者不多，也有自己的路要走，这个请求开了两年才关闭。这个想法只能等待。</p>
+    <p>下一步小一些。没有显示器的服务器得不到硬件加速，所以在 2023年3月，<a href="https://github.com/congzhangzh/daily-scripts-4-us/blob/main/enable_headness_intel_igpu_4_nomachine.sh" target="_blank" rel="noopener">一段简短的脚本</a>给 Intel iGPU 配上了虚拟显示器，显示模式是从一个 HDMI 显卡欺骗器上导出的，NoMachine 就在无头机器上用上了 GPU。一年之后，<a href="https://github.com/rustdesk/rustdesk/pull/7811" target="_blank" rel="noopener">RustDesk 接受了一个小修复</a>，让它能在没有 systemd 的容器里运行，比如在 Colab 上或数据中心里。</p>
+
+    <h2>2026年9月29日至10月20日：GNOME、Wayland、KDE</h2>
+    <p>接下来是 GNOME Remote Desktop。没有 VAAPI 或 NVENC GPU 时，它只能发送 RemoteFX Progressive，而这种编码没有时间预测，于是没有 GPU 的服务器要为每一处变化付出全部代价。我们<a href="https://gitlab.gnome.org/GNOME/gnome-remote-desktop/-/merge_requests/433" target="_blank" rel="noopener">用 x264 加入了软件 H.264</a>，然后是 <a href="https://gitlab.gnome.org/GNOME/gnome-remote-desktop/-/merge_requests/434" target="_blank" rel="noopener">AV1</a>。最初的 4:4:4 AV1 画面颜色不对，而问题出在客户端，所以修复进了 FreeRDP。这两个 GNOME 合并请求目前都还开着。</p>
+    <p>xrdp 有一个更老的缺口：<a href="https://github.com/neutrinolabs/xrdp/issues/2637" target="_blank" rel="noopener">一个关于 Wayland 的请求</a>，从 2017 年开到现在。10月9日，一个叫 wlup 的原型登录到了无头的 sway，当天结束时又登录到了无头的 GNOME Shell，由 xrdp 自己的会话管理器启动。一天之后，它作为<a href="https://github.com/neutrinolabs/xrdp/pull/3904" target="_blank" rel="noopener">一份征求意见稿</a>发了出去。接着是一次公开更正：我们说过 wlup 发送的是 H.264，而它当时还在发送平面位图，于是我们在同一个讨论里说明了这一点，并把它修好了。</p>
+    <p>KDE 在 10月20日跟上。KWin 只有在 OpenGL 场景下才能投射屏幕，所以 6.7 需要渲染节点，2023 年的无头问题又回来了。KWin 6.8 完全不需要 GPU：同一个问题，由别人给出了答案。</p>
+
+    <h2>10月16日：一个到处都能运行的客户端</h2>
+    <p>发布工具包本身始于一个不大却很顽固的问题：一个 FreeRDP 客户端，在任何 Linux 上都能启动，不用四处找库。第一天结束时，它已经有了：由版本固定的源码构建，运行在 glibc 2.34 及更新的系统上，旁边还有适用于 Debian、Ubuntu 和 Fedora 的 xrdp 软件包，每一个都在全新的容器里用一次真实的登录测试过。</p>
+    <p>这个习惯留了下来。没有什么会因为构建成功就发布。能发布，是因为真的登录上了。</p>
+
+    <h2>10月17日至24日：浏览器里的 FreeRDP</h2>
+    <p>一天之后，Windows 客户端来了，接着是那个决定了项目形态的想法：把 FreeRDP 本身编译给浏览器运行，什么都不用安装。</p>
+    <p>浏览器没有轻易就范。大约每三次首次会话，就有一次死于“table index is out of bounds”。重试本可以把它掩盖过去，所以我们选择追查：SDL 里的一个定时器属于设置它的线程，而 FreeRDP 却从另一个线程删除了它。修复之前，28 个会话中有 9 个失败。修复之后，16 个中 0 个失败。</p>
+    <p>AV1 进入了页面，随后是麦克风，然后是 H.264。</p>
+
+    <h2>10月25日至28日：我们敢负责的发布</h2>
+    <p>我们至今遵守的规则，都来自先做错的经历。一次发布就是一个成熟的提交：摘下、冻结、永不改动。修复就是再摘一次。发布工具包构建的是我们选定的内容，而不是上游的时间表。</p>
+    <p>两条 xrdp 产品线使得“Latest”给 Fedora 提供的是没有 Wayland 会话的版本，于是两条线合成了一条。网站曾经从工具包取文件，同时工具包又从网站取文件，一段改了名的视频得过两道；现在只朝一个方向流动。页面学会了中文，接着有了吉祥物蛮蛮。名字旁边出现了一句话：<em>你在这里，也在云端：同一个桌面。</em></p>
+    <p>还有一条规则，也是第一条：线上网站永远不能坏。</p>
+
+    <h2>10月30日：你已有的电脑就是服务器</h2>
+    <p>在此之前，服务器一直是 xrdp。接着，FreeRDP 的影子服务器来到了 Windows：你自己的屏幕，登录界面和锁屏界面，连 Ctrl+Alt+Del 也包括在内。下一代视频编解码器 AV2 在同一天到来，进入了所有客户端和 Windows 主机。一天之后 Mac 跟上，三个产品都转到了同一份 FreeRDP 上，于是一次修复，摘一次就能到达全部产品。</p>
+
+    <h2>11月1日：一天二十次发布</h2>
+    <p>Windows 主机上的画面看起来全是方块，而且看不出是谁的错。解开它靠的是一连串细小而精确的发现：比较变化时用错了视图，区域从错误的像素开始，色度行按错误的高度读取。每一项都单独发布，每一项都让画面更清晰。单是修正宏块网格，就在同等质量下把数据量从 2.85 Mbit/s 降到了 1.86 Mbit/s。</p>
+    <p>AV1 之前一直运行在最慢的设置上，只用一个线程，屏幕工具也关着。正确打开之后，速度最高提升到十倍，文字清晰度提高 12 dB，用的比特还更少。最清晰画面所用的颜色转换，又快了十倍。</p>
+    <p>随后，CI 上一项新的 Mac 测试发现了每个 AV2 会话一开始就发生的崩溃，以及一个由我们自己的修复带来的死锁。一天之内发布了二十个 FreeRDP 版本，每一个都写明了修复了什么。</p>
+
+    <h2>11月2日至5日：Linux 桌面，以及那些小事</h2>
+    <p>页面学会了日语和法语。GNOME 有了自己的主机，没有 portal，也没有对话框，随后是 ARM64，然后是声音。会话管理器也来了：一台电脑的所有用户共用一个端口，各自进入自己的桌面，没有桌面的用户会有人替他们启动一个。这正是我们在 2022年5月提出的请求。</p>
+    <p>有些最好的发现根本不在产品里。Windows 演示很慢，原来问题出在存储服务，而不是页面。一个 TLS 竞争条件会在你打字时让会话掉线。一个曾在命令里显示你用户名的页面，不再这样做了。</p>
+
+    <h2>11月6日：我们开始住进去的那一天</h2>
+    <p>我们决定把自己的日常工作搬到它上面来，而一用起来，清单立刻就变了。就在这一天：</p>
+    <ul>
+      <li>Linux 主机上的共享剪贴板、声音和麦克风</li>
+      <li>密码错误时结束这次尝试，而不是永远重试下去</li>
+      <li>桌面采用你窗口的大小，你调整窗口时它也跟着变</li>
+      <li>合上的笔记本电脑不再把屏幕尺寸扣住不放</li>
+      <li>完整的 GNOME 会话，而不只是一个 shell</li>
+      <li>更新能到达正在运行的会话，无需注销</li>
+      <li>锁定的桌面会为你醒来</li>
+      <li>FreeRDP 库里的统计数据，每个客户端都能读取</li>
+    </ul>
+
+    <h2>回到上游</h2>
+    <p>我们建立在 FreeRDP 和 xrdp 之上，修复应该属于那里。到目前为止，我们有 80 个拉取请求合并进了 FreeRDP，两个合并进了 xrdp。分叉是候车室，不是家。</p>
+
+    <section class="story-open">
+      <h2>还没有解决的问题</h2>
+      <p>AV2 是未来，还不是现在。在我们住进去的那一天，有些 AV2 会话的画面一直是黑的：在最快的设置下，编码器跳过了帧边缘的一个记账步骤，写出了解码器拒绝的第一个关键帧。我们的测试只数帧数，所以照样通过了。修复已经加入，本可以发现它的检查也已加入。如果会话的画面仍然一直是黑的，请选择 AV1，并告诉我们。</p>
+      <p>把我们自己的工作搬到这上面来，这件事也还没有完成，每天的使用都会给清单添上新的内容。</p>
+    </section>
+
+    <p>火花还会继续。</p>
+  </article>
+
+  <article lang="ja" data-i18n-only="ja" hidden>
+    <h1>ここまでの道のり</h1>
+    <p class="lead"><em>ブラウザーや小さなクライアントから、自分のどのコンピューターにもつながるリモートデスクトップ。そのリリースには公開の場で 22 日かかりましたが、その背後にある問いは 4 年以上前からのものです。これはその物語で、回り道も含めて書いています。すべての記録は<a href="https://github.com/congzhangzh/rdp-release-kit/blob/main/CHANGELOG.md" target="_blank" rel="noopener">変更履歴</a>にあります。</em></p>
+
+    <h2>2022年～2024年：画面のないコンピューターにデスクトップを</h2>
+    <p>始まりはコードではなく、一つの問いでした。モニターのない大きなマシンで、チームはどう仕事をすればいいのか。2022年5月、x2go は遅く感じられ、NoMachine は速いものの無料で使えるのは 1 セッションだけでした。そこで私たちは <a href="https://github.com/rustdesk/rustdesk/issues/634" target="_blank" rel="noopener">RustDesk にセッションマネージャーを頼みました</a>。接続してきた人ごとにヘッドレスのデスクトップを起動する仕組みです。RustDesk は貢献者が少なく、独自の道を歩んでいて、この要望は 2 年間開いたままで、やがて閉じられました。アイデアは待つしかありませんでした。</p>
+    <p>次の一歩はもっと小さなものでした。モニターのないサーバーではハードウェアアクセラレーションが使えません。そこで 2023年3月、<a href="https://github.com/congzhangzh/daily-scripts-4-us/blob/main/enable_headness_intel_igpu_4_nomachine.sh" target="_blank" rel="noopener">短いスクリプト</a>で Intel iGPU に仮想モニターを与えました。表示モードは HDMI ダミープラグからダンプしたものです。これで NoMachine はヘッドレスのマシンで GPU を使えるようになりました。その 1 年後、<a href="https://github.com/rustdesk/rustdesk/pull/7811" target="_blank" rel="noopener">RustDesk は小さな修正を取り込み</a>、Colab やデータセンターのように systemd のないコンテナでも動くようになりました。</p>
+
+    <h2>2026年9月29日～10月20日：GNOME、Wayland、KDE</h2>
+    <p>次は GNOME Remote Desktop でした。VAAPI や NVENC の GPU がないと RemoteFX Progressive しか送れず、これには時間方向の予測がありません。そのため GPU のないサーバーは、あらゆる変化の代償をまるごと払っていました。私たちは <a href="https://gitlab.gnome.org/GNOME/gnome-remote-desktop/-/merge_requests/433" target="_blank" rel="noopener">x264 によるソフトウェア H.264 を追加し</a>、続いて <a href="https://gitlab.gnome.org/GNOME/gnome-remote-desktop/-/merge_requests/434" target="_blank" rel="noopener">AV1</a> を加えました。最初の 4:4:4 の AV1 の画面は色が間違っていましたが、バグはクライアント側にあったので、修正は FreeRDP に入れました。GNOME への二つのリクエストは、どちらもまだオープンのままです。</p>
+    <p>xrdp には、もっと古い穴がありました。2017 年から開いたままの <a href="https://github.com/neutrinolabs/xrdp/issues/2637" target="_blank" rel="noopener">Wayland の要望</a>です。10月9日、wlup という試作品がヘッドレスの sway にログインし、その日の終わりには、xrdp 自身のセッションマネージャーが起動するヘッドレスの GNOME Shell にログインしました。翌日、それを<a href="https://github.com/neutrinolabs/xrdp/pull/3904" target="_blank" rel="noopener">意見募集（RFC）</a>として公開しました。続いて公の場での訂正がありました。wlup は H.264 を送っていると言ったのに、実際にはまだプレーナービットマップを送っていたのです。同じスレッドでそう伝え、直しました。</p>
+    <p>10月20日には KDE が続きました。KWin は OpenGL シーンでしか画面をキャストしないため、6.7 はレンダーノードを必要とし、2023 年のヘッドレスの問題が戻ってきました。KWin 6.8 は GPU をまったく必要としません。同じ問いに、別の誰かが答えを出したのです。</p>
+
+    <h2>10月16日：どこでも動くクライアントを一つ</h2>
+    <p>リリースキット自体の始まりは、小さくて頑固な問題でした。どの Linux でも、ライブラリを探し回らずに起動する FreeRDP クライアントです。初日の終わりにはそれができていました。バージョンを固定したソースからビルドし、glibc 2.34 以降で動き、隣には Debian、Ubuntu、Fedora 向けの xrdp パッケージが並び、どれも新しいコンテナで実際にログインしてテストしました。</p>
+    <p>この習慣は残りました。ビルドできたから出すのではありません。実際にログインできたから出すのです。</p>
+
+    <h2>10月17日～24日：ブラウザーの中の FreeRDP</h2>
+    <p>その翌日には Windows クライアントが登場し、続いてこのプロジェクトの形を決めたアイデアが生まれました。FreeRDP そのものをブラウザー向けにコンパイルし、何もインストールせずに使うことです。</p>
+    <p>ブラウザーは手強い相手でした。初回セッションのおよそ 3 回に 1 回が「table index is out of bounds」で落ちたのです。リトライすれば隠せたはずですが、私たちは原因を追いました。SDL のタイマーはそれを設定したスレッドのものなのに、FreeRDP は別のスレッドから削除していたのです。修正前は 28 セッション中 9 回失敗し、修正後は 16 回中 0 回でした。</p>
+    <p>AV1 がページに届き、次にマイク、そして H.264 が続きました。</p>
+
+    <h2>10月25日～28日：責任を持てるリリース</h2>
+    <p>今も守っているルールは、まず間違えたことから生まれました。リリースとは熟したコミットです。摘み取り、凍結し、決して変えません。修正は新しく摘み取ることです。リリースキットがビルドするのは、上流のスケジュールではなく、私たちが選んだものです。</p>
+    <p>xrdp の系統が二つあったため、「Latest」は Fedora に Wayland セッションのないものを提示していました。そこで一つにまとめました。サイトがキットからファイルを取り、同時にキットがサイトから取っていた時期があり、名前を変えた動画は二度渡らなければなりませんでした。今は一方向に流れます。ページは中国語を覚え、続いてマスコットの蛮蛮が加わりました。名前の横に一行が現れました。<em>ここにいるあなた、クラウドにいるあなた：ひとつのデスクトップ。</em></p>
+    <p>そしてもう一つ、最初のルールがあります。公開中のサイトは決して壊れないこと。</p>
+
+    <h2>10月30日：手元のコンピューターがサーバーになる</h2>
+    <p>それまでサーバーといえば xrdp でした。そこへ FreeRDP のシャドウサーバーが Windows にやって来ました。あなた自身の画面、ログイン画面とロック画面、Ctrl+Alt+Del まで含めてです。次世代の動画コーデック AV2 も同じ日に、すべてのクライアントと Windows ホストに届きました。翌日には Mac が続き、三つの製品は一つの FreeRDP に移りました。これで一つの修正が、一度の摘み取りですべてに届きます。</p>
+
+    <h2>11月1日：1 日に 20 リリース</h2>
+    <p>Windows ホストの画面はブロック状に見えましたが、誰のせいとも思えませんでした。解決には、小さく正確な発見の連鎖が必要でした。変更の比較に使うビューの誤り、誤ったピクセルから始まる領域、誤った高さで読まれるクロマ行。どれも単独でリリースされ、そのたびに画面は鮮明になりました。マクロブロックの格子を直しただけで、同じ画質のままデータ量は 2.85 Mbit/s から 1.86 Mbit/s に減りました。</p>
+    <p>AV1 は最も遅い設定で、1 スレッドのまま、画面向けのツールをオフにして動いていました。正しくオンにすると最大 10 倍速くなり、より少ないビットで文字は 12 dB きれいになりました。最も鮮明な画質のための色変換も、さらに 10 倍速くなりました。</p>
+    <p>続いて CI の新しい Mac テストが、すべての AV2 セッションの開始時に起きるクラッシュと、私たち自身の修正が原因のデッドロックを見つけました。1 日で 20 の FreeRDP リリースを出し、どのリリースにも何を直したかが書いてあります。</p>
+
+    <h2>11月2日～5日：Linux デスクトップと、小さなこと</h2>
+    <p>ページは日本語とフランス語を覚えました。GNOME には専用のホストができ、ポータルもダイアログも不要になりました。続いて ARM64、そしてサウンドです。セッションマネージャーも加わりました。1 台のコンピューターの全ユーザーが一つのポートを使い、それぞれ自分のデスクトップに入ります。デスクトップがない人には、その人のために起動します。2022年5月に私たちが頼んだのは、まさにこれでした。</p>
+    <p>最高の発見のいくつかは、製品の中にはありませんでした。Windows のデモが遅いのは、ページではなくストレージサービスのせいでした。TLS の競合は、タイピング中にセッションを切断していました。コマンドにユーザー名を表示していたページは、それをやめました。</p>
+
+    <h2>11月6日：自分たちで住み始めた日</h2>
+    <p>日々の仕事をこの上に移すと決めたところ、使い始めたとたんにリストが変わりました。この 1 日で：</p>
+    <ul>
+      <li>Linux ホストでのクリップボード共有、サウンド、マイク</li>
+      <li>パスワードを間違えると、延々と再試行せずにそこで終わる</li>
+      <li>デスクトップがウィンドウの大きさに合い、リサイズにも追従する</li>
+      <li>ノートパソコンを閉じても、画面サイズが縛られなくなった</li>
+      <li>シェルだけでなく、GNOME セッション全体</li>
+      <li>ログアウトなしで、実行中のセッションに更新が届く</li>
+      <li>ロックされたデスクトップが、あなたのために目を覚ます</li>
+      <li>FreeRDP のライブラリに統計情報が入り、どのクライアントからも読める</li>
+    </ul>
+
+    <h2>上流へ</h2>
+    <p>私たちは FreeRDP と xrdp の上に作っていて、修正の居場所はそちらです。これまでに FreeRDP へ 80 件、xrdp へ 2 件のプルリクエストがマージされました。フォークは待合室であって、家ではありません。</p>
+
+    <section class="story-open">
+      <h2>まだ解決していないこと</h2>
+      <p>AV2 は未来であって、まだ現在ではありません。私たちが住み始めたその日、一部の AV2 セッションでは画面が黒いままでした。最速の設定では、エンコーダーがフレームの端での記録処理を一つ飛ばし、デコーダーが拒否する最初のキーフレームを書き出していたのです。テストはフレームを数えていたので、それでも合格していました。修正は入り、これを検出できたはずのチェックも入りました。それでも画面が黒いままなら、AV1 を選び、私たちに知らせてください。</p>
+      <p>自分たちの仕事をこの上に移す作業もまだ終わっておらず、使う日ごとにリストは増えていきます。</p>
+    </section>
+
+    <p>これからも火花は散ります。</p>
+  </article>
+
+  <article lang="fr" data-i18n-only="fr" hidden>
+    <h1>Comment nous en sommes arrivés là</h1>
+    <p class="lead"><em>Un bureau à distance qui fonctionne depuis un navigateur ou un petit client, vers n’importe quel ordinateur qui vous appartient. Ses versions ont pris 22 jours, au grand jour. La question qui l’anime a plus de quatre ans. Voici l’histoire, fausses routes comprises. Le récit complet se trouve dans le <a href="https://github.com/congzhangzh/rdp-release-kit/blob/main/CHANGELOG.md" target="_blank" rel="noopener">journal des modifications</a>.</em></p>
+
+    <h2>2022 à 2024 : un bureau pour un ordinateur sans écran</h2>
+    <p>Tout a commencé par une question, pas par du code : comment une équipe travaille-t-elle sur une grosse machine sans écran ? En mai 2022, x2go paraissait lent, et NoMachine était rapide mais gratuit pour une seule session. Nous avons donc <a href="https://github.com/rustdesk/rustdesk/issues/634" target="_blank" rel="noopener">demandé à RustDesk un gestionnaire de sessions</a> : de quoi lancer un bureau headless pour chaque personne qui se connecte. RustDesk avait peu de contributeurs et sa propre route, et la demande est restée ouverte deux ans avant d’être fermée. L’idée a dû attendre.</p>
+    <p>L’étape suivante a été plus modeste. Un serveur sans écran ne vous donne aucune accélération matérielle ; en mars 2023, <a href="https://github.com/congzhangzh/daily-scripts-4-us/blob/main/enable_headness_intel_igpu_4_nomachine.sh" target="_blank" rel="noopener">un court script</a> a donc offert un écran virtuel à un iGPU Intel, avec des modes d’affichage extraits d’un dongle HDMI factice, et NoMachine a obtenu le GPU sur une machine headless. Un an plus tard, <a href="https://github.com/rustdesk/rustdesk/pull/7811" target="_blank" rel="noopener">RustDesk a accepté un petit correctif</a> qui lui permettait de tourner dans un conteneur sans systemd, comme sur Colab ou dans un centre de données.</p>
+
+    <h2>29 septembre au 20 octobre 2026 : GNOME, Wayland, KDE</h2>
+    <p>GNOME Remote Desktop est venu ensuite. Sans GPU VAAPI ou NVENC, il ne pouvait envoyer que du RemoteFX Progressive, qui n’a pas de prédiction temporelle, si bien qu’un serveur sans GPU payait plein tarif pour chaque changement. Nous avons <a href="https://gitlab.gnome.org/GNOME/gnome-remote-desktop/-/merge_requests/433" target="_blank" rel="noopener">ajouté le H.264 logiciel avec x264</a>, puis <a href="https://gitlab.gnome.org/GNOME/gnome-remote-desktop/-/merge_requests/434" target="_blank" rel="noopener">AV1</a>. Les premières images AV1 en 4:4:4 avaient de mauvaises couleurs, et le bug était dans le client, donc le correctif est allé dans FreeRDP. Les deux demandes faites à GNOME sont toujours ouvertes.</p>
+    <p>xrdp avait une lacune plus ancienne : <a href="https://github.com/neutrinolabs/xrdp/issues/2637" target="_blank" rel="noopener">une demande de Wayland</a> ouverte depuis 2017. Le 9 octobre, un prototype appelé wlup s’est connecté à un sway headless, et à la fin de la journée à un GNOME Shell headless, démarré par le propre gestionnaire de sessions d’xrdp. Le lendemain, il est sorti sous forme de <a href="https://github.com/neutrinolabs/xrdp/pull/3904" target="_blank" rel="noopener">demande de commentaires</a>. Est alors venue une correction publique : nous avions dit que wlup envoyait du H.264, alors qu’il envoyait encore des bitmaps planaires ; nous l’avons dit sur le même fil, et nous l’avons corrigé.</p>
+    <p>KDE a suivi le 20 octobre. KWin ne diffuse son écran qu’avec une scène OpenGL, si bien que la version 6.7 réclame un nœud de rendu, et le problème headless de 2023 est revenu. KWin 6.8 n’a besoin d’aucun GPU : la même question, résolue par quelqu’un d’autre.</p>
+
+    <h2>16 octobre : un client qui tourne partout</h2>
+    <p>Le kit de publication lui-même a commencé par un petit problème tenace : un client FreeRDP qui démarre sur n’importe quel Linux, sans courir après les bibliothèques. À la fin du premier jour, il existait : compilé à partir de sources épinglées, fonctionnant avec glibc 2.34 et plus récent, à côté de paquets xrdp pour Debian, Ubuntu et Fedora, chacun testé par une vraie connexion dans un conteneur neuf.</p>
+    <p>Cette habitude est restée. Rien ne sort parce que ça compile. Ça sort parce que quelque chose s’est connecté.</p>
+
+    <h2>17 au 24 octobre : FreeRDP dans un navigateur</h2>
+    <p>Un jour plus tard arrivait un client Windows, puis l’idée qui a donné sa forme au projet : FreeRDP lui-même, compilé pour le navigateur, sans rien à installer.</p>
+    <p>Le navigateur a résisté. Environ une première session sur trois mourait avec « table index is out of bounds ». Une nouvelle tentative l’aurait caché, alors nous l’avons traqué : un minuteur de SDL appartenait au thread qui l’avait créé, et FreeRDP le supprimait depuis un autre. Avant le correctif, 9 sessions sur 28 échouaient. Après, 0 sur 16.</p>
+    <p>AV1 est arrivé sur la page, puis le microphone, puis H.264.</p>
+
+    <h2>25 au 28 octobre : des versions que nous pouvons assumer</h2>
+    <p>Les règles que nous suivons encore sont nées de nos erreurs. Une version est un commit mûr : cueilli, figé, jamais modifié. Un correctif est une nouvelle cueillette. Le kit de publication construit ce que nous avons choisi, pas le calendrier de l’amont.</p>
+    <p>Deux lignes d’xrdp faisaient que « Latest » ne proposait à Fedora aucune session Wayland ; elles n’en font donc plus qu’une. Le site a un temps récupéré des fichiers du kit pendant que le kit en récupérait du site, si bien qu’une vidéo renommée devait traverser deux fois ; désormais, tout circule dans un seul sens. La page a appris le chinois, puis a gagné Manman (蛮蛮), sa mascotte. Une phrase est apparue à côté du nom : <em>Vous ici, vous dans le nuage : un seul bureau.</em></p>
+    <p>Et une règle de plus, la première : le site en ligne ne casse jamais.</p>
+
+    <h2>30 octobre : un ordinateur que vous possédez déjà est un serveur</h2>
+    <p>Jusque-là, le serveur, c’était xrdp. Puis le serveur miroir (shadow server) de FreeRDP est arrivé sur Windows : votre propre écran, les écrans de connexion et de verrouillage, Ctrl+Alt+Suppr compris. AV2, le prochain codec vidéo, est arrivé le même jour, dans tous les clients et l’hôte Windows. Le lendemain, le Mac a suivi, et les trois produits sont passés sur un seul FreeRDP, si bien qu’un correctif les atteint tous en une seule cueillette.</p>
+
+    <h2>1er novembre : vingt versions en une journée</h2>
+    <p>L’image sur un hôte Windows paraissait pleine de blocs, et cela ne semblait être la faute de personne. Il a fallu une chaîne de petites découvertes exactes : une mauvaise vue comparée pour détecter les changements, des régions qui commençaient au mauvais pixel, des lignes de chrominance lues à la mauvaise hauteur. Chacune est sortie séparément, et chacune a rendu l’image plus nette. Corriger la seule grille des macroblocs a réduit les données de 2,85 à 1,86 Mbit/s à qualité égale.</p>
+    <p>AV1 tournait à son réglage le plus lent, sur un seul thread, avec ses outils pour écran désactivés. Bien activé, il est allé jusqu’à dix fois plus vite, avec un texte plus propre de 12 dB pour moins de bits. La conversion des couleurs pour l’image la plus nette est devenue à son tour dix fois plus rapide.</p>
+    <p>Un nouveau test Mac en CI a ensuite trouvé un plantage au début de chaque session AV2, et un interblocage venu de l’un de nos propres correctifs. Vingt versions de FreeRDP sont sorties en une journée, et chacune dit ce qu’elle a corrigé.</p>
+
+    <h2>2 au 5 novembre : les bureaux Linux, et les petites choses</h2>
+    <p>La page a appris le japonais et le français. GNOME a eu son propre hôte, sans portail ni boîte de dialogue, puis ARM64, puis le son. Un gestionnaire de sessions est arrivé : un seul port pour tous les utilisateurs d’un ordinateur, chacun arrivant sur son propre bureau, avec un bureau démarré pour qui n’en a pas. C’était ce que nous avions demandé en mai 2022.</p>
+    <p>Certaines des meilleures découvertes n’étaient pas du tout dans le produit. Des démos Windows lentes venaient d’un service de stockage, pas de la page. Une situation de concurrence TLS coupait les sessions pendant la frappe. Une page qui affichait votre nom d’utilisateur dans une commande a cessé de le faire.</p>
+
+    <h2>6 novembre : le jour où nous avons commencé à y vivre</h2>
+    <p>Nous avons décidé d’y installer notre propre travail quotidien, et l’usage a aussitôt changé la liste. En une journée :</p>
+    <ul>
+      <li>presse-papiers partagé, son et microphone sur l’hôte Linux</li>
+      <li>un mauvais mot de passe qui met fin à la tentative, au lieu de réessayer sans fin</li>
+      <li>un bureau qui prend la taille de votre fenêtre, et la suit quand vous la redimensionnez</li>
+      <li>un portable fermé qui ne prend plus la taille de l’écran en otage</li>
+      <li>une session GNOME complète, pas seulement un shell</li>
+      <li>des mises à jour qui atteignent une session en cours sans déconnexion</li>
+      <li>un bureau verrouillé qui se réveille pour vous</li>
+      <li>des statistiques dans les bibliothèques de FreeRDP, lisibles par chaque client</li>
+    </ul>
+
+    <h2>Ce qui part en amont</h2>
+    <p>Nous construisons sur FreeRDP et xrdp, et les correctifs ont leur place là-bas. À ce jour, 80 de nos pull requests ont été fusionnées dans FreeRDP, et deux dans xrdp. Le fork est une salle d’attente, pas une maison.</p>
+
+    <section class="story-open">
+      <h2>Ce qui reste ouvert</h2>
+      <p>AV2 est l’avenir, mais pas encore le présent. Le jour où nous avons commencé à y vivre, certaines sessions AV2 sont restées noires : à ses réglages les plus rapides, l’encodeur sautait une étape de comptabilité au bord de l’image, et écrivait une première image clé que le décodeur refusait. Nos tests comptaient les images, donc ils passaient quand même. Le correctif est en place, tout comme la vérification qui l’aurait détecté. Si une session reste encore noire, choisissez AV1 et dites-le-nous.</p>
+      <p>L’installation de notre propre travail sur tout cela n’est pas terminée non plus, et chaque jour d’usage allonge la liste.</p>
+    </section>
+
+    <p>D’autres étincelles viendront.</p>
+  </article>
+
+  <p><a href="index.html" data-i18n="back">Back to FreeRDP Web</a></p>
+</main>
+</body>
+</html>
