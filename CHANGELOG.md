@@ -15,6 +15,23 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261106.6
+
+- **Files through the clipboard, both ways.** To the session: drop them on the page, paste them where
+  the browser hands them over, or use the toolbar's Files; a paste in the session then reads each
+  piece from the File, so nothing waits in memory. From the session: a copy of files shows a bar
+  with Save; Chrome and Edge write to disk as it arrives, other browsers collect it in memory, up to
+  2 GiB, several files as one ZIP. `web/clip-files.js` holds what can be tested without a page.
+- **Files only where the server takes them.** FreeRDP's `freerdp_web_clipboard_server_files()` reports
+  the server's `CB_STREAM_FILECLIP_ENABLED`, read once the clipboard channel is up, and the page hides
+  Files and the drop on a no. A client without that export can't tell, so the controls show as long as
+  it can offer files. A yes is only the server's word, so the "ready" line says what to think if
+  nothing arrives.
+- Tested on Linux's FreeRDP shadow server only: both ways, 200 MB, CJK and empty folders, in Chrome.
+  xrdp, GNOME Remote Desktop, Windows, Mac, Firefox and Safari have not been tried.
+- No Cancel yet. A failed save in Chrome can leave an empty file.
+- The session's toolbar wraps at phone width, where its buttons ran off the screen.
+
 ## 20261106.5
 
 - **Info no longer shows two times for one AV1 picture.** With FreeRDP's counters, the page's own

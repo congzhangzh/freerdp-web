@@ -152,7 +152,16 @@
     return end.out;
   }
 
-  const api = { SIZE, RANGE, buildList, parseList, cleanPath, fromItems, fromFiles, freeName, sizeText, crc32, zipEntry, zipEnd };
+  // Can this session take files? m: the client. It needs the export that offers them; a client that
+  // also reports the server (_freerdp_web_clipboard_server_files: 1 yes, 0 no, -1 its clipboard
+  // channel isn't up yet) rules out only a server that said no. An older client can't tell.
+  // A yes is only the server's word: a host can claim it and still have no way to take them.
+  function allowed(m) {
+    if (typeof m?._freerdp_web_clipboard_offer_files !== "function") return false;
+    return typeof m._freerdp_web_clipboard_server_files !== "function" || m._freerdp_web_clipboard_server_files() !== 0;
+  }
+
+  const api = { allowed, SIZE, RANGE, buildList, parseList, cleanPath, fromItems, fromFiles, freeName, sizeText, crc32, zipEntry, zipEnd };
   root.FreeRDPClipFiles = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(globalThis);

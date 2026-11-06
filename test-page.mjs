@@ -87,6 +87,12 @@ for (const page of ["index.html", "safety.html", "keyboard.html", "server.html",
   const w = await ev("document.documentElement.scrollWidth");
   check(`${page} fits 390 px`, w <= 390, `${w} px`);
 }
+// the session's toolbar with all its buttons, Files too: it wraps inside a phone's width
+await send("Page.navigate", { url: `${ORIGIN}/index.html` }); await sleep(1000);
+const bar = await ev(`(() => { document.body.classList.add('session'); document.getElementById('tbFiles').hidden = false;
+  const b = document.getElementById('toolbar'), r = b.getBoundingClientRect(), out = { left: r.left, right: r.right, height: r.height };
+  document.body.classList.remove('session'); document.getElementById('tbFiles').hidden = true; return out; })()`);
+check("the session's toolbar fits 390 px", bar.left >= 0 && bar.right <= 390 && bar.height > 0, JSON.stringify(bar));
 await screenshot("page-phone.png");
 await send("Emulation.clearDeviceMetricsOverride");
 await send("Emulation.setDeviceMetricsOverride", { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });

@@ -102,3 +102,14 @@ test("a ZIP that unzip reads: names, folders, contents, in pieces", () => {
   assert.equal(execFileSync("python3", ["-c", py, join(dir, "t.zip")], {encoding: "utf8"}), "名前/\n名前/a.txt\nd/\nhello, world\n");
   assert.ok(readFileSync(join(dir, "t.zip")).length === zip.length);
 });
+
+test("files in a session: the client's offer, unless the server said no", () => {
+  const offer = () => 1;
+  assert.strictEqual(C.allowed(undefined), false);
+  assert.strictEqual(C.allowed({}), false);                                      // a client without file copy
+  assert.strictEqual(C.allowed({ _freerdp_web_clipboard_offer_files: offer }), true);   // an older client can't tell
+  const says = (v) => C.allowed({ _freerdp_web_clipboard_offer_files: offer, _freerdp_web_clipboard_server_files: () => v });
+  assert.strictEqual(says(1), true);
+  assert.strictEqual(says(-1), true);     // its channel isn't up yet: the offer itself says so
+  assert.strictEqual(says(0), false);
+});

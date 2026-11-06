@@ -972,7 +972,10 @@ setInterval(syncClipboard, 1500);
 const CF = FreeRDPClipFiles;
 const filesState = { offered: null, offeredSize: 0, sent: 0, session: null, saving: false, stream: 0, waits: new Map(), shown: 0, hide: 0, drag: 0 };
 const FILE_PIECE = 1024 * 1024, FILE_WAIT_MS = 30000, MEMORY_SAVE_MAX = 2 * 2 ** 30;
-const filesSupported = () => typeof Module._freerdp_web_clipboard_offer_files === "function";
+const filesSupported = () => CF.allowed(Module);
+// the server's answer comes after the session starts, and may change on a reconnect
+const filesToolbar = () => { $("tbFiles").hidden = !clipboardOn || !filesSupported(); };
+setInterval(filesToolbar, 1000);
 const heapCopy = (bytes) => { const ptr = Module._malloc(bytes.length); (Module.HEAPU8 ?? globalThis.HEAPU8).set(bytes, ptr); return ptr; };
 function filesShow(text, key, vars, save) {
   clearTimeout(filesState.hide);
@@ -1003,7 +1006,7 @@ async function filesOffer(entries) {
   filesState.session = null;
   log(`[page] files: offered ${files.length} files, ${filesState.offeredSize} bytes`);
   const all = `${filesCount(files.length)}, ${CF.sizeText(filesState.offeredSize)}`;
-  filesShow(`${all} ready: paste in the session`, "files.ready", { all }, false);
+  filesShow(`${all} ready: paste in the session. If nothing arrives, this host may not take files.`, "files.ready", { all }, false);
 }
 function fileAnswerSend(stream, ok, bytes) {
   const ptr = bytes?.length ? heapCopy(bytes) : 0;
@@ -1585,7 +1588,7 @@ async function connect(againPassword = null, retrying = false) {
   // switch to the session layout first (header hidden), let it settle, then measure: the first
   // picture then has exactly the canvas aspect ratio; /dynamic-resolution follows later resizes
   document.body.classList.add("session"); syncHeader();
-  $("tbFiles").hidden = !clipboardOn || !filesSupported();
+  filesToolbar();
   filesState.offered = filesState.session = null; filesHide();   // a new session knows nothing of them
   // two frames, or 200 ms: a hidden tab, or one that lost focus to a passkey prompt, may get no
   // frames for a while (the measurement below forces the layout either way)
