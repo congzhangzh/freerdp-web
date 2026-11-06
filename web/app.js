@@ -534,11 +534,12 @@ function moduleConfig() {
   onExit(code) {
     if (crash.abandoned === m) { log("[page] the client the page had ended exited now: " + code); return; }
     status("exited: " + code, "status.exited", { code }); log("[page] exit code " + code); window.__freerdpExit = code;
+    conn.refused = refusedBeforePicture();   // read here: the next client brings its own counters
     const over = SESSION_OVER[code];   // the session itself ended: no reconnecting on its own
-    if (code !== 0 && !over) $("logPanel").open = true;   // show the reason
+    if (code !== 0 && !over && !conn.refused) $("logPanel").open = true;   // show the reason
     // exit code 0 also follows a lost connection: look at the log, not only at the code
     const lost = !over && connLog.some((l) => /ERRCONNECT_|Network disconnect|\[tcp-shim\].*(Error|abort)/i.test(l));
-    crashEnd(!crash.userEnded && !over && (code !== 0 || lost), over ? "" : code !== 0 ? "exit code " + code : lost ? "connection lost" : "");
+    crashEnd(!crash.userEnded && !over && !conn.refused && (code !== 0 || lost), over ? "" : code !== 0 ? "exit code " + code : lost ? "connection lost" : "");
     setTimeout(() => sessionEnded(!over && (lost || code !== 0), over), 0);   // after this client's exit is done
   },
   onAbort(what) { runtimeFailed = true; resolveRuntime(false); HostsUI.lock(); log("[page] aborted: " + what); crashEnd(true, "wasm abort: " + what); },
@@ -1369,7 +1370,7 @@ async function connect(againPassword = null, retrying = false) {
     placeToolbar();
     // the page's own retry leaves someone reading the Log alone: a drop is when it matters most
     if (!retrying || logView.following) { $("logPanel").open = false; $("canvas").focus(); }
-    crash.running = true; crash.userEnded = false; crashStore("running"); connLog.length = 0;
+    crash.running = true; crash.userEnded = false; crashStore("running"); connLog.length = 0; conn.began = Date.now(); conn.paints = codecReading(); conn.refused = false;
     crash.timer = setInterval(() => crashStore("running"), 5000);
     // callMain is one-shot. FreeRDP copies argv into its runtime settings; JS drops its copies.
     handedToWasm = true;
@@ -1400,6 +1401,20 @@ function trackSockets() {
 // FreeRDP itself retries a dropped network (+auto-reconnect, vault.js) within the same client;
 // when that client gives up and ends, the page starts a new one: after 2, 4, 8… s, up to 8 times
 const retry = { count: 0, timer: 0, max: 8 };
+// A server that checks the password after the connection sequence (FreeRDP's shadow server, over
+// TLS) cannot say why: FreeRDP's clients don't announce Set Error Info, so a wrong password only
+// shows as this disconnect, and exit code 131 would read as a drop. What tells it from a drop is
+// that the connection never showed anything, soon after it began. A first start of a session
+// that takes long is no such case: there the connection stays open. Counters cover graphics
+// (RDPGFX) only, so a session without them is judged by nothing but the clock: after this long
+// it was a session, and the normal end applies.
+const HUNG_UP = /ERRINFO_RPC_INITIATED_DISCONNECT/, HUNG_UP_MS = 60000;
+const conn = { began: 0, paints: null };
+const codecReading = () => { const cs = window.freerdpCodecStats;
+  return cs && typeof Module._freerdp_web_codec_stats === "function" ? cs.read(Module.HEAPU8, Module._freerdp_web_codec_stats()) : null; };
+// the server ended this connection before it showed anything: the password, most likely
+const refusedBeforePicture = () => connLog.some((l) => HUNG_UP.test(l)) && Date.now() - conn.began < HUNG_UP_MS &&
+  window.freerdpCodecStats?.paintedNothing(conn.paints, codecReading()) === true;
 const LOGON_FAILED = /ERRCONNECT_(LOGON_FAILURE|WRONG_PASSWORD|ACCESS_DENIED|ACCOUNT_\w+|PASSWORD_\w+|NO_OR_MISSING_CREDENTIALS)|credentials do not work/;
 function showEnd(text, canReconnect) {
   $("endText").textContent = text;
@@ -1411,9 +1426,11 @@ function sessionEnded(unexpected, why = "") {
   if (modularClient()) connectStarted = false;   // an older client runs once
   if (crash.userEnded) { endCapture(); return; }
   if (modularClient()) newClient();   // ready for Reconnect, while the bar says what happened
-  if (connLog.some((l) => LOGON_FAILED.test(l))) {
+  const passwordRefused = connLog.some((l) => LOGON_FAILED.test(l));
+  if (passwordRefused || conn.refused) {
     again.forget(); retry.count = 0; endCapture();
-    showEnd(t("end.refused", "The server refused the password. Connect again with the right one."), false);
+    showEnd(passwordRefused ? t("end.refused", "The server refused the password. Connect again with the right one.")
+      : t("end.noPicture", "The server ended the connection before showing anything. Check the user name and password, and connect again."), false);
     return;
   }
   const canAgain = modularClient() && again.has(HostsUI.selected);

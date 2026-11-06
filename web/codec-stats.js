@@ -31,6 +31,18 @@
     return a[0] === LAYOUT ? a : null;
   }
 
+  // everything that paints, of a reading: surface commands of every codec and the codec-less PDUs
+  function paints(a) {
+    let n = 0;
+    for (let i = 2; i <= 17; i++) n += a[i];
+    for (const [i] of PAINTS) n += a[i];
+    return n;
+  }
+
+  // did this connection paint nothing? start, end: readings at its start and end. null when a
+  // reading is missing: a client without the counters says nothing either way
+  const paintedNothing = (start, end) => (start && end ? paints(end) === paints(start) : null);
+
   // a codec id's name: AV2 has id 2 in the FreeRDP the release kit builds; a FreeRDP that gives it
   // AV1's id 1 tells them apart by the caps version the server confirmed. AV1's chroma ("4:4:4")
   // comes from its stream (app.js).
@@ -52,7 +64,7 @@
     return parts.join(" · ");
   }
 
-  const api = { LAYOUT, SLOTS, FRDP_2, read, name, describe };
+  const api = { LAYOUT, SLOTS, FRDP_2, read, name, describe, paints, paintedNothing };
   if (typeof module !== "undefined" && module.exports) { module.exports = api; return; }
   root.freerdpCodecStats = api;
 })(typeof window !== "undefined" ? window : globalThis);

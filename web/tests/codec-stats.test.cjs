@@ -57,3 +57,20 @@ test("the paints that carry no codec: SolidFill, SurfaceToSurface, CacheToSurfac
   const prev = slots({34: 1, 36: 10}), now = slots({34: 3, 35: 1, 36: 40});
   assert.equal(C.describe(now, prev, 1), "SolidFill 2/s · SurfaceToSurface 1/s · CacheToSurface 30/s");
 });
+
+test("paints: every codec's surface commands and the codec-less paints, nothing else", () => {
+  assert.equal(C.paints(slots({[n(1)]: 3, [n(9)]: 2, 34: 1, 35: 1, 36: 1})), 8);
+  assert.equal(C.paints(slots({[b(1)]: 900, 1: 0x20000})), 0, "bytes and the caps version are not paints");
+});
+
+test("paintedNothing: a connection that showed nothing, and one that did", () => {
+  const start = slots({[n(1)]: 40});   // the counters of an earlier connection on this page
+  assert.equal(C.paintedNothing(start, slots({[n(1)]: 40})), true);
+  assert.equal(C.paintedNothing(start, slots({[n(1)]: 41})), false);
+  assert.equal(C.paintedNothing(start, slots({[n(1)]: 40, 35: 1})), false, "a cached paint is a picture too");
+});
+
+test("paintedNothing: says nothing without the counters", () => {
+  assert.equal(C.paintedNothing(null, slots()), null);
+  assert.equal(C.paintedNothing(slots(), null), null);
+});
