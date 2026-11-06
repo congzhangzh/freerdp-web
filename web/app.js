@@ -160,6 +160,8 @@ const log = (s) => {
   // this connection's own log, for how it ended (crash.lines spans reconnections)
   connLog.push(s); if (connLog.length > CRASH_LINES) connLog.shift();
   if (/\[gdi_init_ex\]: Remote framebuffer format|client_auto_reconnect.*(succeeded|success)/i.test(s)) reconnected();
+  // FreeRDP's own reconnect is silent: say so, or the last picture looks like a session that hung
+  if (/\[client_auto_reconnect_ex\]: Network disconnect/.test(s)) droppedNow();
 };
 // "Save the password?" after connecting with a typed one (hosts-ui.js keeps it until answered)
 const saveOffer = { due: false, failed: false, timer: 0 };
@@ -1423,6 +1425,7 @@ function showEnd(text, canReconnect) {
   $("endBar").hidden = false;
 }
 function sessionEnded(unexpected, why = "") {
+  dropOver();
   if (modularClient()) connectStarted = false;   // an older client runs once
   if (crash.userEnded) { endCapture(); return; }
   if (modularClient()) newClient();   // ready for Reconnect, while the bar says what happened
@@ -1460,7 +1463,22 @@ async function reconnect(automatic = false) {
 $("endReconnect").onclick = () => reconnect();
 $("endClose").onclick = () => { clearTimeout(retry.timer); again.forget(); location.reload(); };
 // a session that came back (FreeRDP's own reconnect, or a new client) resets the count
-const reconnected = () => { retry.count = 0; $("endBar").hidden = true; };
+const drop = { timer: 0 };
+const dropOver = () => { clearInterval(drop.timer); drop.timer = 0; };
+const reconnected = () => { dropOver(); retry.count = 0; $("endBar").hidden = true; };
+// the picture coming back is what ends a drop (FreeRDP says nothing when its reconnect works);
+// a client without the counters keeps the bar until its next log line says so
+function droppedNow() {
+  showEnd(t("end.reconnecting", "Reconnecting…"), false);
+  if (drop.timer) return;
+  const cs = window.freerdpCodecStats, before = codecReading();
+  if (!cs || !before) return;
+  drop.timer = setInterval(() => {
+    const now = crash.running ? codecReading() : null;
+    if (!now) { dropOver(); return; }
+    if (!cs.paintedNothing(before, now)) reconnected();
+  }, 500);
+}
 
 // The last session's log, in the Log's own tab. Only an unexpected end is announced: copy, or show.
 (() => {
