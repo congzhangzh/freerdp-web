@@ -15,6 +15,29 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261106.4
+
+- **Get a server has tabs**: Linux, Windows, macOS and Notes, and Debian, Ubuntu and Fedora under
+  xrdp, one of each shown at a time, so the page is about 3,000 px at its longest, down from about
+  7,000. A tab is a plain link to its panel, and a link to a section opens the tabs around it, so
+  older links such as `#windows` keep working and `#server-fedora` opens Linux and Fedora. A change of
+  language, which draws the page again, keeps the tabs. Without `install.json` the page is still
+  its one line to the kit's latest release, with the safety line above it.
+- **The Linux host is on the page at last**: `install.json` has carried `linux[]` and nothing read it.
+  Under Linux: FreeRDP's shadow server first, then xrdp, then the desktop's own server (GNOME Remote
+  Desktop, whose account is its own and not the system login, and KRdp, not tried with this page).
+- **The session manager's section is ready and hidden**: it shows only when `install.json` has a
+  `sesman` field, which the kit writes once a real host confirms it, so that needs no page release.
+- **AV2's text was backwards.** AV2 has been on by default in the kit's xrdp since 31 October and the
+  kit's command puts AV1 first again, but the page still said AV2 was off until you put it first,
+  above that command. It says what the command does now, in the Notes tab.
+- "Then connect" is gone. Its safety line, keep the RDP server on 127.0.0.1 and reach it through
+  SSH, is in the page's opening, since all three systems rely on it.
+- **Get a client**: in the browser (as a page, as a Chrome app), or a native client with uvx, an offline
+  pack (the kit's archives) or pip. `#browser`, `#app`, `#native-clients` and `#freerdp-tk` stay.
+- `test-server.mjs` checks the tabs, every older link, phone width in each tab, and the session
+  manager with and without its field.
+
 ## 20261106.3
 
 - **Info reads FreeRDP's own counters**, which live in its libraries for every client (FreeRDP

@@ -177,25 +177,25 @@ await zh.ev("localStorage.setItem('freerdp-web-lang', 'auto'), true");
 
 // server.html: the page's words in Chinese, install.json's as written
 await zh.open("server.html");
-const kit = await zh.ev("document.getElementById('kit').innerText") || "";
+const kit = await zh.ev("document.getElementById('kit').textContent") || "";
 check("zh: server.html is <html lang=\"zh-Hans\"> with a Chinese title", await zh.ev("document.documentElement.lang") === "zh-Hans"
   && await zh.ev("document.title") === "获取服务器 · FreeRDP Web" && await zh.ev(text("h1")) === "获取服务器");
 check("zh: the cards' headings and labels in Chinese, the sessions and commands as install.json has them",
-  ["安装 xrdp", "启动服务", "全部文件及校验和："].every((s) => kit.includes(s)) && kit.includes("Wayland: GNOME, KDE Plasma, sway")
+  [I.ZH["srv.shadowName"], "启动服务", "全部文件及校验和："].every((s) => kit.includes(s)) && kit.includes("Wayland: GNOME, KDE Plasma, sway")
   && await zh.ev("[...document.querySelectorAll('#kit .copyable button')].every((b) => b.textContent === '复制')"), kit.split("\n").slice(0, 4).join(" | "));
 await zh.screenshot("i18n-server-wide.png");
 await zh.ev("(() => { const s = document.getElementById('lang'); s.value = 'en'; s.dispatchEvent(new Event('change')); return true; })()"); await sleep(300);
-const kitEn = await zh.ev("document.getElementById('kit').innerText") || "";
-check("server.html, switched to English: the cards in English", kitEn.includes("Install xrdp") && kitEn.includes("All files and checksums: ") && !han.test(kitEn));
+const kitEn = await zh.ev("document.getElementById('kit').textContent") || "";
+check("server.html, switched to English: the cards in English", kitEn.includes("FreeRDP's shadow server") && kitEn.includes("All files and checksums: ") && !han.test(kitEn));
 await zh.ev("localStorage.setItem('freerdp-web-lang', 'auto'), true");
 await zh.open("server.html", null);
 check("zh: without install.json, the one line to the kit's latest release in Chinese", await zh.ev(text("#kitFallback a")) === "发布工具包的最新版本");
 
-// client.html: the three ways and the clients' labels in Chinese, the uvx command as it is
+// client.html: its two parts and the clients' labels in Chinese, the uvx command as it is
 await zh.open("client.html");
 const native = await zh.ev("document.getElementById('native').innerText") || "";
-check("zh: client.html with a Chinese title, its three ways in Chinese", await zh.ev("document.title") === "获取客户端 · FreeRDP Web"
-  && JSON.stringify(await zh.ev("[...document.querySelectorAll('main h2')].map((h) => h.textContent)")) === JSON.stringify(["1. 在浏览器里", "2. 作为 Chrome 应用", "3. 原生客户端"]));
+check("zh: client.html with a Chinese title, its two parts in Chinese", await zh.ev("document.title") === "获取客户端 · FreeRDP Web"
+  && JSON.stringify(await zh.ev("[...document.querySelectorAll('main h2')].map((h) => h.textContent)")) === JSON.stringify(["在浏览器里", "原生客户端"]));
 check("zh: the clients' labels in Chinese, the uvx command as it is", ["平台", "文件", "freerdp-tk：连接窗口", "全部文件及校验和："].every((s) => native.includes(s))
   && native.includes("uvx freerdp-tk"), native.split("\n").slice(0, 3).join(" | "));
 
@@ -237,9 +237,9 @@ for (const [asks, code, table] of [["ja-JP", "ja", I.JA], ["fr-FR", "fr", I.FR]]
   check(`English → ${code} again`, await b.ev("document.documentElement.lang") === code && await b.ev(text('nav a[href="server.html"]')) === table["nav.server"]);
   await b.ev("localStorage.setItem('freerdp-web-lang', 'auto'), true");
   await b.open("server.html");
-  const kit = await b.ev("document.getElementById('kit').innerText") || "";
+  const kit = await b.ev("document.getElementById('kit').textContent") || "";
   check(`${code}: server.html's title, the macOS host and its permissions in ${code}, the commands as they are`,
-    await b.ev("document.title") === table["srv.pageTitle"] && [table["srv.install"], table["srv.macShadow"], table["srv.macRemove"]].every((s) => kit.includes(s))
+    await b.ev("document.title") === table["srv.pageTitle"] && [table["srv.shadowName"], table["srv.macShadow"], table["srv.macRemove"]].every((s) => kit.includes(s))
     && kit.includes("launchctl kickstart -k gui/$(id -u)/org.freerdp.shadow")
     && await b.ev("[...document.querySelectorAll('#kit .copyable button')].every((x) => x.textContent === " + JSON.stringify(table["copy"]) + ")"));
   await b.screenshot(`i18n-server-${code}-wide.png`);

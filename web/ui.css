@@ -274,6 +274,7 @@ body.session #logPanel:not([open]) { display:none; }
 .help .lead { margin:0 0 24px; color:var(--muted); }
 .help h2 { font-size:17px; margin:30px 0 8px; }
 .help h3 { font-size:15px; margin:18px 0 6px; }
+.help h4 { font-size:14px; margin:14px 0 6px; }
 .help li { margin:5px 0; }
 .help pre { margin:8px 0; padding:9px 11px; border:1px solid var(--line); border-radius:6px; background:var(--panel);
   overflow-x:auto; white-space:pre; }
@@ -288,11 +289,17 @@ body.session #logPanel:not([open]) { display:none; }
 .help td a { overflow-wrap:anywhere; }
 /* Get a server (server.js): a card per distribution; a long command wraps inside its box */
 .help pre.wrap { white-space:pre-wrap; overflow-wrap:anywhere; }
-.help .families { margin:0 0 4px; }
-.help .families a { font-size:13px; padding:3px 10px; }
+/* tabs: links, one panel shown (server.js) */
+.help .tabs { display:flex; flex-wrap:wrap; gap:2px 4px; margin:16px 0 14px; border-bottom:1px solid var(--line); }
+.help .tabs a { padding:6px 12px; margin-bottom:-1px; font-size:14px; color:var(--muted); text-decoration:none;
+  border:1px solid transparent; border-bottom:none; border-radius:6px 6px 0 0; }
+.help .tabs a:hover { color:var(--signal); }
+.help .tabs a[aria-current] { color:var(--ink); font-weight:600; background:var(--panel); border-color:var(--line); }
+.help .tabs[data-group=family] { margin:8px 0 10px; }
+.help .tabs[data-group=family] a { padding:4px 10px; font-size:13px; }
 .help .distros { display:grid; gap:10px; }
 .help .distro { min-width:0; padding:10px 12px; border:1px solid var(--line); border-radius:6px; background:var(--panel); }
-.help .distro h4 { margin:0; font-size:15px; }
+.help .distro h5 { margin:0; font-size:15px; }
 .help .distro .hint { margin:6px 0 0; }
 .help .distro .copyable { margin-top:6px; }
 .help .distro pre { margin:0; background:var(--paper); }

@@ -27,11 +27,10 @@
     </nav>
   </header>
   <h1 data-i18n="nav.server">Get a server</h1>
-  <p class="lead"><span data-i18n="srv.lead">FreeRDP Web connects to any RDP server: xrdp, gnome-remote-desktop, or Windows' own Remote
-    Desktop. The packages below are the
-    </span><a href="https://github.com/congzhangzh/rdp-release-kit" target="_blank" rel="noopener" data-i18n="srv.kit">release kit</a><span data-i18n="srv.leadEnd">'s xrdp,
-    with Wayland sessions (GNOME, KDE Plasma, sway), tested with this page before each release. For a
-    Windows PC or a Mac: FreeRDP's shadow server, below the xrdp packages.</span></p>
+  <p class="lead"><span data-i18n="srv.lead">FreeRDP Web connects to any RDP server. Pick the computer you want to reach. What you download here comes from the
+    </span><a href="https://github.com/congzhangzh/rdp-release-kit" target="_blank" rel="noopener" data-i18n="srv.kit">release kit</a><span data-i18n="srv.leadEnd">, built and tested with this page for each release.</span></p>
+
+  <p><span data-i18n="srv.thenSsh">Keep the RDP server on 127.0.0.1 and reach it through SSH: </span><a href="safety.html" data-i18n="nav.safety">Safety and tunnels</a><span data-i18n="punct.period">.</span></p>
 
   <!-- server.js fills this from install.json, which the release kit writes next to the page when
        it publishes the site; without that file (a local build) this line is all there is -->
@@ -39,13 +38,6 @@
     <p id="kitFallback"><span data-i18n="srv.fallback">The packages for your Linux distribution:
       </span><a href="https://github.com/congzhangzh/rdp-release-kit/releases/latest" target="_blank" rel="noopener" data-i18n="srv.latest">the release kit's latest release</a><span data-i18n="punct.period">.</span></p>
   </div>
-
-  <h2 data-i18n="srv.then">Then connect</h2>
-  <p><span data-i18n="srv.thenSsh">Keep the RDP server on 127.0.0.1 and reach it through SSH: </span><a href="safety.html" data-i18n="nav.safety">Safety and tunnels</a><span data-i18n="srv.thenCmd"> has
-    the one-line command. Then open </span><a href="index.html">FreeRDP Web</a><span data-i18n="srv.thenEnd"> and connect with your user name and
-    password on the server.</span></p>
-  <p><span data-i18n="srv.thenOther">Other ways to connect, without a gateway, among them FreeRDP's native client and
-    freerdp-tk: </span><a href="client.html" data-i18n="nav.client">Get a client</a><span data-i18n="punct.period">.</span></p>
 
   <p><a href="index.html" data-i18n="back">Back to FreeRDP Web</a></p>
 </main>
