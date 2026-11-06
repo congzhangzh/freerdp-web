@@ -522,6 +522,10 @@ function moduleConfig() {
   // the server's clipboard, from the client's clipboard bridge (below)
   freerdpClipboardWrite: (text) => clipboardWrite(text),
   freerdpClipboardWriteImage: (bytes, isPng) => clipboardWriteImage(bytes, isPng),
+  // the files of a copy: the list, what the server asks of ours, what it answers of its (below)
+  freerdpClipboardFiles: (list) => filesFromSession(list),
+  freerdpClipboardFileRequest: (...request) => filesAnswer(...request),
+  freerdpClipboardFileData: (stream, ok, bytes) => filesData(stream, ok, bytes),
   // with All screens, the screens the canvas is split into (Separate screens; "All screens", below)
   freerdpMonitors: () => screensMonitors(),
   onRuntimeInitialized() {
@@ -957,6 +961,230 @@ async function syncClipboard() {
 window.addEventListener("focus", syncClipboard);
 setInterval(syncClipboard, 1500);
 
+// Files. The browser's clipboard has no files for a page to read, so they come another way:
+//  - to the session: dropped on the page, pasted where the browser hands them over, or from the
+//    toolbar's Files. The page offers them as a copy; a paste in the session then asks for their
+//    contents, a piece at a time, and each piece is read from the File here: nothing waits in memory.
+//  - from the session: a copy of files shows a bar with Save. A page can't start a save on its
+//    own, so the click on Save fetches them, a piece at a time. Chrome and Edge write them to
+//    disk as they arrive: one file where the visitor says, several into a folder they pick.
+//    Elsewhere they collect in memory for a download, several as one ZIP (2 GiB at most).
+const CF = FreeRDPClipFiles;
+const filesState = { offered: null, offeredSize: 0, sent: 0, session: null, saving: false, stream: 0, waits: new Map(), shown: 0, hide: 0, drag: 0 };
+const FILE_PIECE = 1024 * 1024, FILE_WAIT_MS = 30000, MEMORY_SAVE_MAX = 2 * 2 ** 30;
+const filesSupported = () => typeof Module._freerdp_web_clipboard_offer_files === "function";
+const heapCopy = (bytes) => { const ptr = Module._malloc(bytes.length); (Module.HEAPU8 ?? globalThis.HEAPU8).set(bytes, ptr); return ptr; };
+function filesShow(text, key, vars, save) {
+  clearTimeout(filesState.hide);
+  $("filesText").textContent = t(key, text, vars);
+  $("filesSave").hidden = !save;
+  $("filesBar").hidden = false;
+}
+const filesHide = () => { clearTimeout(filesState.hide); $("filesBar").hidden = true; };
+const filesDone = (text, key) => { filesShow(text, key); filesState.hide = setTimeout(filesHide, 5000); };
+const filesCount = (n) => t(n === 1 ? "files.one" : "files.many", n === 1 ? "1 file" : `${n} files`, { n });
+const filesFail = (text, key, vars) => { log("[page] files: " + text); filesShow(text, key, vars, false); };
+
+async function filesOffer(entries) {
+  if (!entries.length || !clipboardOn || !document.body.classList.contains("session") || !filesSupported()) return;
+  let list;
+  try { list = CF.buildList(entries); }
+  catch (e) {
+    if (!e.tooLong) throw e;
+    return filesFail(`The name is too long to copy: ${e.tooLong}`, "files.tooLong", { name: e.tooLong });
+  }
+  const ptr = heapCopy(list);
+  const ok = Module.ccall("freerdp_web_clipboard_offer_files", "number", ["number", "number"], [ptr, list.length]);
+  Module._free(ptr);
+  if (!ok) return filesFail("The session is not ready for files", "files.notReady");
+  const files = entries.filter((e) => !e.dir);
+  filesState.offered = entries; filesState.sent = 0; filesState.shown = 0;
+  filesState.offeredSize = files.reduce((n, e) => n + e.size, 0);
+  filesState.session = null;
+  log(`[page] files: offered ${files.length} files, ${filesState.offeredSize} bytes`);
+  const all = `${filesCount(files.length)}, ${CF.sizeText(filesState.offeredSize)}`;
+  filesShow(`${all} ready: paste in the session`, "files.ready", { all }, false);
+}
+function fileAnswerSend(stream, ok, bytes) {
+  const ptr = bytes?.length ? heapCopy(bytes) : 0;
+  Module.ccall("freerdp_web_clipboard_file_answer", "number", ["number", "number", "number", "number"], [stream, ok ? 1 : 0, ptr, bytes?.length ?? 0]);
+  if (ptr) Module._free(ptr);
+}
+// The server's paste reads our files. It may ask for any file, for any piece, any number of times.
+async function filesAnswer(stream, index, flags, low, high, size) {
+  const entry = filesState.offered?.[index];
+  if (!entry || entry.dir) return fileAnswerSend(stream, false);
+  try {
+    if (flags & CF.SIZE) {
+      const bytes = new Uint8Array(8), v = new DataView(bytes.buffer);
+      v.setUint32(0, entry.size % 2 ** 32, true); v.setUint32(4, Math.floor(entry.size / 2 ** 32), true);
+      return fileAnswerSend(stream, true, bytes);
+    }
+    const from = high * 2 ** 32 + low;
+    const bytes = new Uint8Array(await entry.file.slice(from, from + size).arrayBuffer());
+    fileAnswerSend(stream, true, bytes);
+    filesState.sent += bytes.length;
+    const now = performance.now();
+    if (filesState.sent >= filesState.offeredSize) filesDone("Copied to the session", "files.sent");
+    else if (now - filesState.shown > 250) {
+      filesState.shown = now;
+      const percent = Math.floor(100 * filesState.sent / filesState.offeredSize);
+      filesShow(`Copying to the session: ${percent} %`, "files.sending", { percent });
+    }
+  } catch (e) {
+    filesFail(`Cannot read ${entry.path}: ${e.message}`, "files.cannotRead", { name: entry.path });
+    fileAnswerSend(stream, false);
+  }
+}
+
+// The session copied. null: no files there any more
+function filesFromSession(bytes) {
+  if (filesState.saving) { filesState.session = null; return; }   // the save fails, and says so
+  if (!bytes) {
+    if (filesState.session) filesHide();
+    filesState.session = null;
+    return;
+  }
+  const list = CF.parseList(bytes);
+  if (!list) { log("[page] files: the server's list was refused"); return; }
+  filesState.session = list; filesState.offered = null;
+  log(`[page] files: the session offers ${list.files} files, ${list.size} bytes`);
+  filesShow(`${filesCount(list.files)}, ${CF.sizeText(list.size)}`, "files.offer",
+    { all: `${filesCount(list.files)}, ${CF.sizeText(list.size)}` }, true);
+}
+function filesData(stream, ok, bytes) {
+  const wait = filesState.waits.get(stream);
+  if (!wait) return;
+  filesState.waits.delete(stream); clearTimeout(wait.timer);
+  if (ok) wait.resolve(bytes); else wait.reject(new Error("the server refused"));
+}
+function filePiece(index, offset, size) {
+  return new Promise((resolve, reject) => {
+    const stream = filesState.stream = (filesState.stream + 1) % 2 ** 31;
+    const timer = setTimeout(() => { filesState.waits.delete(stream); reject(new Error("no answer")); }, FILE_WAIT_MS);
+    filesState.waits.set(stream, { resolve, reject, timer });
+    Module.ccall("freerdp_web_clipboard_file_fetch", "number", ["number", "number", "number", "number", "number", "number"],
+      [stream, index, CF.RANGE, offset % 2 ** 32, Math.floor(offset / 2 ** 32), size]);
+  });
+}
+// All of one file, in order, to sink(bytes), which may wait
+async function fileFetch(entry, progress, sink) {
+  for (let offset = 0; offset < entry.size;) {
+    const bytes = await filePiece(entry.index, offset, Math.min(FILE_PIECE, entry.size - offset));
+    if (!bytes.length) throw new Error("the file is shorter than listed");
+    await sink(bytes);
+    offset += bytes.length; progress(bytes.length);
+  }
+}
+async function saveToHandle(handle, entry, progress) {
+  const out = await handle.createWritable();
+  try { await fileFetch(entry, progress, (bytes) => out.write(bytes)); await out.close(); }
+  catch (e) { await out.abort().catch(() => {}); throw e; }
+}
+async function saveToFolder(folder, list, progress) {
+  // nothing here is overwritten: what is at the top gets a free name
+  const here = new Set(), tops = new Map();
+  for await (const name of folder.keys()) here.add(name);
+  for (const e of list.entries) {
+    const top = e.path.split("/")[0];
+    if (tops.has(top)) continue;
+    const free = CF.freeName(top, (name) => here.has(name));
+    here.add(free); tops.set(top, free);
+  }
+  for (const e of list.entries) {
+    const parts = e.path.split("/");
+    parts[0] = tops.get(parts[0]);
+    const name = parts.pop();
+    let dir = folder;
+    for (const part of parts) dir = await dir.getDirectoryHandle(part, { create: true });
+    if (e.dir) await dir.getDirectoryHandle(name, { create: true });
+    else await saveToHandle(await dir.getFileHandle(name, { create: true }), e, progress);
+  }
+}
+function saveDownload(blob, name) {
+  const a = document.createElement("a"), url = URL.createObjectURL(blob);
+  a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+async function saveInMemory(list, single, progress) {
+  if (single) {
+    const parts = [];
+    await fileFetch(single, progress, (bytes) => { parts.push(bytes); });
+    return saveDownload(new Blob(parts), single.path.split("/").pop());
+  }
+  const parts = [], central = [];
+  let at = 0;
+  for (const e of list.entries) {
+    const pieces = [];
+    let crc = 0;
+    if (!e.dir) await fileFetch(e, progress, (bytes) => { crc = CF.crc32(crc, bytes); pieces.push(bytes); });
+    const z = CF.zipEntry(e.path, crc, e.dir ? 0 : e.size, at, e.dir);
+    parts.push(z.local, ...pieces); central.push(z.central);
+    at += z.local.length + (e.dir ? 0 : e.size);
+  }
+  const size = central.reduce((n, c) => n + c.length, 0);
+  saveDownload(new Blob([...parts, ...central, CF.zipEnd(central.length, size, at)], { type: "application/zip" }), "copied-files.zip");
+}
+async function filesSave() {
+  const list = filesState.session;
+  if (!list || filesState.saving) return;
+  const single = list.entries.length === 1 ? list.entries[0] : null;
+  const streaming = single ? !!window.showSaveFilePicker : !!window.showDirectoryPicker;
+  if (!streaming && list.size > MEMORY_SAVE_MAX)
+    return filesFail(`Too large for this browser: ${CF.sizeText(list.size)}. Chrome or Edge can save it.`, "files.tooLarge", { size: CF.sizeText(list.size) });
+  filesState.saving = true;
+  let done = 0, shown = 0;
+  const progress = (n) => {
+    done += n;
+    const now = performance.now();
+    if (now - shown < 250) return;
+    shown = now;
+    const percent = list.size ? Math.floor(100 * done / list.size) : 100;
+    filesShow(`Saving: ${percent} %`, "files.saving", { percent });
+  };
+  try {
+    if (single && window.showSaveFilePicker) await saveToHandle(await showSaveFilePicker({ suggestedName: single.path }), single, progress);
+    else if (!single && window.showDirectoryPicker) await saveToFolder(await showDirectoryPicker({ mode: "readwrite", id: "freerdp-files" }), list, progress);
+    else await saveInMemory(list, single, progress);
+    log(`[page] files: saved ${list.files} files, ${done} bytes`);
+    filesDone("Saved", "files.saved");
+    filesState.session = null;
+  } catch (e) {
+    filesState.saving = false;
+    if (e.name === "AbortError") filesFromSession(CF.buildList(list.entries));   // no choice made: as before
+    else { filesState.session = null; filesFail(`Not saved: ${e.message}. Copy again in the session.`, "files.notSaved"); }
+  } finally { filesState.saving = false; backToCanvas(); }
+}
+$("filesSave").onclick = filesSave;
+$("filesClose").onclick = () => { filesHide(); backToCanvas(); };
+$("tbFiles").onclick = () => { $("filesPick").value = ""; $("filesPick").click(); };
+$("filesPick").onchange = () => { filesOffer(CF.fromFiles($("filesPick").files)).catch((e) => filesFail(e.message, "files.notReady")); backToCanvas(); };
+// A drag of files over a session, on the page or the canvas. Anything else stays as it is.
+const dragHasFiles = (e) => document.body.classList.contains("session") && clipboardOn && filesSupported() && !!e.dataTransfer?.types?.includes("Files");
+// A drag over the page keeps sending dragover: when they stop, it was cancelled or left.
+const dropHide = () => { clearTimeout(filesState.drag); $("filesDrop").hidden = true; };
+const dragOver = (e) => {
+  if (!dragHasFiles(e)) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = "copy";
+  $("filesDrop").hidden = false;
+  clearTimeout(filesState.drag); filesState.drag = setTimeout(dropHide, 1000);
+};
+window.addEventListener("dragenter", dragOver, true);
+window.addEventListener("dragover", dragOver, true);
+window.addEventListener("dragleave", (e) => { if (!e.relatedTarget) dropHide(); }, true);
+window.addEventListener("drop", (e) => {
+  dropHide();
+  if (!dragHasFiles(e)) return;
+  e.preventDefault(); e.stopPropagation();
+  CF.fromItems(e.dataTransfer.items).then(filesOffer).catch((err) => filesFail(err.message, "files.notReady"));
+  backToCanvas();
+}, true);
+window.addEventListener("paste", (e) => {
+  if (!e.clipboardData?.files?.length || !document.body.classList.contains("session") || !clipboardOn || !filesSupported()) return;
+  e.preventDefault();
+  CF.fromItems(e.clipboardData.items).then(filesOffer).catch((err) => filesFail(err.message, "files.notReady"));
+}, true);
+
 // Session toolbar. A button click is always a valid user gesture for full screen.
 const toolbar = $("toolbar");
 const backToCanvas = () => setTimeout(() => $("canvas").focus(), 0);
@@ -1357,6 +1585,8 @@ async function connect(againPassword = null, retrying = false) {
   // switch to the session layout first (header hidden), let it settle, then measure: the first
   // picture then has exactly the canvas aspect ratio; /dynamic-resolution follows later resizes
   document.body.classList.add("session"); syncHeader();
+  $("tbFiles").hidden = !clipboardOn || !filesSupported();
+  filesState.offered = filesState.session = null; filesHide();   // a new session knows nothing of them
   // two frames, or 200 ms: a hidden tab, or one that lost focus to a passkey prompt, may get no
   // frames for a while (the measurement below forces the layout either way)
   await Promise.race([new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),

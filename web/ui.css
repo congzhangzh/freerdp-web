@@ -235,6 +235,16 @@ body.fs.tbhide:not(.tbpinned):not(.captured) #tbGrip { display:block; }
   display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; max-width:min(640px, calc(100vw - 32px)); padding:10px 14px;
   border-radius:8px; background:rgba(24,33,43,.95); color:#e3e9ef; font-size:13px; box-shadow:0 4px 16px rgba(0,0,0,.35); }
 #saveBar[hidden], #endBar[hidden] { display:none; }
+/* files on their way, or ready to save: out of the way of the desktop's middle, a toolbar's reach away in full screen */
+#filesBar { position:fixed; right:16px; bottom:16px; z-index:12; display:flex; align-items:center; gap:10px; max-width:calc(100vw - 32px); padding:8px 8px 8px 14px; border-radius:8px; background:#1d2630; color:#fff; font-size:13px; box-shadow:0 2px 12px rgba(0,0,0,.45); }
+#filesBar[hidden] { display:none; }
+#filesBar .row { display:flex; gap:6px; flex:none; }
+#filesBar button:not(.primary) { background:#34404d; color:#fff; border-color:#4a5866; }
+#filesBar button[hidden] { display:none; }
+#filesText { min-width:0; overflow-wrap:anywhere; }
+#filesDrop { position:fixed; inset:0; z-index:13; display:flex; align-items:center; justify-content:center; background:rgba(47,111,222,.28); box-shadow:inset 0 0 0 4px #2f6fde; pointer-events:none; }
+#filesDrop[hidden] { display:none; }
+#filesDrop span { padding:12px 20px; border-radius:8px; background:#1d2630; color:#fff; font-size:16px; }
 #saveBar .row, #endBar .row { display:flex; gap:6px; }
 #saveBar button:not(.primary), #endBar button:not(.primary) { background:#34404d; color:#fff; border-color:#4a5866; }
 #hotkeyToast { top:calc(var(--tbtop, 8px) + 96px); max-width:min(640px, calc(100vw - 32px)); text-align:center; }

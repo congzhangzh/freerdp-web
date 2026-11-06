@@ -274,6 +274,7 @@
   <button id="tbCapture" title="Capture the mouse and keyboard; Ctrl + Alt releases them" data-i18n="tb.capture" data-i18n-attr="title:tb.captureTitle">Capture</button>
   <button id="tbInfo" title="This session: the server, the codecs in use, decoding, frame rate, network" data-i18n="tb.info" data-i18n-attr="title:tb.infoTitle">Info</button>
   <button id="tbAbout" title="This client: its version and what it was built with" data-i18n="tb.about" data-i18n-attr="title:tb.aboutTitle">About</button>
+  <button id="tbFiles" title="Copy files to the session; you can also drop them on the page" data-i18n="tb.files" data-i18n-attr="title:tb.filesTitle" hidden>Files</button>
   <button id="tbLog" data-i18n="tb.log">Log</button>
   <button id="tbReconnect" title="Connect again, with the same password (no passkey, no typing)" data-i18n="tb.reconnect" data-i18n-attr="title:tb.reconnectTitle">Reconnect</button>
   <button id="tbQuit" data-i18n="tb.quit">Disconnect</button>
@@ -295,6 +296,12 @@
   <span id="endText"></span>
   <span class="row"><button id="endReconnect" class="small primary">Reconnect</button><button id="endClose" class="small" data-i18n="end.close">Close</button></span>
 </div>
+<input id="filesPick" type="file" multiple hidden>
+<div id="filesDrop" hidden><span data-i18n="files.drop">Drop to copy to the session</span></div>
+<div id="filesBar" role="status" hidden>
+  <span id="filesText"></span>
+  <span class="row"><button id="filesSave" class="small primary" data-i18n="files.save">Save</button><button id="filesClose" class="small" aria-label="Close" data-i18n-attr="aria-label:end.close">✕</button></span>
+</div>
 <div id="hotkeyToast" role="status" hidden></div>
 <div id="screensToast" role="status" hidden></div>
 <div id="captureToast" role="status" hidden><span data-i18n="cap.toast">Mouse and keyboard captured · </span><kbd>Ctrl</kbd> + <kbd>Alt</kbd><span data-i18n="cap.toastEnd"> releases them</span></div>
@@ -311,6 +318,7 @@
 <script src="options.js"></script>
 <script src="keyboard.js"></script>
 <script src="screens.js"></script>
+<script src="clip-files.js"></script>
 <script src="hosts.js"></script>
 <script src="hosts-ui.js"></script>
 <script src="about.js"></script>
