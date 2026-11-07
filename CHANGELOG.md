@@ -15,7 +15,7 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
-## 20261106.6
+## 20261107.1
 
 - **Files through the clipboard, both ways.** To the session: drop them on the page, paste them where
   the browser hands them over, or use the toolbar's Files; a paste in the session then reads each
