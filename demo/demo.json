@@ -1,8 +1,8 @@
 {
   "recorded": {
-    "kit": "150598ebfb15d21549ab15d65e3419d8bd2f82d8",
-    "web": "web-20261107.10-150598ebfb15",
-    "xrdp": "xrdp-20261107.10-150598ebfb15",
+    "kit": "a0d739dfdf9b5257b1e7e39fb4d316168a23ebbc",
+    "web": "web-20261108.5-a0d739dfdf9b",
+    "xrdp": "xrdp-20261108.5-a0d739dfdf9b",
     "pipewire-module-xrdp": "pipewire-module-xrdp-20261031.1-1b78a2c01cc2"
   },
   "videos": [
@@ -172,6 +172,30 @@
       "aliases": [
         "windows-rdp"
       ]
+    },
+    {
+      "title": "FreeRDP shadow server + macOS, AV1",
+      "src": "demo/mac-host.mp4",
+      "poster": "demo/mac-host.jpg",
+      "caption": "FreeRDP Web in a browser on a GitHub macOS runner, through websockify, to the kit's macOS host (FreeRDP-Shadow.app, ScreenCaptureKit) sharing that Mac's screen: Firefox there with web video and WebGL; the picture in AV1. The browser runs headless, so the Mac's screen shows only its own desktop. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD.",
+      "i18n": {
+        "zh": {
+          "title": "FreeRDP 影子服务器 + macOS，AV1",
+          "caption": "在 GitHub 的一台 macOS runner 上，浏览器里的 FreeRDP Web 经 websockify 连接 kit 的 macOS 主机（FreeRDP-Shadow.app，ScreenCaptureKit），它共享这台 Mac 的屏幕：那里的 Firefox 播放网页视频和 WebGL；画面为 AV1。浏览器以无头模式运行，所以 Mac 的屏幕上只有它自己的桌面。Big Buck Bunny © Blender Foundation，CC BY 3.0；WebGL Aquarium © Google，BSD。"
+        },
+        "ja": {
+          "title": "FreeRDP シャドウサーバー + macOS、AV1",
+          "caption": "GitHub の macOS ランナー上のブラウザーで動く FreeRDP Web から、websockify を通して kit の macOS ホスト（FreeRDP-Shadow.app、ScreenCaptureKit）に接続し、その Mac の画面を共有します。そこで Firefox の Web 動画と WebGL を再生し、画面は AV1 です。ブラウザーはヘッドレスで動くため、Mac の画面にはそのデスクトップだけが映ります。Big Buck Bunny © Blender Foundation、CC BY 3.0。WebGL Aquarium © Google、BSD。"
+        },
+        "fr": {
+          "title": "Serveur miroir FreeRDP + macOS, AV1",
+          "caption": "FreeRDP Web dans un navigateur, sur un runner macOS de GitHub, via websockify, vers l’hôte macOS du kit (FreeRDP-Shadow.app, ScreenCaptureKit) qui partage l’écran de ce Mac : Firefox y lit une vidéo web et du WebGL ; l’image en AV1. Le navigateur tourne sans fenêtre, si bien que l’écran du Mac ne montre que son propre bureau. Big Buck Bunny © Blender Foundation, CC BY 3.0 ; WebGL Aquarium © Google, BSD."
+        }
+      },
+      "id": "mac-host",
+      "aliases": [
+        "mac-host"
+      ]
     }
   ],
   "clients": [
@@ -196,24 +220,10 @@
       }
     },
     {
-      "title": "xrdp + GNOME Wayland, H.264, freerdp-tk uvx",
+      "title": "xrdp + GNOME Wayland, AV1, freerdp-tk uvx",
       "src": "demo/freerdp-tk-uvx.mp4",
       "poster": "demo/freerdp-tk-uvx.jpg",
-      "caption": "freerdp-tk from PyPI with plain uvx on a Linux desktop (Debian 13) whose Python has no Tk: freerdp-tk starts again with uv's own Python, which has it. With Debian's FreeRDP 3 client: the same connection, saved with its password in the system keyring, to rdp-release-kit's xrdp with GNOME on Wayland (Fedora 45): a terminal, then Firefox there with web video and WebGL, with sound. Debian's client has no AV1, so xrdp sends H.264. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD.",
-      "i18n": {
-        "zh": {
-          "title": "xrdp + GNOME Wayland，H.264，freerdp-tk（uvx）",
-          "caption": "在一台 Python 不带 Tk 的 Linux 桌面（Debian 13）上，用普通的 uvx 从 PyPI 运行 freerdp-tk：freerdp-tk 会改用 uv 自带的、带 Tk 的 Python 重新启动。配合 Debian 的 FreeRDP 3 客户端：同样的连接，密码存在系统钥匙环中，连接 rdp-release-kit 的 xrdp，GNOME on Wayland（Fedora 45）：打开终端，然后在那里的 Firefox 里播放网页视频和 WebGL，带声音。Debian 的客户端不支持 AV1，所以 xrdp 发送 H.264。Big Buck Bunny © Blender Foundation，CC BY 3.0；WebGL Aquarium © Google，BSD。"
-        },
-        "ja": {
-          "title": "xrdp + GNOME Wayland、H.264、freerdp-tk（uvx）",
-          "caption": "Python に Tk がない Linux デスクトップ（Debian 13）で、PyPI の freerdp-tk を素の uvx で動かします。freerdp-tk は Tk を持つ uv 自身の Python で起動し直します。Debian の FreeRDP 3 クライアントで、パスワードをシステムのキーリングに保存した同じ接続により、rdp-release-kit の xrdp と Wayland 上の GNOME（Fedora 45）に接続し、端末を開いてから、そこで Firefox の Web 動画と WebGL を音声付きで再生します。Debian のクライアントは AV1 に対応していないため、xrdp は H.264 で送ります。Big Buck Bunny © Blender Foundation、CC BY 3.0。WebGL Aquarium © Google、BSD。"
-        },
-        "fr": {
-          "title": "xrdp + GNOME Wayland, H.264, freerdp-tk (uvx)",
-          "caption": "freerdp-tk depuis PyPI avec un simple uvx, sur un bureau Linux (Debian 13) dont le Python n’a pas Tk : freerdp-tk redémarre avec le Python d’uv, qui l’a. Avec le client FreeRDP 3 de Debian : la même connexion, enregistrée avec son mot de passe dans le trousseau du système, vers le xrdp de rdp-release-kit avec GNOME sous Wayland (Fedora 45) : un terminal, puis Firefox avec une vidéo web et du WebGL, avec le son. Le client de Debian n’a pas AV1, donc xrdp envoie du H.264. Big Buck Bunny © Blender Foundation, CC BY 3.0 ; WebGL Aquarium © Google, BSD."
-        }
-      }
+      "caption": "freerdp-tk from PyPI with plain uvx on a Linux desktop (Debian 13) whose Python has no Tk: freerdp-tk starts again with uv's own Python, which has it. With the FreeRDP client in its package, the kit's own, taken before Debian's: the same connection, saved with its password in the system keyring, to rdp-release-kit's xrdp with GNOME on Wayland (Fedora 45): a terminal, then Firefox there with web video and WebGL, with sound, in AV1. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD."
     },
     {
       "title": "Windows Remote Desktop, freerdp-tk release (Windows)",
@@ -274,6 +284,28 @@
         "fr": {
           "title": "FreeRDP Web vers le Bureau à distance de Windows",
           "caption": "FreeRDP Web dans un navigateur vers le Bureau à distance de Windows Server 2025, sur une machine de CI, via websockify : une session propre à l’utilisateur, le Bloc-notes depuis Win+R, puis Firefox dans la session avec une vidéo web et du WebGL, avec le son. Rien d’installé sur Windows. Big Buck Bunny © Blender Foundation, CC BY 3.0 ; WebGL Aquarium © Google, BSD."
+        }
+      }
+    }
+  ],
+  "mac": [
+    {
+      "title": "FreeRDP Web on a macOS host, AV1",
+      "src": "demo/mac-host.mp4",
+      "poster": "demo/mac-host.jpg",
+      "caption": "FreeRDP Web in a browser on a GitHub macOS runner, through websockify, to the kit's macOS host (FreeRDP-Shadow.app, ScreenCaptureKit) sharing that Mac's screen: Firefox there with web video and WebGL; the picture in AV1. The browser runs headless, so the Mac's screen shows only its own desktop. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD.",
+      "i18n": {
+        "zh": {
+          "title": "FreeRDP Web 连接 macOS 主机，AV1",
+          "caption": "在 GitHub 的一台 macOS runner 上，浏览器里的 FreeRDP Web 经 websockify 连接 kit 的 macOS 主机（FreeRDP-Shadow.app，ScreenCaptureKit），它共享这台 Mac 的屏幕：那里的 Firefox 播放网页视频和 WebGL；画面为 AV1。浏览器以无头模式运行，所以 Mac 的屏幕上只有它自己的桌面。Big Buck Bunny © Blender Foundation，CC BY 3.0；WebGL Aquarium © Google，BSD。"
+        },
+        "ja": {
+          "title": "macOS ホストへの FreeRDP Web、AV1",
+          "caption": "GitHub の macOS ランナー上のブラウザーで動く FreeRDP Web から、websockify を通して kit の macOS ホスト（FreeRDP-Shadow.app、ScreenCaptureKit）に接続し、その Mac の画面を共有します。そこで Firefox の Web 動画と WebGL を再生し、画面は AV1 です。ブラウザーはヘッドレスで動くため、Mac の画面にはそのデスクトップだけが映ります。Big Buck Bunny © Blender Foundation、CC BY 3.0。WebGL Aquarium © Google、BSD。"
+        },
+        "fr": {
+          "title": "FreeRDP Web sur un hôte macOS, AV1",
+          "caption": "FreeRDP Web dans un navigateur, sur un runner macOS de GitHub, via websockify, vers l’hôte macOS du kit (FreeRDP-Shadow.app, ScreenCaptureKit) qui partage l’écran de ce Mac : Firefox y lit une vidéo web et du WebGL ; l’image en AV1. Le navigateur tourne sans fenêtre, si bien que l’écran du Mac ne montre que son propre bureau. Big Buck Bunny © Blender Foundation, CC BY 3.0 ; WebGL Aquarium © Google, BSD."
         }
       }
     }

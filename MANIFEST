@@ -1,8 +1,8 @@
-FreeRDP web client (preview), built 2026-11-07 with emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.13 (e13ee988ce3d87a738dd8f3661d02223308c412a)
+FreeRDP web client (preview), built 2026-11-08 with emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.13 (e13ee988ce3d87a738dd8f3661d02223308c412a)
 page: freerdp-web 65afc62f2f7bb66c16a67382d7065ce00759dc08
 
 sources (sources.lock):
-  freerdp          20261107.8 34c035018cd076163d0c9d6e36171c679fdac849
+  freerdp          20261108.1 aa26cb5166ee7141f6be2cb55d3dbe228962aecd
   sdl3_wasm        3.4.18+timer 1d615c14f95a3389bf0026e719144ad51378e40c
   sdl3_ttf         3.2.2     63547d58d0185c833213885b635a2c0548201cc8f301e6587c0be1a67e1e045d
   freetype         2.15.0    93cd47eb719c325107f2d3cf087d06299e944c3b48a40b55537302304dea1dd5
