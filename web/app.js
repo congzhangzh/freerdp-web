@@ -88,7 +88,9 @@ $("logCopy").onclick = () => {
     () => { pre.focus(); getSelection().selectAllChildren(pre); said(t("log.selected", "Selected: copy it now")); });
 };
 showLogView();
-const info = { started: 0, decoder: "–", transport: "–", server: "–" };
+// netBase: the page's byte counts (freerdpNet, which runs for the page's whole life) when this
+// session began, so Info's Network totals are this session's, not every session's since the load
+const info = { started: 0, decoder: "–", transport: "–", server: "–", netBase: { rx: 0, tx: 0 } };
 // Crash capture: the last log lines are kept and, while a session runs, saved to localStorage
 // every few seconds. A clean end (Disconnect, FreeRDP's disconnect hotkey) marks them "clean"; anything else
 // (wasm abort, connection lost, tab crash or reload) leaves "running" or "crashed", and the next
@@ -1504,8 +1506,9 @@ function updateInfo() {
       return `${c.state}, ${a ? t("info.queued", q + " ms queued", { ms: q }) : t("info.noData", "no data yet")}`; })()],
     [t("info.audioIn", "Audio received"), statsAudio ? t("info.audioInValue", `${per(statsAudio.perSecond)} /s, ${statsAudio.waves} total, ${statsAudio.dropped} dropped, ${statsAudio.delayMs} ms delay`,
       { rate: per(statsAudio.perSecond), n: statsAudio.waves, dropped: statsAudio.dropped, ms: statsAudio.delayMs }) : null],
-    [t("info.netIn", "Network in"), net2(kbit(net.rx - last.rx), mb(net.rx))],
-    [t("info.netOut", "Network out"), net2(kbit(net.tx - last.tx), mb(net.tx))],
+    // the rate from the last reading, the total for this session only (info.netBase)
+    [t("info.netIn", "Network in"), net2(kbit(net.rx - last.rx), mb(net.rx - info.netBase.rx))],
+    [t("info.netOut", "Network out"), net2(kbit(net.tx - last.tx), mb(net.tx - info.netBase.tx))],
     // the server's own measurements: a client without them hides the rows, and 0 is not measured,
     // for now or for good: not every server measures (xrdp 0.10 here did not)
     [t("info.rtt", "Round trip"), statsNet ? (statsNet.rtt ? t("info.rttValue", `${statsNet.rtt} ms (lowest ${statsNet.rttBase})`, { ms: statsNet.rtt, base: statsNet.rttBase }) : notMeasured) : null],
@@ -1631,6 +1634,7 @@ async function connect(againPassword = null, retrying = false) {
     sessionPassword = host.password;
     if (modularClient()) again.keep(selectedId, host.password);
     info.started = Date.now(); info.server = host.host;
+    { const n = window.freerdpNet || { rx: 0, tx: 0 }; info.netBase = { rx: n.rx, tx: n.tx }; }
     info.transport = host.direct ? t("info.direct", "direct TCP (IWA)") : t("info.gateway", "WebSocket gateway");
     $("go").disabled = true; status("connecting…", "status.connecting");
     log("[page] sdl-freerdp " + args.map(a => a.startsWith("/p:") ? "/p:***" : a.startsWith("/u:") ? "/u:***" : a).join(" "));
