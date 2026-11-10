@@ -9,7 +9,10 @@
 // or AV1 or H.264 arrived and no decoder counted it (then Info must show its results too). A
 // server that sends neither has no decoder row, which is right: an older xrdp sends Planar and
 // Progressive. With FreeRDP's counters the page's own AV1 rows are gone, so never two times for one
-// picture. EXTRA replaces the session's FreeRDP options (/gfx), e.g. /gfx:AV2:off,AV1:i444. Round trip, bandwidth and sound are printed and not failed on: only some servers
+// picture. EXTRA replaces the session's FreeRDP options (default /gfx:AV2:off, see below), e.g. /gfx:AV2:off,AV1:i444.
+// AV2 is off by default: FreeRDP signals it under AV1's codec id (RDPGFX_CAPVERSION_FRDP_2) and its
+// frames have no decoder verdict yet, so with AV2 the decoder check would count AV2 frames as AV1
+// ones that no decoder took (2026-11-10, 116 commands, 0 decoder results). EXTRA=/gfx tests AV2. Round trip, bandwidth and sound are printed and not failed on: only some servers
 // measure, and a silent desktop plays nothing. USER_NAME and PASSWORD pick the login
 // (test / test, the CI container's). CHROME=<binary> picks another Chrome or Chromium.
 import { spawn } from "node:child_process";
@@ -49,7 +52,7 @@ const reading = () => ev("(() => { const s = clientStats(); return s ? JSON.stri
 const nonZero = (s) => Object.fromEntries(Object.entries(s).filter(([, v]) => v));
 
 await send("Runtime.enable");
-await send("Page.navigate", { url: `${PAGE}?v=${GATEWAY}&u=${process.env.USER_NAME || "test"}&extra=${encodeURIComponent(process.env.EXTRA || "/gfx")}&fs=0` });
+await send("Page.navigate", { url: `${PAGE}?v=${GATEWAY}&u=${process.env.USER_NAME || "test"}&extra=${encodeURIComponent(process.env.EXTRA || "/gfx:AV2:off")}&fs=0` });
 await connectTestSession(send, { password: process.env.PASSWORD || "test" }).catch((e) => { console.error(e, "\n" + logs.slice(-20).join("\n")); done(1); });
 let session = false;
 for (let i = 0; i < 60 && !session; i++) { await sleep(500); session = await ev("document.body.classList.contains('session') && !!document.getElementById('canvas').width"); }
