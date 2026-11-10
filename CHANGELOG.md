@@ -15,6 +15,24 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261110.1
+
+- **Screen changes settle before the server hears of them.** A window that changes size in steps
+  (macOS animating into and out of full screen, a dragged edge) gave the server a new monitor layout
+  every half second, and FreeRDP's shadow server rebuilds the session for each one; a burst of those
+  broke two-screen sessions. While a session runs, the client now learns of a resize once the size has
+  kept still for 300 ms (at most 1.5 s after the first); the page's own toolbar and header still follow
+  at once. Against the shadow server this cut the layouts sent per two-screen test from 62 to about 20.
+  The drops themselves were FreeRDP's (a surface clipped at the screen's edge turned into a scale the
+  web build cannot do, FreeRDP#14126; input during a reconnect aborted the client, FreeRDP#14128); this
+  page change only makes them rarer.
+- **Info's Network totals are this session's.** "Network in" and "Network out" counted every session
+  since the page loaded; each connect now starts them from its own bytes. The rate is unchanged.
+- Tests: `test-screens-fs.mjs` drives two screens, Window / Full screen rounds the way real screens do
+  them, the microphone, and Reconnects with input, against xrdp or (`SERVER=shadow`) FreeRDP's shadow
+  server, checking after each step that the picture still updates; `test-stats.mjs` asks for AV1 by
+  default, since AV2 frames have no decoder verdict yet.
+
 ## 20261107.1
 
 - **Files through the clipboard, both ways.** To the session: drop them on the page, paste them where
