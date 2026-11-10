@@ -630,6 +630,27 @@ function toggleFullscreen() {
 // SDL's listener on the document; the page handles it here (onFullscreenChange, below).
 for (const type of ["fullscreenchange", "webkitfullscreenchange"])
   window.addEventListener(type, (e) => { e.stopImmediatePropagation(); if (type === "fullscreenchange") onFullscreenChange(); }, true);
+// A window that changes size in steps (macOS animates into and out of full screen over ~0.8 s,
+// a dragged window edge) would give the server a new monitor layout every half second, FreeRDP's
+// own pace: some servers rebuild the whole session for each one (FreeRDP's shadow server
+// reactivates the client), and a burst of those broke sessions (2026-11-10). While a session
+// runs, the client hears of a resize only once the size has kept still for RESIZE_SETTLE_MS, or
+// RESIZE_MAX_MS after the first one of a burst. The page's own listeners still run at once. This
+// listener is registered before SDL's (the client starts later), and captures, so it runs first.
+const RESIZE_SETTLE_MS = 300, RESIZE_MAX_MS = 1500;
+const settle = { timer: 0, first: 0, passing: false };
+window.addEventListener("resize", (e) => {
+  if (settle.passing || !document.body.classList.contains("session")) return;   // its own, or no session
+  e.stopImmediatePropagation();
+  placeToolbar(); syncHeader();   // the page's own, at once
+  const now = performance.now();
+  if (!settle.timer) settle.first = now;
+  clearTimeout(settle.timer);
+  settle.timer = setTimeout(() => {
+    settle.timer = 0; settle.passing = true;
+    try { window.dispatchEvent(new Event("resize")); } finally { settle.passing = false; }
+  }, now - settle.first >= RESIZE_MAX_MS ? 0 : RESIZE_SETTLE_MS);
+}, true);
 function onFullscreenChange() {
   if (!document.fullscreenElement) {
     document.body.classList.remove("fs"); kbLocked = false; syncCaptured(); log("[page] left full screen");
