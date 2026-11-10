@@ -22,6 +22,8 @@ const ENGINE = process.env.ENGINE || "docker", ROUNDS = +(process.env.ROUNDS || 
 const SERVER = process.env.SERVER || "xrdp", CT = process.env.CT || "fsdrop-shadow";
 const USER = SERVER === "shadow" ? "tester" : "test";
 const EXTRA = process.env.EXTRA ?? "/gfx:AV2:off,AV1:off,AVC420 /sound /microphone /scale-desktop:200";
+// FreeRDP keeps only the last /log-filters: add the disp channel's filter to one in EXTRA
+const withFilter = (extra, f) => /\/log-filters:/.test(extra) ? extra.replace(/\/log-filters:(\S+)/, (_, x) => `/log-filters:${x},${f}`) : `${extra} /log-filters:${f}`;
 const W = 800, H = 500;   // each screen, CSS pixels; the second one is right of the first
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const within = (p, ms) => Promise.race([p.catch(() => {}), sleep(ms)]);
@@ -37,13 +39,20 @@ const quit = async (code) => {
 for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => quit(1));
 process.on("uncaughtException", (e) => { console.error(e); quit(1); });
 const targets = async () => (await (await fetch("http://127.0.0.1:9349/json")).json()).filter((x) => x.type === "page");
-const consoleLines = [];
+const consoleLines = [], workers = []; let wid = 0;
 async function cdp(url, keep) {
   const ws = new WebSocket(url); await new Promise((r) => ws.addEventListener("open", r));
   let id = 0; const p = new Map();
   ws.addEventListener("message", (e) => { const m = JSON.parse(e.data); if (m.id && p.has(m.id)) { p.get(m.id)(m.result); p.delete(m.id); }
     if (keep && m.method === "Runtime.consoleAPICalled") consoleLines.push(m.params.args.map((a) => a.value ?? a.description).join(" "));
-    if (keep && m.method === "Runtime.exceptionThrown") consoleLines.push("EXCEPTION " + (m.params.exceptionDetails?.exception?.description ?? m.params.exceptionDetails?.text)); });
+    if (keep && m.method === "Runtime.exceptionThrown") consoleLines.push((m.sessionId ? "WORKER " : "") + "EXCEPTION " + (m.params.exceptionDetails?.exception?.description ?? m.params.exceptionDetails?.text)
+      + (m.params.exceptionDetails?.stackTrace ? "\n  " + m.params.exceptionDetails.stackTrace.callFrames.map((f) => `${f.functionName || "?"} ${f.url.split("/").pop()}:${f.lineNumber}`).join("\n  ") : ""));
+    // the client's threads are workers: attach to each (flat sessions) so an abort in one is
+    // seen with its own stack, not only as "Aborted(undefined)" on the page
+    if (keep && m.method === "Target.attachedToTarget") {
+      const sid = m.params.sessionId; workers.push(m.params.targetInfo.type + " " + m.params.targetInfo.url.split("/").pop());
+      for (const method of ["Runtime.enable", "Runtime.runIfWaitingForDebugger"]) ws.send(JSON.stringify({ id: 900000 + (++wid), method, sessionId: sid }));
+    } });
   const send = (method, params = {}) => new Promise((r) => { const i = ++id; p.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
   const ev = async (expression) => (await send("Runtime.evaluate", { expression, returnByValue: true, userGesture: true, awaitPromise: true }))?.result?.value;
   return { ws, send, ev };
@@ -67,10 +76,11 @@ const painting = async (ms = 4000) => {
 const metrics = (w, h) => main.send("Emulation.setDeviceMetricsOverride", { width: w, height: h, deviceScaleFactor: 2, mobile: false });
 
 await main.send("Runtime.enable");
+await main.send("Target.setAutoAttach", { autoAttach: true, waitForDebuggerOnStart: false, flatten: true });
 await main.send("Emulation.setFocusEmulationEnabled", { enabled: true });
 await metrics(W, H);
 const url = new URL(process.env.PAGE || "http://127.0.0.1:8080/index.html");
-for (const [k, v] of Object.entries({ v: GATEWAY, u: USER, fs: "0", extra: EXTRA + " /log-filters:com.freerdp.channels.disp.client:DEBUG",
+for (const [k, v] of Object.entries({ v: GATEWAY, u: USER, fs: "0", extra: withFilter(EXTRA, "com.freerdp.channels.disp.client:DEBUG"),
   ...(SCREENS === 2 ? { screens: `${W}x${H}+0+0,${W}x${H}+${W}+0` } : {}) })) url.searchParams.set(k, v);
 await main.send("Page.navigate", { url: url.href });
 await connectTestSession(main.send, process.env.PASSWORD ? { password: process.env.PASSWORD } : {}).catch(async (e) => { console.error(e); await quit(1); });
@@ -155,18 +165,30 @@ for (let r = 1; r <= ROUNDS; r++) {
   if (ab) break;
 }
 
-// Reconnect on the toolbar while the session runs: FreeRDP's own reconnect, no abort
-if (!(await aborted())) {
+// Reconnect on the toolbar while the session runs: FreeRDP's own reconnect, no abort.
+// RECONNECTS=<n> presses it n times; with the microphone capturing (a page without a CSP, as
+// GitHub Pages serves it: the worklet comes from a blob: URL) and the mouse moving while the
+// sockets close, so the main thread writes to a closing connection (聪哥's abort, 2026-11-10)
+const mic = () => main.ev("JSON.stringify(Object.entries(Module.freerdpAudin || {}).filter(([k, v]) => v && typeof v === 'object' && 'ctx' in v).map(([k, v]) => v.ctx ? v.ctx.state : 'starting'))");
+console.log("microphone captures:", await mic());
+const RECONNECTS = +(process.env.RECONNECTS || 1);
+for (let k = 1; k <= RECONNECTS && !(await aborted()); k++) {
+  let moving = process.env.MOUSE !== "0";   // MOUSE=0: no input while the sockets close
+  (async () => { for (let i = 0; moving; i++) { await main.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 100 + (i % 50) * 4, y: 120 + (i % 30) * 3 }); await sleep(15); } })();
+  await sleep(300);
   await main.ev("tbReconnect.click(), 1");
-  await sleep(15000);
-  check("Reconnect: no wasm abort", !(await aborted()));
+  await sleep(3000); moving = false;
+  await sleep(12000);
+  const ab = await aborted();
+  check(`Reconnect ${k}: no wasm abort`, !ab);
+  if (ab) break;
   p = await painting(5000);
-  check("Reconnect: the picture updates again", p.ok, p.why);
+  check(`Reconnect ${k}: the picture updates again`, p.ok, p.why + ", microphone " + (await mic()));
 }
 
 try { if (SERVER === "shadow") execFileSync("podman", ["exec", CT, "pkill", "-x", "foot"]); else execFileSync(ENGINE, ["exec", "-u", "test", XRDP, "sh", "-c", "kill $(pidof xterm)"]); } catch { /* gone already */ }
 writeFileSync(join(out, "screens-fs-page.log"), String(await pageLog()));
-writeFileSync(join(out, "screens-fs-console.log"), consoleLines.join("\n"));
+writeFileSync(join(out, "screens-fs-console.log"), consoleLines.join("\n") + "\n--- workers attached: " + workers.length + "\n" + workers.join("\n"));
 writeFileSync(join(out, "screens-fs-main.png"), Buffer.from((await main.send("Page.captureScreenshot", { format: "png" }))?.data ?? "", "base64"));
 if (second) await within(second.ev("window.close()"), 5000);
 main.ws.close();
