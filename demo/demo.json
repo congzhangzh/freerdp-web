@@ -1,8 +1,8 @@
 {
   "recorded": {
-    "kit": "5b78b197282767b4962dd2992498afd7b80cfbd2",
-    "web": "web-20261111.4-5b78b1972827",
-    "xrdp": "xrdp-20261111.4-5b78b1972827",
+    "kit": "916dfce10c4f147cd82368a7466406a23f4fe499",
+    "web": "web-20261112.1-916dfce10c4f",
+    "xrdp": "xrdp-20261112.1-916dfce10c4f",
     "pipewire-module-xrdp": "pipewire-module-xrdp-20261031.1-1b78a2c01cc2"
   },
   "videos": [
@@ -177,19 +177,16 @@
       "title": "FreeRDP shadow server + macOS, AV1",
       "src": "demo/mac-host.mp4",
       "poster": "demo/mac-host.jpg",
-      "caption": "FreeRDP Web in a browser on a GitHub macOS runner, through websockify, to the kit's macOS host (FreeRDP-Shadow.app, ScreenCaptureKit) sharing that Mac's screen: Firefox there with web video and WebGL; the picture in AV1. The browser runs headless, so the Mac's screen shows only its own desktop. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD.",
+      "caption": "The kit's macOS host (FreeRDP-Shadow.app, ScreenCaptureKit) on a GitHub macOS runner, and the kit's macOS client connected to it on the same Mac, so the client shows the screen it is part of; apps open and close; the picture in AV1. The runner has no sound card, so no sound here.",
       "i18n": {
         "zh": {
-          "title": "FreeRDP 影子服务器 + macOS，AV1",
-          "caption": "在 GitHub 的一台 macOS runner 上，浏览器里的 FreeRDP Web 经 websockify 连接 kit 的 macOS 主机（FreeRDP-Shadow.app，ScreenCaptureKit），它共享这台 Mac 的屏幕：那里的 Firefox 播放网页视频和 WebGL；画面为 AV1。浏览器以无头模式运行，所以 Mac 的屏幕上只有它自己的桌面。Big Buck Bunny © Blender Foundation，CC BY 3.0；WebGL Aquarium © Google，BSD。"
+          "title": "FreeRDP 影子服务器 + macOS，AV1"
         },
         "ja": {
-          "title": "FreeRDP シャドウサーバー + macOS、AV1",
-          "caption": "GitHub の macOS ランナー上のブラウザーで動く FreeRDP Web から、websockify を通して kit の macOS ホスト（FreeRDP-Shadow.app、ScreenCaptureKit）に接続し、その Mac の画面を共有します。そこで Firefox の Web 動画と WebGL を再生し、画面は AV1 です。ブラウザーはヘッドレスで動くため、Mac の画面にはそのデスクトップだけが映ります。Big Buck Bunny © Blender Foundation、CC BY 3.0。WebGL Aquarium © Google、BSD。"
+          "title": "FreeRDP シャドウサーバー + macOS、AV1"
         },
         "fr": {
-          "title": "Serveur miroir FreeRDP + macOS, AV1",
-          "caption": "FreeRDP Web dans un navigateur, sur un runner macOS de GitHub, via websockify, vers l’hôte macOS du kit (FreeRDP-Shadow.app, ScreenCaptureKit) qui partage l’écran de ce Mac : Firefox y lit une vidéo web et du WebGL ; l’image en AV1. Le navigateur tourne sans fenêtre, si bien que l’écran du Mac ne montre que son propre bureau. Big Buck Bunny © Blender Foundation, CC BY 3.0 ; WebGL Aquarium © Google, BSD."
+          "title": "Serveur miroir FreeRDP + macOS, AV1"
         }
       },
       "id": "mac-host",
@@ -290,22 +287,19 @@
   ],
   "mac": [
     {
-      "title": "FreeRDP Web on a macOS host, AV1",
+      "title": "FreeRDP shadow server + macOS, AV1",
       "src": "demo/mac-host.mp4",
       "poster": "demo/mac-host.jpg",
-      "caption": "FreeRDP Web in a browser on a GitHub macOS runner, through websockify, to the kit's macOS host (FreeRDP-Shadow.app, ScreenCaptureKit) sharing that Mac's screen: Firefox there with web video and WebGL; the picture in AV1. The browser runs headless, so the Mac's screen shows only its own desktop. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD.",
+      "caption": "The kit's macOS host (FreeRDP-Shadow.app, ScreenCaptureKit) on a GitHub macOS runner, and the kit's macOS client connected to it on the same Mac, so the client shows the screen it is part of; apps open and close; the picture in AV1. The runner has no sound card, so no sound here.",
       "i18n": {
         "zh": {
-          "title": "FreeRDP Web 连接 macOS 主机，AV1",
-          "caption": "在 GitHub 的一台 macOS runner 上，浏览器里的 FreeRDP Web 经 websockify 连接 kit 的 macOS 主机（FreeRDP-Shadow.app，ScreenCaptureKit），它共享这台 Mac 的屏幕：那里的 Firefox 播放网页视频和 WebGL；画面为 AV1。浏览器以无头模式运行，所以 Mac 的屏幕上只有它自己的桌面。Big Buck Bunny © Blender Foundation，CC BY 3.0；WebGL Aquarium © Google，BSD。"
+          "title": "FreeRDP 影子服务器 + macOS，AV1"
         },
         "ja": {
-          "title": "macOS ホストへの FreeRDP Web、AV1",
-          "caption": "GitHub の macOS ランナー上のブラウザーで動く FreeRDP Web から、websockify を通して kit の macOS ホスト（FreeRDP-Shadow.app、ScreenCaptureKit）に接続し、その Mac の画面を共有します。そこで Firefox の Web 動画と WebGL を再生し、画面は AV1 です。ブラウザーはヘッドレスで動くため、Mac の画面にはそのデスクトップだけが映ります。Big Buck Bunny © Blender Foundation、CC BY 3.0。WebGL Aquarium © Google、BSD。"
+          "title": "FreeRDP シャドウサーバー + macOS、AV1"
         },
         "fr": {
-          "title": "FreeRDP Web sur un hôte macOS, AV1",
-          "caption": "FreeRDP Web dans un navigateur, sur un runner macOS de GitHub, via websockify, vers l’hôte macOS du kit (FreeRDP-Shadow.app, ScreenCaptureKit) qui partage l’écran de ce Mac : Firefox y lit une vidéo web et du WebGL ; l’image en AV1. Le navigateur tourne sans fenêtre, si bien que l’écran du Mac ne montre que son propre bureau. Big Buck Bunny © Blender Foundation, CC BY 3.0 ; WebGL Aquarium © Google, BSD."
+          "title": "Serveur miroir FreeRDP + macOS, AV1"
         }
       }
     }
