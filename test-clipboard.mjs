@@ -8,14 +8,16 @@
 //   node test-clipboard.mjs <site dir>        e.g. dist/site (./site.sh makes one)
 //
 // Needs Playwright (PLAYWRIGHT=<its package dir> when it is not installed here) with its Firefox,
-// and Chrome (CHROME=<binary>). No server: the page is put in its session state by hand (the body's
-// "session" class, focus), which is all the clipboard code looks at; the client is not started.
+// and Chrome (CHROME=<binary>; else /usr/bin/google-chrome, else Playwright's own Chromium). No
+// server: the page is put in its session state by hand (the body's "session" class, focus), which
+// is all the clipboard code looks at; the client is not started.
 // Checks, in each browser:
 //  - Firefox: no read at all in 5 s, and a paste (Ctrl + V pressed on the canvas, the text put on
 //    the clipboard first) offers its text to the client before the client sees the V.
 //  - Chrome with clipboard-read granted: it still reads on its own (today's behaviour).
 //  - Firefox: full screen in and out (not the clipboard's, but this test has the Firefox).
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 
@@ -95,7 +97,7 @@ await run("Firefox full screen", firefox, {}, {}, async (page) => {
   check("Firefox: full screen, in and out", fs.in && fs.out, JSON.stringify(fs));
 });
 
-await run("Chrome", chromium, { executablePath: process.env.CHROME || "/usr/bin/google-chrome" }, { permissions: ["clipboard-read", "clipboard-write"] }, async (page) => {
+await run("Chrome", chromium, { executablePath: process.env.CHROME || (existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : undefined) }, { permissions: ["clipboard-read", "clipboard-write"] }, async (page) => {
   await sleep(5000);
   const reads = await page.evaluate(() => window.__clip.reads);
   check("Chrome with the permission: it still reads on its own", reads.length >= 2, `${reads.length} reads in 5 s`);

@@ -13,6 +13,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -29,3 +30,30 @@ jobs:
         run: node --test web/tests/*.test.cjs
       - name: Which kit pre-release holds the client (kit-release.sh, for site.sh)
         run: ./test-kit-release.sh
+
+  # The page in the browsers Chrome alone does not stand for (2026-11-13, #368: Firefox showed its
+  # "Paste" box all the time and an iPhone never got past "Loading…", for weeks, because nothing ran
+  # them): Firefox, WebKit as an iPhone and as the desktop's Safari, and Chrome, with the release
+  # kit's newest web client (site.sh, as the tests run by hand). Playwright's image has the three
+  # browsers and the libraries they need; the version is the one the tests were written with.
+  browsers:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    container:
+      image: mcr.microsoft.com/playwright:v1.50.1-noble
+      # the runner's user: Firefox refuses to start as root in a home that is not root's
+      options: --user 1001 --ipc=host
+    env:
+      GH_TOKEN: ${{ github.token }}   # kit-release.sh: more GitHub API calls an hour
+      HOME: /tmp/home
+    steps:
+      - uses: actions/checkout@v7
+      - name: Playwright's package, the image's version (its browsers are in the image)
+        run: mkdir -p "$HOME" "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw" && npm init -y > /dev/null && npm install --no-audit --no-fund playwright@1.50.1
+      - name: The site, with the kit's newest web client
+        run: NO_MEDIA=1 ./site.sh kit
+      - name: WebKit as an iPhone and as the desktop's Safari (test-webkit.mjs)
+        run: PLAYWRIGHT="$RUNNER_TEMP/pw/node_modules/playwright" node test-webkit.mjs dist/site
+      - name: The clipboard in Firefox and Chrome, full screen in Firefox (test-clipboard.mjs)
+        run: PLAYWRIGHT="$RUNNER_TEMP/pw/node_modules/playwright" node test-clipboard.mjs dist/site
+        if: success() || failure()
