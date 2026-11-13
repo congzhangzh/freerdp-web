@@ -14,6 +14,7 @@
 //  - Firefox: no read at all in 5 s, and a paste (Ctrl + V pressed on the canvas, the text put on
 //    the clipboard first) offers its text to the client before the client sees the V.
 //  - Chrome with clipboard-read granted: it still reads on its own (today's behaviour).
+//  - Firefox: full screen in and out (not the clipboard's, but this test has the Firefox).
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
@@ -85,6 +86,13 @@ await run("Firefox", firefox, {}, {}, async (page) => {
   const ok = offer >= 0 && down > offer && up > down;
   check("Firefox: a paste offers its text before the client sees Ctrl + V", ok, ev.join(", "));
   if (!ok || process.env.VERBOSE) console.log(page.logs.filter((l) => /clipboard|paste|error/i.test(l)).slice(-10).join("\n"));
+});
+
+// full screen in Firefox, the page's own way in and out (#368 changed how it leaves full screen)
+await run("Firefox full screen", firefox, {}, {}, async (page) => {
+  const fs = await page.evaluate(async () => { toggleFullscreen(); await new Promise((r) => setTimeout(r, 1000)); const inside = !!document.fullscreenElement;
+    toggleFullscreen(); await new Promise((r) => setTimeout(r, 1000)); return { in: inside, out: !document.fullscreenElement }; });
+  check("Firefox: full screen, in and out", fs.in && fs.out, JSON.stringify(fs));
 });
 
 await run("Chrome", chromium, { executablePath: process.env.CHROME || "/usr/bin/google-chrome" }, { permissions: ["clipboard-read", "clipboard-write"] }, async (page) => {

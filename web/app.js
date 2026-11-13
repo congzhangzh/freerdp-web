@@ -532,7 +532,7 @@ function moduleConfig() {
   freerdpMonitors: () => screensMonitors(),
   onRuntimeInitialized() {
     runtimeReady = true; resolveRuntime(true);
-    $("go").disabled = false; goReady = true; showGo(); status("ready", "status.ready");
+    $("go").disabled = false; goReady = true; showGo(); status("ready", "status.ready"); window.freerdpPageReady = true;
     // a client built with the Web Audio microphone backend (FreeRDP's audin "emscripten")
     if (typeof Module._audin_emscripten_release === "function") {
       $("optMic").disabled = false; $("micNote").hidden = true; micReady = true; showMicTitle();
@@ -550,7 +550,10 @@ function moduleConfig() {
     crashEnd(!crash.userEnded && !over && !conn.refused && (code !== 0 || lost), over ? "" : code !== 0 ? "exit code " + code : lost ? "connection lost" : "");
     setTimeout(() => sessionEnded(!over && (lost || code !== 0), over), 0);   // after this client's exit is done
   },
-  onAbort(what) { runtimeFailed = true; resolveRuntime(false); HostsUI.lock(); log("[page] aborted: " + what); crashEnd(true, "wasm abort: " + what); },
+  onAbort(what) { runtimeFailed = true; resolveRuntime(false); HostsUI.lock(); log("[page] aborted: " + what); crashEnd(true, "wasm abort: " + what);
+    // a client that never got ready: say so, or the button says "Loading…" for good (#368)
+    if (!goReady) { $("go").disabled = true; $("go").textContent = t("form.failed", "Could not start");
+      status("the client did not start: " + what, "status.noStart", { what }); } },
   };
   return m;
 }
@@ -592,7 +595,12 @@ window.addEventListener("pagehide", () => { if (crash.running) crashStore(crash.
 // Full screen is requested from a user gesture (Connect click or FreeRDP's full screen hotkey).
 // The canvas is sized by CSS, so SDL follows it and /dynamic-resolution resizes the remote
 // desktop. Keyboard Lock sends Esc / Windows keys to the remote side (hold Esc to leave).
-const realExitFullscreen = document.exitFullscreen.bind(document);
+// iPhone's Safari has no full screen for the page (document.exitFullscreen and requestFullscreen
+// are undefined there): binding it threw while app.js loaded, so nothing after this line ran and
+// the page said "Loading…" for good (#368). Without it full screen is refused (enterFullscreen)
+// and leaving it does nothing; an older Safari has it as webkitExitFullscreen.
+const nativeExitFullscreen = document.exitFullscreen ?? document.webkitExitFullscreen;
+const realExitFullscreen = () => (nativeExitFullscreen ? nativeExitFullscreen.call(document) : Promise.resolve());
 // SDL3 also requests full screen on its canvas when it (re)creates its window, e.g. after the
 // GRD handover redirect; Emscripten defers such a request to the next click or key press, so the
 // page appeared to go full screen by itself. The page owns full screen: ignore canvas requests.
@@ -602,6 +610,7 @@ for (const name of ["requestFullscreen", "webkitRequestFullscreen"]) {
 }
 async function enterFullscreen(screen) {   // screen: a ScreenDetailed, for All screens (below)
   try {
+    if (!document.documentElement.requestFullscreen) throw new Error("this browser has no full screen for pages");
     await document.documentElement.requestFullscreen({ navigationUI: "hide", ...(screen && { screen }) });
   } catch (e) {
     log("[page] full screen refused: " + e.message);

@@ -287,6 +287,12 @@ check("vault: a new passkey creates a new vault after that", await waitFor("!doc
 await ev("document.getElementById('vaultLock').click(), document.querySelector('#hostList .host').click(), true");
 logs.length = 0;
 
+// full screen, the page's own way in and out (toggleFullscreen, as the toolbar and the hotkey do):
+// it binds the browser's exitFullscreen when it may be missing (iPhone, #368), so it must still work here
+const fsIn = await ev("toggleFullscreen(), new Promise((r) => setTimeout(() => r(!!document.fullscreenElement), 1000))");
+const fsOut = await ev("toggleFullscreen(), new Promise((r) => setTimeout(() => r(!document.fullscreenElement), 1000))");
+check("full screen: the page enters it and leaves it", fsIn && fsOut, `in ${fsIn}, out ${fsOut}`);
+
 // session settings as a user clicks them; the mstsc shortcuts; a gateway port with no server
 await ev(`(() => { for (const s of ['input[name=codec][value="bandwidth"]', 'input[name=strategy][value="bandwidth"]',
   '#optClipboard', 'input[name=keys][value="mstsc"]', '#sessionPanel > summary']) document.querySelector(s).click();
