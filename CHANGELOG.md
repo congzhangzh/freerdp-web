@@ -15,6 +15,22 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261113.1
+
+- **Info reads FreeRDP's decoder counters by either name.** FreeRDP from 20261113 (FreeRDP#14076)
+  names them by graphics codec ID, `RDPGFX_CODECID_<codec>_<stat>`, where earlier releases had
+  `RDPGFX_DECODER_<decoder>_<stat>`; the page reads the new names first and the old ones when a client
+  has only those, so this page works with the FreeRDP of today's release and with the next one.
+  Unused codec IDs (`RDPGFX_CODECID_UNKNOWN*`) are left out.
+- **AV2's results are called AV2's.** The new names have no AV2 of their own: FreeRDP counts AV2
+  under AV1's codec ID when the server confirmed the FRDP_2 capability set. Info tells them apart by
+  the capability version the server confirmed, which the web client gives the page
+  (`Module._freerdp_web_codec_stats()`, slot 1): FRDP_2 is AV2, anything else AV1, and a client that
+  doesn't say shows "AV1/AV2" rather than a guess. With the older names AV2's own counters are now
+  shown too.
+- Tests: the unit tests read the counter names of both FreeRDP releases; `test-page.mjs` and
+  `test-stats.mjs` accept either, and `test-stats.mjs` checks that an AV2 session says "AV2 results".
+
 ## 20261110.1
 
 - **Screen changes settle before the server hears of them.** A window that changes size in steps
