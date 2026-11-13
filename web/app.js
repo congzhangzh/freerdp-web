@@ -1509,11 +1509,12 @@ function updateInfo() {
       return `${name}, ${rate / 1000} kHz, ${ch === 2 ? t("info.stereo", "stereo") : ch === 1 ? t("info.mono", "mono") : t("info.channels", ch + " ch", { n: ch })}`; })()],
     // the page's own count, for a client without FreeRDP's: two times for one picture, measured
     // differently, would explain nothing (FreeRDP's "AV1 results" row is above)
-    ...(stats?.RDPGFX_DECODER_AV1_PICTURES !== undefined ? [] : [[t("info.av1Frames", "AV1 frames"), av1Frames], [t("info.av1Decode", "AV1 decode"), av1Decode]]),
+    ...(stats && cs.hasDecoders(stats) ? [] : [[t("info.av1Frames", "AV1 frames"), av1Frames], [t("info.av1Decode", "AV1 decode"), av1Decode]]),
     // H.264's rows only once H.264 pictures arrive (most sessions are AV1)
     ...(h264Frames === "–" ? [] : [[t("info.h264Frames", "H.264 frames"), h264Frames], [t("info.h264Decode", "H.264 decode"), h264Decode]]),
-    // each decoder FreeRDP has used, by its own counters: what became a picture and what did not
-    ...(stats ? cs.decoders(stats, last.stats, dt).map((d) => {
+    // each decoder FreeRDP has used, by its own counters: what became a picture and what did not.
+    // The caps version the server confirmed (codec-stats.js [1]) says whether AV1's are AV2's
+    ...(stats ? cs.decoders(stats, last.stats, dt, codecReading()?.[1]).map((d) => {
       const hw = d.hardware === null ? "" : `, ${d.hardware ? t("info.hardware", "hardware") : t("info.software", "software")}`;
       const rate = per(d.perSecond), avg = d.avgMs.toFixed(1), max = d.maxMs.toFixed(1), name = d.label;
       return [t("info.decoderStats", `${name} results`, { name }),

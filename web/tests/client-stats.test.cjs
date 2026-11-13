@@ -79,3 +79,72 @@ test("only the decoders that worked are listed", () => {
   assert.deepStrictEqual(S.decoders({ RDPGFX_DECODER_AV1_PICTURES: 0 }, null, 1), []);
   assert.deepStrictEqual(S.decoders({ RDPGFX_DECODER_AV1_PICTURES: 0, RDPGFX_DECODER_AVC420_PICTURES: 1 }, null, 1).map(d => [d.id, d.label]), [["AVC420", "H.264 4:2:0"]]);
 });
+
+// The two sets of decoder names (client-stats.js): FreeRDP from 20261113 names them by GFX codec
+// ID, RDPGFX_CODECID_<codec>_<stat> (fixtures: the names probed from release-20261113.1's built
+// library, AV on and AV off); FreeRDP up to 20261111 had RDPGFX_DECODER_<decoder>_<stat>, written
+// out here from release-20261111.4's RDPGFX_STATS_DECODER_NAMES (rdpgfx_main.c), AV2 among them.
+const fs = require("node:fs"), path = require("node:path");
+const fixture = (v) => fs.readFileSync(path.join(__dirname, "fixtures", `rdpgfx-names-20261113-${v}.txt`), "utf8").split("\n").filter((l) => l && !l.startsWith("#"));
+const STATS = ["PICTURES", "FAILED", "NO_PICTURE", "KEY_FRAMES", "DECODE_NS_SUM", "DECODE_NS_MAX", "LAST_PICTURE_AGE_NS", "HARDWARE", "FALLBACKS"];
+const OLD = ["AV1", "AVC420", "AVC444", "AVC444v2", "AV2"].flatMap((d) => STATS.map((s) => `RDPGFX_DECODER_${d}_${s}`));
+// a reading of a client with these names: every name 0 but those in values
+const reading = (names, values = {}) => { const m = client(names, values); return S.read(m, S.index(m)); };
+
+test("the fixtures are the 206 names the brief and the probe give", () => {
+  for (const v of ["avon", "avoff"]) assert.strictEqual(fixture(v).length, 206, v);
+  assert.ok(fixture("avon").includes("RDPGFX_CODECID_AV1_PICTURES"));
+  assert.ok(!fixture("avoff").includes("RDPGFX_CODECID_AV1_PICTURES"));
+});
+
+test("new names: every RDPGFX_CODECID_UNKNOWN* is left out, the rest kept once", () => {
+  for (const v of ["avon", "avoff"]) {
+    const names = S.index(client(fixture(v)));
+    assert.ok(![...names.keys()].some((n) => n.startsWith("RDPGFX_CODECID_UNKNOWN")), v);
+    assert.strictEqual(names.size, new Set(fixture(v).filter((n) => !n.startsWith("RDPGFX_CODECID_UNKNOWN"))).size, v);
+  }
+});
+
+test("a session's counters are 0: no decoder has worked, but the client has them", () => {
+  for (const names of [fixture("avon"), fixture("avoff"), OLD]) {
+    const now = reading(names);
+    assert.deepStrictEqual(S.decoders(now, null, 1, 0), []);
+    assert.strictEqual(S.hasDecoders(now), true);
+  }
+  assert.strictEqual(S.hasDecoders({ AUDIO_WAVES: 1 }), false);
+  assert.strictEqual(S.hasDecoders(null), false);
+});
+
+test("new names: AV1's counters are AV2's when the server confirmed FRDP_2", () => {
+  const now = reading(fixture("avon"), { RDPGFX_CODECID_AV1_PICTURES: 30, RDPGFX_CODECID_AV1_DECODE_NS_SUM: 60e6, RDPGFX_CODECID_AVC420_PICTURES: 2 });
+  const label = (caps) => S.decoders(now, null, 1, caps).map((d) => [d.id, d.label, d.pictures]);
+  assert.deepStrictEqual(label(S.FRDP_2), [["AV2", "AV2", 30], ["AVC420", "H.264 4:2:0", 2]]);
+  assert.deepStrictEqual(label(0x00010000), [["AV1", "AV1", 30], ["AVC420", "H.264 4:2:0", 2]]);   // FRDP_1
+  assert.deepStrictEqual(label(0x000a0701), [["AV1", "AV1", 30], ["AVC420", "H.264 4:2:0", 2]]);   // 10.7: no AV2 there
+  // a client without the caps version, or before the confirm: the page can't tell, and says so
+  assert.deepStrictEqual(label(undefined), [["AV1", "AV1/AV2", 30], ["AVC420", "H.264 4:2:0", 2]]);
+  assert.deepStrictEqual(label(0), [["AV1", "AV1/AV2", 30], ["AVC420", "H.264 4:2:0", 2]]);
+  assert.strictEqual(S.decoders(now, null, 1, S.FRDP_2)[0].avgMs, 2);
+});
+
+test("new names, AV off: AV1's slot is UNKNOWN, so only H.264 is there", () => {
+  const now = reading(fixture("avoff"), { RDPGFX_CODECID_AVC444v2_PICTURES: 5, RDPGFX_CODECID_UNKNOWN_PICTURES: 9 });
+  assert.deepStrictEqual(S.decoders(now, null, 1, S.FRDP_2).map((d) => [d.id, d.pictures]), [["AVC444v2", 5]]);
+});
+
+test("old names: AV1 and AV2 each have their own, whatever the caps version", () => {
+  const now = reading(OLD, { RDPGFX_DECODER_AV1_PICTURES: 3, RDPGFX_DECODER_AV2_PICTURES: 7, RDPGFX_DECODER_AV2_HARDWARE: 1 });
+  for (const caps of [undefined, 0, S.FRDP_2])
+    assert.deepStrictEqual(S.decoders(now, null, 1, caps).map((d) => [d.id, d.label, d.pictures, d.hardware]), [["AV1", "AV1", 3, null], ["AV2", "AV2", 7, false]]);
+});
+
+test("the new names win when a client has both", () => {
+  const now = { RDPGFX_CODECID_AV1_PICTURES: 4, RDPGFX_DECODER_AV1_PICTURES: 99 };
+  assert.strictEqual(S.decoder(now, null, 1, "AV1").pictures, 4);
+});
+
+test("a rate from the new names, and none across a reconnect", () => {
+  const k = "RDPGFX_CODECID_AVC420_PICTURES";
+  assert.strictEqual(S.decoders({ [k]: 50 }, { [k]: 20 }, 2, 0)[0].perSecond, 15);
+  assert.strictEqual(S.decoders({ [k]: 5 }, { [k]: 20 }, 2, 0)[0].perSecond, null);
+});

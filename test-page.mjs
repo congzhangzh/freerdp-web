@@ -309,9 +309,12 @@ check("the client tried to connect", logs.some((l) => /ERRCONNECT_|tcp-shim|WebS
 // real client. No session here, so every value is 0; a client without the list skips this
 const stats = await ev(`(() => { const names = window.freerdpClientStats.index(Module); if (!names) return null;
   const now = window.freerdpClientStats.read(Module, names);
-  return { names: names.size, need: ["NETWORK_RTT_AVERAGE_MS", "NETWORK_BANDWIDTH_KBPS", "AUDIO_WAVES", "AUDIO_DELAY_MS", "RDPGFX_DECODER_AV1_PICTURES", "RDPGFX_DECODER_AV1_FAILED"].every((n) => names.has(n)),
-    numbers: Object.values(now).every((v) => typeof v === "number"), unused: names.has("FREERDP_CLIENT_STATS_UNUSED") || names.has("RDPGFX_CODECID_UNKNOWN") }; })()`);
-if (stats) check("FreeRDP's counters are read by name in the browser", stats.names > 50 && stats.need && stats.numbers && !stats.unused, JSON.stringify(stats));
+  // AV1's decoder by either name set: RDPGFX_CODECID_AV1_* (FreeRDP from 20261113) or RDPGFX_DECODER_AV1_*
+  const av1 = ["RDPGFX_CODECID_AV1_", "RDPGFX_DECODER_AV1_"].some((p) => names.has(p + "PICTURES") && names.has(p + "FAILED"));
+  return { names: names.size, need: av1 && ["NETWORK_RTT_AVERAGE_MS", "NETWORK_BANDWIDTH_KBPS", "AUDIO_WAVES", "AUDIO_DELAY_MS"].every((n) => names.has(n)),
+    decoders: window.freerdpClientStats.hasDecoders(now), numbers: Object.values(now).every((v) => typeof v === "number"),
+    unused: names.has("FREERDP_CLIENT_STATS_UNUSED") || [...names.keys()].some((n) => n.startsWith("RDPGFX_CODECID_UNKNOWN")) }; })()`);
+if (stats) check("FreeRDP's counters are read by name in the browser", stats.names > 50 && stats.need && stats.decoders && stats.numbers && !stats.unused, JSON.stringify(stats));
 else console.log("SKIP  this client has no counters list");
 // Info with those counters, or without (a client that has none): it draws, and hides what it lacks
 const infoText = await ev(`(() => { const i = document.getElementById('info'), was = i.hidden; i.hidden = false; updateInfo(); const s = document.getElementById('infoTable').innerText; i.hidden = was; return s; })()`);

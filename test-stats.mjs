@@ -10,9 +10,11 @@
 // server that sends neither has no decoder row, which is right: an older xrdp sends Planar and
 // Progressive. With FreeRDP's counters the page's own AV1 rows are gone, so never two times for one
 // picture. EXTRA replaces the session's FreeRDP options (default /gfx:AV2:off, see below), e.g. /gfx:AV2:off,AV1:i444.
-// AV2 is off by default: FreeRDP signals it under AV1's codec id (RDPGFX_CAPVERSION_FRDP_2) and its
-// frames have no decoder verdict yet, so with AV2 the decoder check would count AV2 frames as AV1
-// ones that no decoder took (2026-11-10, 116 commands, 0 decoder results). EXTRA=/gfx tests AV2. Round trip, bandwidth and sound are printed and not failed on: only some servers
+// AV2 is off by default: FreeRDP signals it under AV1's codec id (RDPGFX_CAPVERSION_FRDP_2), and
+// up to 20261111 its frames had no decoder verdict under AV1's name (2026-11-10, 116 commands, 0
+// decoder results). From 20261113 (RDPGFX_CODECID_* names) AV2's verdict is AV1's counters under
+// FRDP_2, and Info labels it AV2: EXTRA=/gfx tests AV2, and is checked to say "AV2 results" then.
+// Either set of decoder names is read. Round trip, bandwidth and sound are printed and not failed on: only some servers
 // measure, and a silent desktop plays nothing. USER_NAME and PASSWORD pick the login
 // (test / test, the CI container's). CHROME=<binary> picks another Chrome or Chromium.
 import { spawn } from "node:child_process";
@@ -70,11 +72,17 @@ const info = await ev("document.getElementById('infoTable').innerText");
 console.log("\n--- Info ---\n" + info + "\n--- counters that are not 0 ---\n" + JSON.stringify(nonZero(second), null, 1) + "\n");
 const sum = (re) => Object.entries(second).filter(([k]) => re.test(k)).reduce((n, [, v]) => n + v, 0);
 const commands = sum(/^RDPGFX_CMDID_WIRETOSURFACE_/), video = sum(/^RDPGFX_CODECID_(AV1|AVC)[^_]*$/);
-const tries = sum(/^RDPGFX_DECODER_.*_(PICTURES|FAILED|NO_PICTURE)$/);
+// the video decoders' attempts, by either name set (RDPGFX_CODECID_* from 20261113, RDPGFX_DECODER_* before)
+const tries = sum(/^RDPGFX_(CODECID|DECODER)_(AV1|AV2|AVC[^_]*)_(PICTURES|FAILED|NO_PICTURE)$/);
+// the GFX caps version the server confirmed (codec-stats.js [1]): FRDP_2 = AV2
+const caps = await ev("(() => { const r = codecReading(); return r ? r[1] : null; })()");
 check("the server's graphics were counted", commands > 0, `${commands} surface commands`);
 if (video) {
   check("the decoder counted what arrived", tries > 0, `${video} commands, ${tries} decoder results`);
   check("Info shows that decoder's results", / results\s+pictures: \d+/.test(info || ""));
+  // AV2's pictures are AV1's counters under FRDP_2: Info must call them AV2's (new names), never AV1's
+  if (caps === 0x00020000) check("AV2: Info names the decoder AV2", /AV2 results\s+pictures: [1-9]/.test(info || "") && !/AV1 results/.test(info || ""), "caps FRDP_2");
+  else console.log(`INFO  confirmed caps version ${caps === null ? "unknown" : "0x" + caps.toString(16)}`);
 } else console.log("SKIP  no AV1 or H.264 from this server: no decoder to check");
 // not "grew": an idle desktop sends nothing between two readings
 check("Info has FreeRDP's counters instead of the page's own AV1 rows", !/AV1 frames|AV1 decode\b/.test(info || ""));
