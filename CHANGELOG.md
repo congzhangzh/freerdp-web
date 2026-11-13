@@ -15,6 +15,26 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261113.2
+
+- **The page works on an iPhone.** iPhone's Safari has no full screen for web pages, and the page
+  used that API while it loaded: it stopped there, and the Connect button said "Loading…" for good
+  (it never worked on an iPhone). Without the API, full screen is now refused and the rest works. Found
+  with Playwright's WebKit as an iPhone; a real iPhone is the next check. **Open risk:** the client asks
+  for up to 1 GiB of shared WebAssembly memory, and iOS may refuse that on some devices. If so, the
+  page now says so (below) instead of loading for good.
+- **A page that cannot start says why.** An error while the page starts, or a client that stops
+  before it is ready, puts "Could not start" on the button and the reason under it.
+- **Firefox no longer shows a "Paste" box all the time.** Firefox and Safari have no permission to
+  read the clipboard silently: each read shows the browser's own "Paste" button, and the page read
+  on focus and every 1.5 s. There the page now reads nothing by itself: Ctrl or Cmd + V on the
+  remote desktop takes the browser's clipboard from that paste, offers it, and then sends the keys,
+  so the remote app pastes what was just copied. Chrome and Edge, where the permission exists,
+  still read on their own. A copy from the remote desktop that the browser would not take is written
+  on the next key or click.
+- Tests: `test-clipboard.mjs` (Firefox and Chrome, Playwright) and `test-webkit.mjs` (WebKit as an
+  iPhone and as the desktop's Safari); `test-page.mjs` checks full screen in and out.
+
 ## 20261113.1
 
 - **Info reads FreeRDP's decoder counters by either name.** FreeRDP from 20261113 (FreeRDP#14076)
