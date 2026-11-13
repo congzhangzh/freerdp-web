@@ -532,7 +532,7 @@ function moduleConfig() {
   freerdpMonitors: () => screensMonitors(),
   onRuntimeInitialized() {
     runtimeReady = true; resolveRuntime(true);
-    $("go").disabled = false; goReady = true; showGo(); status("ready", "status.ready");
+    $("go").disabled = false; goReady = true; showGo(); status("ready", "status.ready"); window.freerdpPageReady = true;
     // a client built with the Web Audio microphone backend (FreeRDP's audin "emscripten")
     if (typeof Module._audin_emscripten_release === "function") {
       $("optMic").disabled = false; $("micNote").hidden = true; micReady = true; showMicTitle();
@@ -550,7 +550,10 @@ function moduleConfig() {
     crashEnd(!crash.userEnded && !over && !conn.refused && (code !== 0 || lost), over ? "" : code !== 0 ? "exit code " + code : lost ? "connection lost" : "");
     setTimeout(() => sessionEnded(!over && (lost || code !== 0), over), 0);   // after this client's exit is done
   },
-  onAbort(what) { runtimeFailed = true; resolveRuntime(false); HostsUI.lock(); log("[page] aborted: " + what); crashEnd(true, "wasm abort: " + what); },
+  onAbort(what) { runtimeFailed = true; resolveRuntime(false); HostsUI.lock(); log("[page] aborted: " + what); crashEnd(true, "wasm abort: " + what);
+    // a client that never got ready: say so, or the button says "Loading…" for good (#368)
+    if (!goReady) { $("go").disabled = true; $("go").textContent = t("form.failed", "Could not start");
+      status("the client did not start: " + what, "status.noStart", { what }); } },
   };
   return m;
 }
@@ -592,7 +595,12 @@ window.addEventListener("pagehide", () => { if (crash.running) crashStore(crash.
 // Full screen is requested from a user gesture (Connect click or FreeRDP's full screen hotkey).
 // The canvas is sized by CSS, so SDL follows it and /dynamic-resolution resizes the remote
 // desktop. Keyboard Lock sends Esc / Windows keys to the remote side (hold Esc to leave).
-const realExitFullscreen = document.exitFullscreen.bind(document);
+// iPhone's Safari has no full screen for the page (document.exitFullscreen and requestFullscreen
+// are undefined there): binding it threw while app.js loaded, so nothing after this line ran and
+// the page said "Loading…" for good (#368). Without it full screen is refused (enterFullscreen)
+// and leaving it does nothing; an older Safari has it as webkitExitFullscreen.
+const nativeExitFullscreen = document.exitFullscreen ?? document.webkitExitFullscreen;
+const realExitFullscreen = () => (nativeExitFullscreen ? nativeExitFullscreen.call(document) : Promise.resolve());
 // SDL3 also requests full screen on its canvas when it (re)creates its window, e.g. after the
 // GRD handover redirect; Emscripten defers such a request to the next click or key press, so the
 // page appeared to go full screen by itself. The page owns full screen: ignore canvas requests.
@@ -602,6 +610,7 @@ for (const name of ["requestFullscreen", "webkitRequestFullscreen"]) {
 }
 async function enterFullscreen(screen) {   // screen: a ScreenDetailed, for All screens (below)
   try {
+    if (!document.documentElement.requestFullscreen) throw new Error("this browser has no full screen for pages");
     await document.documentElement.requestFullscreen({ navigationUI: "hide", ...(screen && { screen }) });
   } catch (e) {
     log("[page] full screen refused: " + e.message);
@@ -895,7 +904,7 @@ $("tbCapture").onclick = () => { if (pointerLocked()) release(); else { capture(
 //  - local -> remote: on focus and every 1.5 s while focused, read the browser clipboard; if it
 //    changed, offer its text and image (converted to a 32 bit bottom-up CF_DIB) to the server.
 //    What we wrote ourselves is not offered back, so nothing ping-pongs.
-const clip = { lastSig: null, pending: null, out: null, outTimer: 0, warned: false };
+const clip = { lastSig: null, pending: null, out: null, outTimer: 0, warned: false, poll: null };
 async function dibToPng(dib) {
   const h = new DataView(dib.buffer, dib.byteOffset, dib.byteLength);
   const biSize = h.getUint32(0, true), bits = h.getUint16(14, true), compression = h.getUint32(16, true);
@@ -955,20 +964,26 @@ const clipboardWriteImage = (bytes, isPng) =>
   (isPng ? Promise.resolve(new Blob([bytes], { type: "image/png" })) : dibToPng(bytes)).then((png) => queueOut({ png }),
     (e) => log("[page] clipboard image from server not decodable: " + e.message));
 let clipboardOn = true;   // Session settings: off means -clipboard, and the page bridge stays quiet
-async function syncClipboard() {
-  if (!clipboardOn || !document.body.classList.contains("session") || !document.hasFocus()) return;
-  if (clip.pending) { clip.out = clip.pending; clip.pending = null; await writeOut(); return; }
-  let text = "", png = null;
+// How the browser's clipboard reaches the session. Chrome and Edge have a clipboard-read
+// permission: once it is given, navigator.clipboard.read() is silent, so the page reads on focus
+// and every 1.5 s, and a copy here is on the remote side before the user pastes there. Firefox and
+// Safari have no such permission (permissions.query() throws for it): each read() shows the
+// browser's own "Paste" button for the user to click, so polling showed that button all the time
+// (#368). There the page never reads by itself: it takes the clipboard from the user's paste, Ctrl
+// or Cmd + V on the session (below). A Chrome that refused the permission does the same.
+// clip.poll: null until the permission is known, then true (read on its own) or false (on paste).
+async function clipboardMode() {
   try {
-    for (const item of await navigator.clipboard.read()) {
-      if (item.types.includes("text/plain")) text = await (await item.getType("text/plain")).text();
-      const img = item.types.find((t) => t.startsWith("image/"));
-      if (img) png = await item.getType(img);
-    }
-  } catch (e) {
-    try { text = await navigator.clipboard.readText(); }            // e.g. only text permission
-    catch (e2) { if (!clip.warned) { clip.warned = true; log("[page] clipboard read not allowed: " + e2.message); } return; }
-  }
+    const s = await navigator.permissions.query({ name: "clipboard-read" });
+    const set = () => { clip.poll = s.state !== "denied"; };
+    set(); s.addEventListener?.("change", set);
+  } catch (e) { clip.poll = false; }
+  log(`[page] clipboard: ${clip.poll ? "read on focus and every 1.5 s" : "read on paste (Ctrl or Cmd + V)"}`);
+}
+clipboardMode();
+// the local clipboard's text and image to the session, unless it is what was last offered (or
+// written out by the session itself)
+async function offerLocal(text, png) {
   if (!text && !png) return;
   const sig = await signature(text, png);
   if (sig === clip.lastSig) return;
@@ -981,8 +996,61 @@ async function syncClipboard() {
   if (ptr) Module._free(ptr);
   if (ok) clip.lastSig = sig;
 }
+async function syncClipboard() {
+  if (!clipboardOn || !document.body.classList.contains("session") || !document.hasFocus()) return;
+  if (clip.pending) { clip.out = clip.pending; clip.pending = null; await writeOut(); return; }
+  if (clip.poll !== true) return;
+  let text = "", png = null;
+  try {
+    for (const item of await navigator.clipboard.read()) {
+      if (item.types.includes("text/plain")) text = await (await item.getType("text/plain")).text();
+      const img = item.types.find((t) => t.startsWith("image/"));
+      if (img) png = await item.getType(img);
+    }
+  } catch (e) {
+    try { text = await navigator.clipboard.readText(); }            // e.g. only text permission
+    catch (e2) { if (!clip.warned) { clip.warned = true; log("[page] clipboard read not allowed: " + e2.message); } return; }
+  }
+  await offerLocal(text, png);
+}
 window.addEventListener("focus", syncClipboard);
 setInterval(syncClipboard, 1500);
+// On paste (clip.poll false). Ctrl or Cmd + V on the canvas would reach the remote side at once,
+// before the browser's paste event says what is in the clipboard, and the remote app would paste
+// what was offered before. So the V is held back (not prevented: the browser's paste must still
+// happen), the paste event's text and image are offered, and then the held keys go to the client
+// in their order. No paste event within 300 ms (nothing pasteable, or a browser that gives none):
+// the keys go anyway. A paste of files is the Files code's (below).
+// Writing to the clipboard there needs a user gesture too: a copy from the session that the
+// browser refused (clip.pending) is written on the next key or click.
+const paste = { held: null, timer: 0 };
+function pasteRelease() {
+  const held = paste.held; paste.held = null; clearTimeout(paste.timer);
+  for (const [type, init] of held ?? []) synthKey(type, init);
+}
+const keyInit = (e) => ({ key: e.key, code: e.code, keyCode: e.keyCode, location: e.location, repeat: e.repeat,
+  ctrlKey: e.ctrlKey, altKey: e.altKey, shiftKey: e.shiftKey, metaKey: e.metaKey });
+for (const type of ["keydown", "keyup"]) window.addEventListener(type, (e) => {
+  if (synthetic || e.target !== $("canvas") || !document.body.classList.contains("session") || !clipboardOn) return;
+  if (clip.pending && type === "keydown") syncClipboard();   // in the gesture: write the session's copy out
+  if (clip.poll !== false) return;
+  if (!paste.held && type === "keydown" && e.code === "KeyV" && (e.ctrlKey || e.metaKey) && !e.altKey && !e.repeat) {
+    paste.held = []; paste.timer = setTimeout(pasteRelease, 300);
+  }
+  if (!paste.held) return;
+  e.stopImmediatePropagation();   // not preventDefault(): the browser's paste comes from this key
+  paste.held.push([type, keyInit(e)]);
+}, true);
+window.addEventListener("pointerdown", () => { if (clip.pending) syncClipboard(); }, true);
+window.addEventListener("paste", (e) => {
+  if (!paste.held) return;
+  const d = e.clipboardData;
+  if (d?.files?.length && filesSupported()) { pasteRelease(); return; }   // the Files code's (below)
+  e.preventDefault();
+  const item = [...(d?.items ?? [])].find((i) => i.kind === "file" && i.type.startsWith("image/"));
+  offerLocal(d?.getData("text/plain") || "", item?.getAsFile() ?? null)
+    .catch((err) => log("[page] clipboard paste not offered: " + err.message)).finally(pasteRelease);
+}, true);
 
 // Files. The browser's clipboard has no files for a page to read, so they come another way:
 //  - to the session: dropped on the page, pasted where the browser hands them over, or from the
@@ -1509,11 +1577,12 @@ function updateInfo() {
       return `${name}, ${rate / 1000} kHz, ${ch === 2 ? t("info.stereo", "stereo") : ch === 1 ? t("info.mono", "mono") : t("info.channels", ch + " ch", { n: ch })}`; })()],
     // the page's own count, for a client without FreeRDP's: two times for one picture, measured
     // differently, would explain nothing (FreeRDP's "AV1 results" row is above)
-    ...(stats?.RDPGFX_DECODER_AV1_PICTURES !== undefined ? [] : [[t("info.av1Frames", "AV1 frames"), av1Frames], [t("info.av1Decode", "AV1 decode"), av1Decode]]),
+    ...(stats && cs.hasDecoders(stats) ? [] : [[t("info.av1Frames", "AV1 frames"), av1Frames], [t("info.av1Decode", "AV1 decode"), av1Decode]]),
     // H.264's rows only once H.264 pictures arrive (most sessions are AV1)
     ...(h264Frames === "–" ? [] : [[t("info.h264Frames", "H.264 frames"), h264Frames], [t("info.h264Decode", "H.264 decode"), h264Decode]]),
-    // each decoder FreeRDP has used, by its own counters: what became a picture and what did not
-    ...(stats ? cs.decoders(stats, last.stats, dt).map((d) => {
+    // each decoder FreeRDP has used, by its own counters: what became a picture and what did not.
+    // The caps version the server confirmed (codec-stats.js [1]) says whether AV1's are AV2's
+    ...(stats ? cs.decoders(stats, last.stats, dt, codecReading()?.[1]).map((d) => {
       const hw = d.hardware === null ? "" : `, ${d.hardware ? t("info.hardware", "hardware") : t("info.software", "software")}`;
       const rate = per(d.perSecond), avg = d.avgMs.toFixed(1), max = d.maxMs.toFixed(1), name = d.label;
       return [t("info.decoderStats", `${name} results`, { name }),
