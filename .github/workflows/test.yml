@@ -56,6 +56,13 @@ jobs:
       - name: The tests' Connect puts the page in full screen (test-fs-click.mjs)
         run: node test-fs-click.mjs dist/site
         if: success() || failure()
+      - name: The same with the click by script, test-connect.mjs of 20261113.4 (shown, not failed)
+        continue-on-error: true
+        if: success() || failure()
+        run: |
+          git fetch -q --depth=1 origin 35eed3f74898f7f4c2ca22edf72817fe06707fd5
+          mkdir -p "$RUNNER_TEMP/old" && git show 35eed3f74898f7f4c2ca22edf72817fe06707fd5:test-connect.mjs > "$RUNNER_TEMP/old/test-connect.mjs"
+          cp test-fs-click.mjs serve.py "$RUNNER_TEMP/old/" && node "$RUNNER_TEMP/old/test-fs-click.mjs" dist/site
 
   # The page in the browsers Chrome alone does not stand for (2026-11-13, #368: Firefox showed its
   # "Paste" box all the time and an iPhone never got past "Loading…", for weeks, because nothing ran
