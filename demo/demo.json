@@ -1,8 +1,8 @@
 {
   "recorded": {
-    "kit": "6f51173672055a83eb438e5d3b3d0eae66f505a8",
-    "web": "web-20261114.4-6f5117367205",
-    "xrdp": "xrdp-20261114.4-6f5117367205",
+    "kit": "0412352d0167e276ae584fa1b30029e17642e48f",
+    "web": "web-20261114.6-0412352d0167",
+    "xrdp": "xrdp-20261114.6-0412352d0167",
     "pipewire-module-xrdp": "pipewire-module-xrdp-20261031.1-1b78a2c01cc2"
   },
   "videos": [
