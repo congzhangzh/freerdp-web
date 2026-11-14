@@ -15,6 +15,20 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261113.5
+
+- **The tests click Connect the way a person does** (the release kit's All screens tests). From
+  Chrome 157 (the CI runners' image of 2026-11-11) the page, clicked by a script through the
+  DevTools protocol (`Runtime.evaluate` with `userGesture`), was refused full screen at Connect
+  ("full screen refused: not granted"). It stayed windowed and measured 602 x 456 instead of
+  640 x 480, so every All screens test failed on the size (kit round 43542667639), with FreeRDP
+  20261113.2 that passes 3 of 3 on Chrome 156. `test-connect.mjs` now clicks with
+  `Input.dispatchMouseEvent`: on Chrome 157 the page gets full screen and 640 x 480. A person's
+  click was never affected. Nothing in the page changed.
+- CI checks it in the runner's own Chrome: `test-fs-probe.mjs` (a button clicked by script and for
+  real, at once and after an await) and `test-fs-click.mjs` (the page, connected the way the tests
+  connect); the old click is shown too.
+
 ## 20261113.4
 
 - **Info shows no key frames or fallbacks a client does not count.** The next FreeRDP stops
