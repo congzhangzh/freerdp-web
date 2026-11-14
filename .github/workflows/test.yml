@@ -57,3 +57,6 @@ jobs:
       - name: The clipboard in Firefox and Chrome, full screen in Firefox (test-clipboard.mjs)
         run: PLAYWRIGHT="$RUNNER_TEMP/pw/node_modules/playwright" node test-clipboard.mjs dist/site
         if: success() || failure()
+      - name: A connection that dies without closing, in Chromium (test-deadnet.mjs)
+        run: PLAYWRIGHT="$RUNNER_TEMP/pw/node_modules/playwright" node test-deadnet.mjs dist/site
+        if: success() || failure()

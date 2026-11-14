@@ -1750,16 +1750,64 @@ async function connect(againPassword = null, retrying = false) {
 }
 
 window.addEventListener("pagehide", () => again.forget());
-// the client's sockets (gateway WebSocket or Direct TCP), closed by Reconnect while a session runs
+// The client's sockets (gateway WebSocket or Direct TCP), closed by Reconnect while a session runs.
+// A connection that dies without closing (a hung ssh tunnel, a network that changed: no FIN, #369)
+// is noticed by nobody: a WebSocket has no keepalive, FreeRDP no read watchdog. Two things here:
+//  - close(): FreeRDP's socket layer (Emscripten's SOCKFS) waits for the close event, and Chrome
+//    sends it only when its closing handshake gives up, 60 s later (code 1006). So a gateway socket
+//    the page closes gets its close event at once (code 4000), and the browser's late one is
+//    dropped: Reconnect on a dead connection took 76 s, now 20 s (the GNOME test bed, 2026-11-13).
+//  - the watchdog (deadWatch, below) closes a socket the server has gone quiet on.
+// Direct TCP (tcp-shim.js, the installed app) is no EventTarget; its close() ends its own reads.
 const sockets = new Set();
 function trackSockets() {
   const Base = window.WebSocket;
   if (Base.tracked) return;
+  const events = typeof EventTarget === "function" && Base.prototype instanceof EventTarget;
   window.WebSocket = class extends Base {
     static tracked = true;
-    constructor(...a) { super(...a); sockets.add(this); }
+    constructor(...a) {
+      super(...a); sockets.add(this);
+      this.lastMessage = Date.now(); this.messages = 0; this.closeSent = false;
+      if (!events) return;
+      this.addEventListener("message", () => { this.lastMessage = Date.now(); this.messages++; });
+      // before SOCKFS's onclose: a capture listener at the target runs first
+      this.addEventListener("close", (e) => {
+        if (this.closeSent && !e.byPage) e.stopImmediatePropagation();   // the browser's, a minute late
+        this.closeSent = true; sockets.delete(this);
+      }, { capture: true });
+    }
+    close(...a) {
+      try { super.close(...a); } finally {
+        if (events && !this.closeSent) {
+          const e = new CloseEvent("close", { code: 4000, reason: "closed by the page", wasClean: false });
+          e.byPage = true; this.dispatchEvent(e);
+        }
+      }
+    }
   };
 }
+// The watchdog (dead-watch.js): a server that kept talking and then stopped is gone, so the page
+// closes its socket and FreeRDP reconnects by itself (shadow on GNOME, hung: closed after 10 s, the
+// desktop answering again within 20 s, no click); a server that is silent when idle (xrdp: not one
+// message in 180 s) never arms it, unless it played sound. Gateway WebSockets only.
+const deadWatch = { socket: null, watch: null, input: 0 };
+for (const type of ["keydown", "pointerdown", "pointermove", "wheel"])
+  window.addEventListener(type, () => { deadWatch.input = Date.now(); }, { capture: true, passive: true });
+function deadTick() {
+  const s = [...sockets].filter((x) => x.readyState === 1 && typeof x.addEventListener === "function").pop();
+  if (!crash.running || !s || !window.freerdpDeadWatch) { deadWatch.socket = null; return; }
+  if (deadWatch.socket !== s) Object.assign(deadWatch, { socket: s, watch: window.freerdpDeadWatch.create() });
+  const codecs = codecReading();
+  const dead = deadWatch.watch.tick({ now: Date.now(), messages: s.messages, lastMessage: s.lastMessage,
+    paints: codecs ? window.freerdpCodecStats.paints(codecs) : null, input: deadWatch.input });
+  if (!dead) return;
+  log(`[page] no message from the server for ${Math.round(dead.silentMs / 1000)} s (it talked about every ${Math.round(dead.paceMs / 1000)} s): the connection is dead, closing it`);
+  deadWatch.socket = null;
+  droppedNow();
+  try { s.close(); } catch (e) { /* closed */ }
+}
+setInterval(deadTick, 1000);
 // FreeRDP itself retries a dropped network (+auto-reconnect, vault.js) within the same client;
 // when that client gives up and ends, the page starts a new one: after 2, 4, 8… s, up to 8 times
 const retry = { count: 0, timer: 0, max: 8 };
@@ -1814,7 +1862,11 @@ async function reconnect(automatic = false) {
   log("[page] reconnect" + (automatic ? ` (try ${retry.count})` : ""));
   // a session that still runs, e.g. a network that hangs instead of failing: close its sockets;
   // FreeRDP reconnects by itself, or ends and comes back here
-  if (crash.running) { for (const s of sockets) try { s.close(); } catch (e) { /* closed */ } sockets.clear(); return; }
+  if (crash.running) {
+    droppedNow();   // the bar, not a picture that looks alive (#369)
+    for (const s of sockets) try { s.close(); } catch (e) { /* closed */ }
+    sockets.clear(); return;
+  }
   $("endText").textContent = t("end.reconnecting", "Reconnecting…"); $("endReconnect").hidden = true;
   const password = await again.take(HostsUI.selected);
   await connect(password ?? "", automatic);
