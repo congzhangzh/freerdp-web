@@ -100,6 +100,18 @@ check("in full screen a click on the remote desktop is just a click: no capture"
 const capClick = await clickForReal(send, "#tbCapture"); await sleep(800);
 const afterCapture = await ev("document.pointerLockElement === canvas && document.body.classList.contains('captured')");
 check("…and the toolbar's Capture captures", capClick && afterCapture === true, `clicked for real: ${capClick}, captured: ${afterCapture}`);
+await ev("release(), true"); await sleep(500);
+// The client's own requests for a capture (SDL's relative mouse mode, #369 again): Emscripten runs
+// a deferred pointer lock request inside its next mouse button handler, so here a mousedown
+// listener on the canvas asks the way it does. A real click on the remote desktop must not capture.
+await ev("canvas.addEventListener('mousedown', () => canvas.requestPointerLock(), { once: true }), true");
+const sdlClick = await clickForReal(send, "#canvas"); await sleep(800);
+const afterSdl = await ev("JSON.stringify({ locked: document.pointerLockElement === canvas, captured: document.body.classList.contains('captured') })");
+const sdlLog = (await ev("document.getElementById('log').textContent")).split("\n").filter((l) => /the client asked to capture/.test(l));
+check("a capture the client asks for itself, at a click on the remote desktop, is ignored", sdlClick && afterSdl === JSON.stringify({ locked: false, captured: false }), `clicked for real: ${sdlClick}, ${afterSdl}`);
+check("…and said once in the Log", sdlLog.length === 1, sdlLog.join(" | ") || "no line");
+const capAgain = await clickForReal(send, "#tbCapture"); await sleep(800);
+check("…while the toolbar's Capture still captures", capAgain && (await ev("document.pointerLockElement === canvas")) === true, `clicked for real: ${capAgain}`);
 await ev("release(), true");
 console.log(fails ? "FAILED" : "PASSED");
 done(fails ? 1 : 0);
