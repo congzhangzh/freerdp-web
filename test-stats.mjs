@@ -87,5 +87,8 @@ if (video) {
 // not "grew": an idle desktop sends nothing between two readings
 check("Info has FreeRDP's counters instead of the page's own AV1 rows", !/AV1 frames|AV1 decode\b/.test(info || ""));
 check("the network was counted", second.NETWORK_BYTES_RECEIVED > 0 && second.NETWORK_BYTES_RECEIVED >= first.NETWORK_BYTES_RECEIVED, `${first.NETWORK_BYTES_RECEIVED} -> ${second.NETWORK_BYTES_RECEIVED} bytes`);
+// RDP's own bytes in Info (20261114.1), beside the WebSocket's: a rate and this connection's total
+const rdpIn = /Network in \(RDP\)\s+(\d+ kbit\/s|–), ([\d.]+) MB total/.exec(info || ""), rdpOut = /Network out \(RDP\)\s+(\d+ kbit\/s|–), ([\d.]+) MB total/.exec(info || "");
+check("Info shows RDP's own bytes, in and out", !!rdpIn && !!rdpOut && +rdpIn[2] > 0, rdpIn && rdpOut ? `in ${rdpIn[1]}, ${rdpIn[2]} MB; out ${rdpOut[1]}, ${rdpOut[2]} MB` : "no rows");
 console.log(`${fails ? "FAILED" : "PASSED"}`);
 done(fails ? 1 : 0);

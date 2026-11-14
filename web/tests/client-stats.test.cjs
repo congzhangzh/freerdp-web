@@ -165,3 +165,21 @@ test("trimmed names: no key frames, hardware or fallbacks: null, never a 0 that 
   const full = S.decoders(reading(fixture("avon"), { RDPGFX_CODECID_AV1_PICTURES: 12 }), null, 1, S.FRDP_2)[0];
   assert.deepStrictEqual([full.keyFrames, full.hardware, full.fallbacks], [0, null, 0]);
 });
+
+test("RDP's own bytes: both names or none; a rate per second, none across a new connection", () => {
+  assert.strictEqual(S.rdpBytes({}, null, 1), null);
+  assert.strictEqual(S.rdpBytes({ NETWORK_BYTES_RECEIVED: 10 }, null, 1), null);
+  const a = { NETWORK_BYTES_RECEIVED: 1000, NETWORK_BYTES_SENT: 200 }, b = { NETWORK_BYTES_RECEIVED: 3000, NETWORK_BYTES_SENT: 600 };
+  assert.deepStrictEqual(S.rdpBytes(a, null, 1), { rx: 1000, tx: 200, rxPerSecond: null, txPerSecond: null });
+  assert.deepStrictEqual(S.rdpBytes(b, a, 2), { rx: 3000, tx: 600, rxPerSecond: 1000, txPerSecond: 200 });
+  assert.deepStrictEqual(S.rdpBytes(a, b, 2), { rx: 1000, tx: 200, rxPerSecond: null, txPerSecond: null });
+});
+
+test("the caps version: FreeRDP's GFX_CAPS_VERSION when the client has it, else undefined (the page asks the web client)", () => {
+  assert.strictEqual(S.capsVersion({}), undefined);
+  assert.strictEqual(S.capsVersion(null), undefined);
+  assert.strictEqual(S.capsVersion({ GFX_CAPS_VERSION: 0 }), 0);
+  assert.strictEqual(S.capsVersion({ GFX_CAPS_VERSION: S.FRDP_2 }), S.FRDP_2);
+  assert.strictEqual(S.av1Slot(S.capsVersion({ GFX_CAPS_VERSION: S.FRDP_2 }) ?? 0x00010000), "AV2");
+  assert.strictEqual(S.av1Slot(S.capsVersion({}) ?? 0x00010000), "AV1");
+});

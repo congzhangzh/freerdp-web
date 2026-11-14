@@ -2,7 +2,8 @@ import { clickForReal, connectTestSession } from "./test-connect.mjs";
 // Mouse and keyboard capture against the CI xrdp session: the toolbar's Capture locks the
 // pointer; relative mouse moves move the page's cursor and the remote pointer the same way
 // (XQueryPointer in the session, test-keymap.py); Ctrl + Alt + X does not release, a Ctrl + Alt
-// tap does; in full screen a click on the remote desktop captures again. Disconnect by FreeRDP's
+// tap does; in full screen a click on the remote desktop does not capture, the toolbar's Capture
+// does. Disconnect by FreeRDP's
 // hotkey gives the mouse and the keys back by itself. Info names the codec, its colour and whether
 // it decodes in hardware.
 //   node test-capture.mjs [out dir]     PAGE, GATEWAY (127.0.0.1:6081), XRDP (grd-wasm-xrdp-ci)
@@ -105,24 +106,29 @@ await key("keyUp", "Alt", "AltLeft", 18, 2); await key("keyUp", "Control", "Cont
 s = await page(); console.log("after Ctrl + Alt:", JSON.stringify(s));
 check("a Ctrl + Alt tap releases", !s.locked && !s.captured && !s.drawn);
 
-// full screen: a click on the remote desktop captures. The toolbar's Full screen is clicked for
-// real: Chrome 157 refuses full screen to a click made by Runtime.evaluate (#371)
+// full screen: a click on the remote desktop is just a click there; the toolbar's Capture captures
+// (#369, 聪哥 2026-11-14: a click used to capture, and the mouse could not reach the toolbar). The
+// toolbar's buttons are clicked for real: Chrome 157 refuses full screen to a click made by
+// Runtime.evaluate (#371)
 const fsClicked = await clickForReal(send, "#tbFs"); await sleep(3000);
 check("the toolbar's Full screen (a real click) puts the page in full screen", fsClicked && (await ev("!!document.fullscreenElement")), `clicked for real: ${fsClicked}`);
 await click(400, 300); await sleep(500);
 s = await page(); console.log("full screen, after a click:", JSON.stringify(s));
-check("in full screen a click captures", s.locked && s.captured);
+check("in full screen a click on the remote desktop does not capture", !s.locked && !s.captured);
+const capClicked = await clickForReal(send, "#tbCapture"); await sleep(500);
+s = await page(); console.log("full screen, after Capture:", JSON.stringify(s));
+check("…the toolbar's Capture does (a real click)", capClicked && s.locked && s.captured, `clicked for real: ${capClicked}`);
 check("the grip is hidden while captured", (await ev("getComputedStyle(tbGrip).display")) === "none");
 await key("rawKeyDown", "Control", "ControlLeft", 17, 2); await key("rawKeyDown", "Alt", "AltLeft", 18, 3);
 await key("keyUp", "Alt", "AltLeft", 18, 2); await key("keyUp", "Control", "ControlLeft", 17); await sleep(500);
 s = await page();
 check("Ctrl + Alt releases in full screen, which stays", !s.locked && !s.captured && (await ev("!!document.fullscreenElement")));
 
-// captured again, then FreeRDP's Disconnect hotkey (Right Alt + Right Shift + D, the default):
-// a session ended on purpose; the mouse and the keys come back without a Ctrl + Alt
-await click(400, 300); await sleep(500);
+// captured again (Capture), then FreeRDP's Disconnect hotkey (Right Alt + Right Shift + D, the
+// default): a session ended on purpose; the mouse and the keys come back without a Ctrl + Alt
+const again = await clickForReal(send, "#tbCapture"); await sleep(500);
 s = await page();
-check("captured again before Disconnect", s.locked && s.captured);
+check("captured again before Disconnect", again && s.locked && s.captured, `clicked for real: ${again}`);
 const chord = async () => {
   await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Alt", code: "AltRight", windowsVirtualKeyCode: 18, modifiers: 1, location: 2 });
   await send("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Shift", code: "ShiftRight", windowsVirtualKeyCode: 16, modifiers: 9, location: 2 });

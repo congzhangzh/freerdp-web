@@ -625,7 +625,7 @@ async function enterFullscreen(screen) {   // screen: a ScreenDetailed, for All 
 let kbLocked = false;
 async function lockKeyboard() {
   if (!document.fullscreenElement || !navigator.keyboard?.lock) return;
-  try { await navigator.keyboard.lock(); kbLocked = true; syncCaptured(); }
+  try { const was = kbLocked; await navigator.keyboard.lock(); kbLocked = true; syncCaptured(); if (!was) browserNotice(); }
   catch (e) { log("[page] keyboard lock unavailable: " + e.message); }
 }
 function unlockKeyboard() { navigator.keyboard?.unlock?.(); kbLocked = false; syncCaptured(); }
@@ -664,7 +664,7 @@ function onFullscreenChange() {
   if (!document.fullscreenElement) {
     document.body.classList.remove("fs"); kbLocked = false; syncCaptured(); log("[page] left full screen");
     if (multiOn() && !screensSpec) screensOff();   // the canvas spans the screens from this one's full screen
-  }
+  } else browserNotice();
   showFsButton();
   document.body.classList.toggle("tbhide", !!document.fullscreenElement);
   // The browser fires "resize" before or after "fullscreenchange" (macOS: after), so measure
@@ -797,9 +797,11 @@ window.addEventListener("wheel", (e) => { if (e.target === $("canvas")) flushMet
 
 // Capture: the mouse is locked to the remote desktop (Pointer Lock) and, in full screen, the
 // keyboard too (Keyboard Lock, above); Ctrl + Alt, pressed and released with nothing else,
-// releases both, as in VMware. In full screen a click on the remote desktop captures again; in
-// a window, the toolbar's Capture button. Only the left Alt counts: Windows reports AltGr as
-// Ctrl + right Alt, and French or German keyboards type @ or € with it.
+// releases both, as in VMware. Only the toolbar's Capture button captures, in a window and in full
+// screen alike: a click on the remote desktop is just a click there (until 20261114 one in full
+// screen captured, and the mouse could not reach the toolbar or a download until Ctrl + Alt).
+// Only the left Alt counts: Windows reports AltGr as Ctrl + right Alt, and French or German
+// keyboards type @ or € with it.
 //
 // SDL is not told about the lock: it would treat the mouse as relative and the RDP server still
 // wants absolute positions. The page moves its own cursor by the lock's movementX/Y, clamped to
@@ -810,7 +812,7 @@ const ARROW = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www
   '<path d="M1 1v20l5-5 3.5 8 3-1.3L9 15h7z" fill="#fff" stroke="#000" stroke-width="1.2" stroke-linejoin="round"/></svg>');
 const pointerLocked = () => document.pointerLockElement === $("canvas");
 // "captured": the mouse is (the grip and the toolbar's mouse reveal step aside); Ctrl + Alt also
-// releases a keyboard that is captured alone, as in full screen before the first click
+// releases a keyboard that is captured alone, as in full screen before Capture
 const keysCaptured = () => pointerLocked() || (kbLocked && !!document.fullscreenElement);
 function syncCaptured() {
   document.body.classList.toggle("captured", pointerLocked());
@@ -887,12 +889,6 @@ for (const type of Object.keys(POINTER_TYPE))
     dispatchToSdl(new PointerEvent(POINTER_TYPE[type], { ...init, pointerId: 1, pointerType: "mouse", isPrimary: true }));
     dispatchToSdl(new MouseEvent(type, init));
   }, true);
-// in full screen, a click on the remote desktop captures (the click still reaches it)
-window.addEventListener("mousedown", (e) => {
-  if (synthetic || pointerLocked() || e.target !== $("canvas") || e.button !== 0 || !document.fullscreenElement) return;
-  const r = $("canvas").getBoundingClientRect();
-  capture(e.clientX - r.left, e.clientY - r.top);
-}, true);
 $("tbCapture").onclick = () => { if (pointerLocked()) release(); else { capture(); backToCanvas(); } };
 
 // Clipboard (text and images). SDL3 has no browser clipboard driver, so the page bridges it:
@@ -1527,6 +1523,8 @@ function updateInfo() {
   // per second, or "–" for a counter that started again after a reconnect
   const per = (v) => (v === null ? "–" : v.toFixed(1));
   const statsNet = stats && cs.network(stats), statsAudio = stats && cs.audio(stats, last.stats, dt);
+  const rdpNet = stats && cs.rdpBytes(stats, last.stats, dt);
+  const kbitPer = (v) => (v === null ? "–" : (v * 8 / 1000).toFixed(0) + " kbit/s");
   const notMeasured = t("info.notMeasured", "not measured");
   const rows = [
     [t("info.server", "Server"), info.server], [t("info.transport", "Transport"), info.transport],
@@ -1581,8 +1579,9 @@ function updateInfo() {
     // H.264's rows only once H.264 pictures arrive (most sessions are AV1)
     ...(h264Frames === "–" ? [] : [[t("info.h264Frames", "H.264 frames"), h264Frames], [t("info.h264Decode", "H.264 decode"), h264Decode]]),
     // each decoder FreeRDP has used, by its own counters: what became a picture and what did not.
-    // The caps version the server confirmed (codec-stats.js [1]) says whether AV1's are AV2's
-    ...(stats ? cs.decoders(stats, last.stats, dt, codecReading()?.[1]).map((d) => {
+    // The caps version the server confirmed says whether AV1's are AV2's: FreeRDP's own
+    // GFX_CAPS_VERSION when the client has it, else the web client's (codec-stats.js [1])
+    ...(stats ? cs.decoders(stats, last.stats, dt, cs.capsVersion(stats) ?? codecReading()?.[1]).map((d) => {
       const hw = d.hardware === null ? "" : `, ${d.hardware ? t("info.hardware", "hardware") : t("info.software", "software")}`;
       const rate = per(d.perSecond), avg = d.avgMs.toFixed(1), max = d.maxMs.toFixed(1), name = d.label;
       return [t("info.decoderStats", `${name} results`, { name }),
@@ -1601,6 +1600,10 @@ function updateInfo() {
     // the rate from the last reading, the total for this session only (info.netBase)
     [t("info.netIn", "Network in"), net2(kbit(net.rx - last.rx), mb(net.rx - info.netBase.rx))],
     [t("info.netOut", "Network out"), net2(kbit(net.tx - last.tx), mb(net.tx - info.netBase.tx))],
+    // RDP's own bytes (FreeRDP's NETWORK_BYTES_*, above TLS): the rows above less TLS and the
+    // WebSocket; the total since the client connected. Hidden for a client without them
+    [t("info.netInRdp", "Network in (RDP)"), rdpNet ? net2(kbitPer(rdpNet.rxPerSecond), mb(rdpNet.rx)) : null],
+    [t("info.netOutRdp", "Network out (RDP)"), rdpNet ? net2(kbitPer(rdpNet.txPerSecond), mb(rdpNet.tx)) : null],
     // the server's own measurements: a client without them hides the rows, and 0 is not measured,
     // for now or for good: not every server measures (xrdp 0.10 here did not)
     [t("info.rtt", "Round trip"), statsNet ? (statsNet.rtt ? t("info.rttValue", `${statsNet.rtt} ms (lowest ${statsNet.rttBase})`, { ms: statsNet.rtt, base: statsNet.rttBase }) : notMeasured) : null],
@@ -1616,8 +1619,17 @@ setInterval(updateInfo, 1000);
 // edge right above it (a grip marks the spot), not anywhere along the edge: the corners belong
 // to the remote desktop (a maximized window's close button, menus). It hides again once the
 // mouse moves away from it; shown from the keyboard (Ctrl + Alt + Home), after 2.5 s.
-const TB_ZONE = 40, TB_DWELL = 300, TB_AWAY = 60;
-let tbTimer = 0, tbAway = 0, tbDwell = 0, pointer = null;
+//
+// Chrome's own notice ("Press and hold Esc to exit full screen") sits at the top centre for a few
+// seconds when full screen starts and when the keyboard lock engages, right where the toolbar
+// shows: while it does (BROWSER_NOTICE_MS from either), the toolbar waits, then shows if still
+// asked for (the mouse still at the edge, or a show from the keyboard or a release). The reveal
+// stays at the top centre rather than a corner, for the reason above. The time is what 聪哥 saw
+// (about 5 s), not a number from Chrome: the browser says nothing when its notice goes.
+const TB_ZONE = 40, TB_DWELL = 300, TB_AWAY = 60, BROWSER_NOTICE_MS = 5000;
+let tbTimer = 0, tbAway = 0, tbDwell = 0, pointer = null, noticeUntil = 0, noticeTimer = 0;
+function browserNotice() { noticeUntil = Date.now() + BROWSER_NOTICE_MS; }
+const noticeLeft = () => (document.fullscreenElement ? Math.max(0, noticeUntil - Date.now()) : 0);
 const nearToolbar = (x, y) => { const r = toolbar.getBoundingClientRect();
   return x >= r.left - TB_AWAY && x <= r.right + TB_AWAY && y <= r.bottom + TB_AWAY; };
 function hideToolbar() {
@@ -1626,6 +1638,9 @@ function hideToolbar() {
   document.body.classList.add("tbhide");
 }
 function showToolbar(timeout = 2500) {
+  clearTimeout(noticeTimer); noticeTimer = 0;
+  const wait = noticeLeft();
+  if (wait) { noticeTimer = setTimeout(() => showToolbar(timeout), wait); return; }
   document.body.classList.remove("tbhide");
   clearTimeout(tbTimer); tbTimer = timeout ? setTimeout(hideToolbar, timeout) : 0;
 }
@@ -1639,7 +1654,7 @@ window.addEventListener("mousemove", (e) => {
   }
   const r = toolbar.getBoundingClientRect();
   if (e.clientY <= 4 && Math.abs(e.clientX - (r.left + r.right) / 2) <= r.width / 2 + TB_ZONE) {
-    if (!tbDwell) tbDwell = setTimeout(() => { tbDwell = 0; showToolbar(0); }, TB_DWELL);
+    if (!tbDwell) tbDwell = setTimeout(() => { tbDwell = 0; showToolbar(0); }, Math.max(TB_DWELL, noticeLeft()));
   } else { clearTimeout(tbDwell); tbDwell = 0; }
 }, true);
 // in a window: keep the toolbar at the top of the canvas

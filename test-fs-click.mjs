@@ -7,7 +7,8 @@
 //
 // Fails when Connect was not clicked for real, the page is not in full screen after it, or the page
 // logged a refusal before it started the client; or when the toolbar's Full screen, clicked for real
-// (clickForReal), does not go in and out. CHROME=<binary> for another Chrome.
+// (clickForReal), does not go in and out; when a click in full screen captures, the Capture
+// button does not, or the toolbar shows while Chrome's notice does. CHROME=<binary> for another Chrome.
 import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -69,5 +70,36 @@ check("…and its Window, a real click on the hidden toolbar, leaves it", hidden
 const byScript = await send("Runtime.evaluate", { expression: "tbFs.click(), new Promise((r) => setTimeout(() => r(!!document.fullscreenElement), 1000))", returnByValue: true, awaitPromise: true, userGesture: true });
 console.log("INFO  the toolbar's Full screen clicked by script: full screen", byScript?.result?.value, "|",
   (await ev("document.getElementById('log').textContent")).split("\n").filter((l) => /full screen refused/.test(l)).slice(-1)[0] || "nothing refused");
+
+// Capture only when asked (#369, 聪哥 2026-11-14): in full screen a click on the remote desktop is
+// just a click; the toolbar's Capture captures. And the toolbar waits while Chrome's own notice
+// ("Press and hold Esc to exit full screen") shows at the top centre, the first 5 s of full screen.
+// Again in the session state by hand; the Capture check shows the browser grants a capture here,
+// so "no capture" from the click means the page did not ask for one.
+await send("Page.navigate", { url: `http://127.0.0.1:${port}/index.html?fs=0` });
+for (let i = 0; i < 100 && await ev("document.getElementById('status')?.textContent") !== "ready"; i++) await sleep(200);
+await ev("document.body.classList.add('session'), true");
+const fsClick = await clickForReal(send, "#tbFs");
+// the page's full screen (body.fs) comes when the browser's request resolves, the hidden toolbar
+// (tbhide) with the fullscreenchange event, in either order: the mouse moves after both
+for (let i = 0; i < 50 && !(await ev("document.body.classList.contains('fs') && document.body.classList.contains('tbhide') && !!document.fullscreenElement")); i++) await sleep(20);
+const t0 = Date.now();
+const edge = JSON.parse(await ev("(() => { const r = toolbar.getBoundingClientRect(); return JSON.stringify({ x: Math.round((r.left + r.right) / 2), y: 2 }); })()"));
+await send("Input.dispatchMouseEvent", { type: "mouseMoved", x: edge.x, y: edge.y, button: "none" });
+await sleep(1500);
+const heldEarly = await ev("document.body.classList.contains('tbhide')");
+let shownAt = null;
+for (let i = 0; i < 80 && shownAt === null; i++) { await sleep(100); if (!(await ev("document.body.classList.contains('tbhide')"))) shownAt = Date.now() - t0; }
+check("full screen from the toolbar (a real click)", fsClick && (await ev("!!document.fullscreenElement")), `clicked for real: ${fsClick}`);
+check("…the toolbar waits at the top edge while Chrome's notice shows (hidden 1.5 s in)", heldEarly === true);
+check("…and shows once it is gone (5 s), the mouse still at the edge", shownAt !== null && shownAt >= 4500 && shownAt <= 7000, shownAt === null ? "not in 9.5 s" : `${shownAt} ms`);
+// a real click on the remote desktop, away from the toolbar: no capture
+const canvasClick = await clickForReal(send, "#canvas"); await sleep(800);
+const afterClick = await ev("JSON.stringify({ locked: document.pointerLockElement === canvas, captured: document.body.classList.contains('captured') })");
+check("in full screen a click on the remote desktop is just a click: no capture", canvasClick && afterClick === JSON.stringify({ locked: false, captured: false }), `clicked for real: ${canvasClick}, ${afterClick}`);
+const capClick = await clickForReal(send, "#tbCapture"); await sleep(800);
+const afterCapture = await ev("document.pointerLockElement === canvas && document.body.classList.contains('captured')");
+check("…and the toolbar's Capture captures", capClick && afterCapture === true, `clicked for real: ${capClick}, captured: ${afterCapture}`);
+await ev("release(), true");
 console.log(fails ? "FAILED" : "PASSED");
 done(fails ? 1 : 0);

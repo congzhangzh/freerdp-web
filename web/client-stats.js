@@ -24,9 +24,10 @@
 // A decoder's counters have two sets of names, and either may come (the page works with both):
 //  - FreeRDP from 20261113 (#14076): RDPGFX_CODECID_<codec>_<stat>, one set per GFX codec ID.
 //    AV2 has no ID of its own: it is counted under AV1's, RDPGFX_CODECID_AV1_*, when the server
-//    confirmed RDPGFX_CAPVERSION_FRDP_2. So the page tells them apart by the caps version, which
-//    only the web client's Module._freerdp_web_codec_stats() gives ([1], codec-stats.js); without
-//    it the label is "AV1/AV2", never a guess. Unused IDs (and AV1's in a build without AV1)
+//    confirmed RDPGFX_CAPVERSION_FRDP_2. So the page tells them apart by the caps version: the
+//    list's GFX_CAPS_VERSION when the client has it (capsVersion), else the web client's own
+//    Module._freerdp_web_codec_stats() ([1], codec-stats.js); without either the label is
+//    "AV1/AV2", never a guess. Unused IDs (and AV1's in a build without AV1)
 //    are named RDPGFX_CODECID_UNKNOWN*, and are left out.
 //  - FreeRDP up to 20261111: RDPGFX_DECODER_<decoder>_<stat>, with a set of AV2's own.
 // Both have the same <stat> suffixes.
@@ -71,6 +72,19 @@
     if (now?.NETWORK_RTT_AVERAGE_MS === undefined) return null;
     return { rtt: now.NETWORK_RTT_AVERAGE_MS, rttBase: now.NETWORK_RTT_BASE_MS ?? 0, kbps: now.NETWORK_BANDWIDTH_KBPS ?? 0 };
   }
+  // RDP's own bytes, as FreeRDP's transport reads and writes them above TLS (transport.c: rdp->inBytes,
+  // rdp->outBytes): no TLS records, no WebSocket frames, which the page's own Network rows count.
+  // null for a client without them; a rate is null after a counter went down (a new connection)
+  function rdpBytes(now, prev, dt) {
+    if (now?.NETWORK_BYTES_RECEIVED === undefined || now?.NETWORK_BYTES_SENT === undefined) return null;
+    return { rx: now.NETWORK_BYTES_RECEIVED, tx: now.NETWORK_BYTES_SENT,
+      rxPerSecond: rate(now, prev, "NETWORK_BYTES_RECEIVED", dt), txPerSecond: rate(now, prev, "NETWORK_BYTES_SENT", dt) };
+  }
+  // the GFX caps version the server confirmed (RdpgfxClientContext::CapsVersion, upstream
+  // aa9940f24), from the list's GFX_CAPS_VERSION when the client has it (0 before the confirm);
+  // undefined for a client without it, which then leaves the web client's own reading to the page
+  // (codec-stats.js [1])
+  const capsVersion = (now) => now?.GFX_CAPS_VERSION;
   // sound from the server (rdpsnd; the microphone is not counted); null until the first wave
   function audio(now, prev, dt) {
     if (!now?.AUDIO_WAVES) return null;
@@ -115,7 +129,7 @@
     });
   }
 
-  const api = { FRDP_2, index, read, rate, network, audio, decoder, decoders, hasDecoders, av1Slot };
+  const api = { FRDP_2, index, read, rate, network, rdpBytes, capsVersion, audio, decoder, decoders, hasDecoders, av1Slot };
   if (typeof module !== "undefined" && module.exports) { module.exports = api; return; }
   root.freerdpClientStats = api;
 })(typeof window !== "undefined" ? window : globalThis);
