@@ -1,4 +1,4 @@
-import { connectTestSession } from "./test-connect.mjs";
+import { clickForReal, connectTestSession } from "./test-connect.mjs";
 // 聪哥's drops (2026-11-05, 2026-11-10): two screens (separate monitors), switching Window / Full
 // screen a few times, then the toolbar's Reconnect. On his Mac (device pixel ratio 2, Remote scale
 // 200 %) the picture stopped updating after such switches, and a Reconnect then ended in a wasm
@@ -132,7 +132,7 @@ const openSecond = async () => {
 if (SCREENS === 2 && process.env.REAL !== "0") {
   for (let r = 1; r <= ROUNDS; r++) {
     // leave full screen if in it (round 1 starts windowed with two screens): one screen again
-    if (await main.ev("!!document.fullscreenElement")) await main.ev("tbFs.click(), 1");
+    if (await main.ev("!!document.fullscreenElement")) await clickForReal(main.send, "#tbFs");
     await main.ev("screensOff(), 1");
     for (let i = 19; i >= 0; i--) { await sleep(40); await metrics(W + 10 * i, H + 8 * i); }
     await sleep(3000);
@@ -141,9 +141,11 @@ if (SCREENS === 2 && process.env.REAL !== "0") {
     check(`round ${r}: window, one screen: the picture updates`, p.ok, p.why + ", canvas " + (await main.ev("canvas.width + 'x' + canvas.height")));
     if (ab) break;
     // full screen, the window growing to the screen over ~0.8 s as on macOS, then All screens
-    await main.ev("tbFs.click(), 1");
+    const clicked = await clickForReal(main.send, "#tbFs");
     for (let i = 1; i <= 20; i++) { await sleep(40); await metrics(W + 10 * i, H + 8 * i); }
     await sleep(2000);
+    // the steps below are only the user's when the page really is in full screen
+    check(`round ${r}: the toolbar's Full screen (a real click) enters full screen`, clicked && (await main.ev("!!document.fullscreenElement")), `clicked for real: ${clicked}`);
     const opened = await openSecond();
     await sleep(4000);
     ab = await aborted();
@@ -155,10 +157,13 @@ if (SCREENS === 2 && process.env.REAL !== "0") {
 // Window <-> Full screen, the window growing to the screen over ~0.8 s as on macOS
 for (let r = 1; r <= ROUNDS; r++) {
   const toFull = !(await main.ev("!!document.fullscreenElement"));
-  await main.ev("tbFs.click(), 1");
+  // the toolbar's Full screen / Window, clicked for real: Chrome 157 refuses full screen to a click
+  // made by Runtime.evaluate (#371), and this test then switched nothing and still passed
+  const clicked = await clickForReal(main.send, "#tbFs");
   if (toFull) for (let i = 1; i <= 20; i++) { await sleep(40); await metrics(W + 10 * i, H + 8 * i); }
   else for (let i = 19; i >= 0; i--) { await sleep(40); await metrics(W + 10 * i, H + 8 * i); }
   await sleep(3000);
+  check(`switch ${r}: the page is ${toFull ? "in full screen" : "in a window"} (a real click)`, clicked && (await main.ev("!!document.fullscreenElement")) === toFull, `clicked for real: ${clicked}`);
   const ab = await aborted();
   p = ab ? { ok: false, why: "aborted" } : await painting();
   check(`switch ${r} (${toFull ? "to full screen" : "to window"}): the picture updates`, p.ok, p.why + ", canvas " + (await main.ev("canvas.width + 'x' + canvas.height")));

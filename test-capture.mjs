@@ -1,4 +1,4 @@
-import { connectTestSession } from "./test-connect.mjs";
+import { clickForReal, connectTestSession } from "./test-connect.mjs";
 // Mouse and keyboard capture against the CI xrdp session: the toolbar's Capture locks the
 // pointer; relative mouse moves move the page's cursor and the remote pointer the same way
 // (XQueryPointer in the session, test-keymap.py); Ctrl + Alt + X does not release, a Ctrl + Alt
@@ -105,8 +105,10 @@ await key("keyUp", "Alt", "AltLeft", 18, 2); await key("keyUp", "Control", "Cont
 s = await page(); console.log("after Ctrl + Alt:", JSON.stringify(s));
 check("a Ctrl + Alt tap releases", !s.locked && !s.captured && !s.drawn);
 
-// full screen: a click on the remote desktop captures
-await ev("tbFs.click(), 1"); await sleep(3000);
+// full screen: a click on the remote desktop captures. The toolbar's Full screen is clicked for
+// real: Chrome 157 refuses full screen to a click made by Runtime.evaluate (#371)
+const fsClicked = await clickForReal(send, "#tbFs"); await sleep(3000);
+check("the toolbar's Full screen (a real click) puts the page in full screen", fsClicked && (await ev("!!document.fullscreenElement")), `clicked for real: ${fsClicked}`);
 await click(400, 300); await sleep(500);
 s = await page(); console.log("full screen, after a click:", JSON.stringify(s));
 check("in full screen a click captures", s.locked && s.captured);

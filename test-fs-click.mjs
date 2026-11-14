@@ -6,12 +6,13 @@
 //   node test-fs-click.mjs <site dir>        e.g. dist/site (./site.sh makes one)
 //
 // Fails when Connect was not clicked for real, the page is not in full screen after it, or the page
-// logged a refusal before it started the client. CHROME=<binary> for another Chrome.
+// logged a refusal before it started the client; or when the toolbar's Full screen, clicked for real
+// (clickForReal), does not go in and out. CHROME=<binary> for another Chrome.
 import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { connectTestSession } from "./test-connect.mjs";
+import { clickForReal, connectTestSession } from "./test-connect.mjs";
 
 const site = resolve(process.argv[2] || "dist/site"), port = 8249, cdp = 9355;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -51,5 +52,22 @@ check("Connect is clicked for real (Input.dispatchMouseEvent)", sent.filter((m) 
 check("the page is in full screen after Connect", fs);
 check("…and refused nothing before it started the client", !before.some((l) => /full screen refused/.test(l)), before.filter((l) => /full screen/.test(l)).join(" | "));
 console.log("INFO ", (log[start] || "the client did not start").slice(0, 120));
+
+// The toolbar's Full screen, clicked for real (clickForReal, as test-capture, test-fs-connect and
+// test-screens-fs click it): in, then out from the hidden toolbar (it shows when the mouse rests at
+// the top edge). No server: the page is put in its session state by hand, which shows the toolbar.
+await send("Page.navigate", { url: `http://127.0.0.1:${port}/index.html?fs=0` });
+for (let i = 0; i < 100 && await ev("document.getElementById('status')?.textContent") !== "ready"; i++) await sleep(200);
+await ev("document.body.classList.add('session'), true");
+const inClick = await clickForReal(send, "#tbFs"); await sleep(1000);
+const tbIn = await ev("!!document.fullscreenElement"), hidden = await ev("document.body.classList.contains('tbhide')");
+const outClick = await clickForReal(send, "#tbFs"); await sleep(1000);
+const tbOut = await ev("!document.fullscreenElement");
+check("the toolbar's Full screen, a real click, enters full screen", inClick && tbIn, `clicked for real: ${inClick}`);
+check("…and its Window, a real click on the hidden toolbar, leaves it", hidden && outClick && tbOut, `toolbar hidden: ${hidden}, clicked for real: ${outClick}`);
+// the old way, a click by script, for the record: Chrome 157 refused it in test-page.mjs (#371)
+const byScript = await send("Runtime.evaluate", { expression: "tbFs.click(), new Promise((r) => setTimeout(() => r(!!document.fullscreenElement), 1000))", returnByValue: true, awaitPromise: true, userGesture: true });
+console.log("INFO  the toolbar's Full screen clicked by script: full screen", byScript?.result?.value, "|",
+  (await ev("document.getElementById('log').textContent")).split("\n").filter((l) => /full screen refused/.test(l)).slice(-1)[0] || "nothing refused");
 console.log(fails ? "FAILED" : "PASSED");
 done(fails ? 1 : 0);

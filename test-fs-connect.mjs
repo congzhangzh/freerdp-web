@@ -1,4 +1,4 @@
-import { connectTestSession } from "./test-connect.mjs";
+import { clickForReal, connectTestSession } from "./test-connect.mjs";
 // "Full screen" checked at Connect, on a screen that grows the way macOS animates into full screen
 // (device pixel ratio 2): the window is small when the page enters full screen and reaches the
 // screen's size only ~0.8 s later. Which size and scale does the server end up with, at once and
@@ -26,7 +26,11 @@ ws.addEventListener("message", (e) => { const m = JSON.parse(e.data); if (m.id &
 const send = (method, params = {}) => new Promise((r) => { const i = ++id; p.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
 const ev = async (expression) => (await send("Runtime.evaluate", { expression, returnByValue: true, userGesture: true })).result.value;
 const metrics = (width, height) => send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 2, mobile: false });
-if (!process.env.GNOME) execFileSync("docker", ["cp", new URL("test-keymap.py", import.meta.url).pathname, "grd-wasm-xrdp-ci:/tmp/keymap.py"]);
+// XRDP: the xrdp container (grd-wasm-xrdp-ci), GATEWAY its websockify (127.0.0.1:6081)
+const XRDP = process.env.XRDP || "grd-wasm-xrdp-ci", GATEWAY = process.env.GATEWAY || "127.0.0.1:6081";
+let fails = 0;
+const check = (name, ok, detail = "") => { console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail ? "  (" + detail + ")" : ""}`); if (!ok) fails++; };
+if (!process.env.GNOME) execFileSync("docker", ["cp", new URL("test-keymap.py", import.meta.url).pathname, XRDP + ":/tmp/keymap.py"]);
 const GNOME = process.env.GNOME, GNOME_CT = process.env.GNOME_CT;
 if (GNOME && !GNOME_CT) throw new Error("GNOME_CT=<the GNOME container's name> is needed with GNOME");
 const gnomeScreen = () => {
@@ -39,9 +43,9 @@ const gnomeScreen = () => {
 };
 const screen = () => {
   if (GNOME) return gnomeScreen();
-  const displays = execFileSync("docker", ["exec", "grd-wasm-xrdp-ci", "ls", "/tmp/.X11-unix"]).toString().split(/\s+/).filter(Boolean);
+  const displays = execFileSync("docker", ["exec", XRDP, "ls", "/tmp/.X11-unix"]).toString().split(/\s+/).filter(Boolean);
   const d = ":" + displays.map((n) => +n.slice(1)).sort((a, b) => b - a)[0];
-  return execFileSync("docker", ["exec", "-u", "test", "-e", "XAUTHORITY=/home/test/.Xauthority", "grd-wasm-xrdp-ci", "python3", "/tmp/keymap.py", d, "--size"]).toString().split("\n")[1];
+  return execFileSync("docker", ["exec", "-u", "test", "-e", "XAUTHORITY=/home/test/.Xauthority", XRDP, "python3", "/tmp/keymap.py", d, "--size"]).toString().split("\n")[1];
 };
 const layouts = () => logs.filter((l) => /W\/H=|DesktopScaleFactor=/.test(l)).map((l) => l.replace(/^.*layout_pdu\]: \s*/, "").replace(/Orientation: \S+ /, ""));
 let seen = 0;
@@ -54,7 +58,7 @@ const report = async (label) => {
 await send("Runtime.enable");
 await metrics(1280, 760);   // the window before full screen, in CSS pixels
 await send("Page.navigate", { url: (process.env.PAGE || "http://127.0.0.1:8080/index.html") +
-  `?v=${GNOME || "127.0.0.1:6081"}&u=${GNOME ? "tester" : "test"}&fs=1&extra=` + encodeURIComponent("/gfx -clipboard /log-filters:com.freerdp.channels.disp.client:DEBUG") });
+  `?v=${GNOME || GATEWAY}&u=${GNOME ? "tester" : "test"}&fs=1&extra=` + encodeURIComponent("/gfx -clipboard /log-filters:com.freerdp.channels.disp.client:DEBUG") });
 // SCALE=<percent>: the Remote scale setting chosen before Connect (default Automatic)
 if (process.env.SCALE) {
   while (!(await ev(`!!document.querySelector('input[name=scale][value="${process.env.SCALE}"]')`))) await sleep(100);
@@ -71,7 +75,13 @@ await connecting.catch(e => { chrome.kill(); throw e; });
 await sleep(15000);
 console.log(logs.find((l) => /sdl-freerdp /.test(l))?.replace(/^.*sdl-freerdp /, "args: "));
 await report("connected:");
-await ev("tbFs.click(), 1"); await sleep(4000); await report("Window:");
-await ev("tbFs.click(), 1"); await sleep(4000); await report("Full screen again:");
+check("Connect puts the page in full screen", await ev("!!document.fullscreenElement"));
+// the toolbar's Full screen, clicked for real: Chrome 157 refuses full screen to a click made by
+// Runtime.evaluate (#371), and "Full screen again" stayed a window
+let clicked = await clickForReal(send, "#tbFs"); await sleep(4000); await report("Window:");
+check("the toolbar's Window (a real click) leaves full screen", clicked && !(await ev("!!document.fullscreenElement")), `clicked for real: ${clicked}`);
+clicked = await clickForReal(send, "#tbFs"); await sleep(4000); await report("Full screen again:");
+check("…and its Full screen (a real click) enters it again", clicked && (await ev("!!document.fullscreenElement")), `clicked for real: ${clicked}`);
 if (process.env.LOG) console.log("LOG\n" + logs.join("\n"));
-ws.close(); chrome.kill();
+console.log(fails ? "FAILED" : "PASSED");
+ws.close(); chrome.kill(); process.exitCode = fails ? 1 : 0;

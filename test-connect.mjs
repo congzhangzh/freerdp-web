@@ -40,3 +40,26 @@ export async function connectTestSession(send, {password="test", timeout=60000}=
   }
   throw new Error("WASM did not become ready within the test connection deadline.");
 }
+
+// A real click on a page element (Input.dispatchMouseEvent at its centre), for what needs the
+// browser's user activation: Chrome 157 refuses full screen to a click made by Runtime.evaluate
+// (#371), so the toolbar's Full screen is clicked this way. In full screen the toolbar is hidden
+// until the mouse rests at the top edge (app.js showToolbar: y <= 4 for 300 ms): it does that
+// first. Resolves to whether the element itself got the click.
+export async function clickForReal(send, selector) {
+  const ev = async (expression) => (await send("Runtime.evaluate", { expression, returnByValue: true }))?.result?.value;
+  const mouse = async (x, y, types = ["mouseMoved", "mousePressed", "mouseReleased"]) => {
+    for (const type of types) await send("Input.dispatchMouseEvent", { type, x, y, button: type === "mouseMoved" ? "none" : "left", clickCount: 1 }); };
+  const reveal = await ev(`(() => { if (!document.body.classList.contains("tbhide") || !document.getElementById("toolbar")?.contains(document.querySelector(${JSON.stringify(selector)}))) return null;
+    const r = document.getElementById("toolbar").getBoundingClientRect(); return JSON.stringify({ x: (r.left + r.right) / 2, y: 2 }); })()`);
+  if (reveal) { const { x, y } = JSON.parse(reveal); await mouse(x, y, ["mouseMoved"]); await new Promise((r) => setTimeout(r, 700)); }
+  const at = await ev(`(() => { const e = document.querySelector(${JSON.stringify(selector)}); if (!e) return null;
+    const r = e.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    if (!e.contains(document.elementFromPoint(x, y))) return null;
+    window.__clickedForReal = false; e.addEventListener("click", () => { window.__clickedForReal = true; }, { once: true, capture: true });
+    return JSON.stringify({ x, y }); })()`);
+  if (!at) return false;
+  const { x, y } = JSON.parse(at);
+  await mouse(x, y);
+  return (await ev("window.__clickedForReal")) === true;
+}
