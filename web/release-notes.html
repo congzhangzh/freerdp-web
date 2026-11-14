@@ -33,6 +33,16 @@
   <!-- shown only in Chinese (i18n.js): the entries below stay in English -->
   <p class="note" data-i18n="notes.english" data-i18n-only="zh ja fr" hidden></p>
 
+  <h2>20261113.3 <span class="muted">· 13 November 2026</span></h2>
+  <ul>
+    <li>A connection that stops without closing (a tunnel that hangs, a network that changed) now comes back by itself,
+      in about 20 s, where the page used to show a frozen picture for good. A server that is quiet while nothing happens
+      is not cut. One side effect with xrdp: when sound that was playing stops on a still screen, the page reconnects
+      10 s later (a few seconds' pause).</li>
+    <li><b>Reconnect</b> on such a connection takes about 20 s instead of over a minute, and the page shows "Reconnecting…"
+      meanwhile.</li>
+  </ul>
+
   <h2>20261113.2 <span class="muted">· 13 November 2026</span></h2>
   <ul>
     <li>The page works on an iPhone: it used to stay at "Loading…". Full screen is not available there.

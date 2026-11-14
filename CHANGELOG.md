@@ -15,6 +15,29 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261113.3
+
+- **A connection that dies without closing comes back by itself** (#369). A hung ssh tunnel or a
+  network that changed (no FIN reaches the browser) left the page on a picture that looked alive,
+  for good: a WebSocket has no keepalive and FreeRDP no read watchdog. Now the page keeps a
+  watchdog: once the server has been heard talking unprompted (with nothing on the screen changing
+  and no input from here: a heartbeat, round trip requests, sound), 10 s of silence, or three times
+  its own pace if that is slower, means the connection is dead; the page closes it and FreeRDP
+  reconnects by itself. FreeRDP's shadow server on GNOME, behind a tunnel that hangs: closed after
+  10 s, the desktop answering keys again within 20 s, with no click (the previous page was still
+  dead at 67 s). A server that is silent when idle is never cut: xrdp at rest sent not one message
+  in 180 s, and the page kept its connection. **The cost:** xrdp playing sound arms the watchdog,
+  and when the sound stops on a still screen the page cannot tell that from a dead link, so it
+  reconnects 10 s later (FreeRDP's own reconnect, a few seconds).
+- **Reconnect on a hung connection takes 20 s instead of 76 s.** FreeRDP's socket layer
+  (Emscripten's SOCKFS) waits for the WebSocket's close event, and Chrome sends it only when its
+  closing handshake gives up, 60 s later. A socket the page closes now gets its close event at
+  once, and the browser's late one is dropped.
+- While it reconnects, the page shows the Reconnecting bar instead of the frozen picture.
+- Tests: `web/tests/dead-watch.test.cjs` (traces of shadow, xrdp, sound, typing),
+  `test-deadnet.mjs` (a gateway in node that hangs, in Chromium; in CI's browsers job) and
+  `test-idle.mjs` (an idle real session, e.g. xrdp through the release kit's harness).
+
 ## 20261113.2
 
 - **The page works on an iPhone.** iPhone's Safari has no full screen for web pages, and the page
