@@ -148,3 +148,20 @@ test("a rate from the new names, and none across a reconnect", () => {
   assert.strictEqual(S.decoders({ [k]: 50 }, { [k]: 20 }, 2, 0)[0].perSecond, 15);
   assert.strictEqual(S.decoders({ [k]: 5 }, { [k]: 20 }, 2, 0)[0].perSecond, null);
 });
+
+// FreeRDP#14076 trimmed (the integration after next15): the client stops publishing
+// RDPGFX_CODECID_<codec>_KEY_FRAMES, _HARDWARE and _FALLBACKS. Missing is not 0: Info shows no key
+// count and no fallbacks then, and hardware stays unknown (the page asks WebCodecs itself)
+const TRIMMED = /_(KEY_FRAMES|HARDWARE|FALLBACKS)$/;
+test("trimmed names: no key frames, hardware or fallbacks: null, never a 0 that looks measured", () => {
+  const names = fixture("avon").filter((n) => !TRIMMED.test(n));
+  assert.ok(names.length < fixture("avon").length && names.includes("RDPGFX_CODECID_AV1_PICTURES"));
+  const now = reading(names, { RDPGFX_CODECID_AV1_PICTURES: 12, RDPGFX_CODECID_AV1_FAILED: 1, RDPGFX_CODECID_AV1_DECODE_NS_SUM: 26e6 });
+  assert.strictEqual(S.hasDecoders(now), true);
+  const [d] = S.decoders(now, null, 1, S.FRDP_2);
+  assert.deepStrictEqual([d.id, d.pictures, d.failed, d.avgMs], ["AV2", 12, 1, 2]);
+  assert.deepStrictEqual([d.keyFrames, d.hardware, d.fallbacks], [null, null, null]);
+  // a client that still has them: a measured 0 stays 0
+  const full = S.decoders(reading(fixture("avon"), { RDPGFX_CODECID_AV1_PICTURES: 12 }), null, 1, S.FRDP_2)[0];
+  assert.deepStrictEqual([full.keyFrames, full.hardware, full.fallbacks], [0, null, 0]);
+});

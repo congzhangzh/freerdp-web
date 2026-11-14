@@ -1586,8 +1586,10 @@ function updateInfo() {
       const hw = d.hardware === null ? "" : `, ${d.hardware ? t("info.hardware", "hardware") : t("info.software", "software")}`;
       const rate = per(d.perSecond), avg = d.avgMs.toFixed(1), max = d.maxMs.toFixed(1), name = d.label;
       return [t("info.decoderStats", `${name} results`, { name }),
-        t("info.decoderValue", `pictures: ${d.pictures} (${rate} /s), failed: ${d.failed}, no picture: ${d.noPicture}, key frames: ${d.keyFrames}; ${avg} ms per attempt, ${max} ms max`,
-          { n: d.pictures, rate, failed: d.failed, none: d.noPicture, key: d.keyFrames, avg, max }) + hw +
+        t("info.decoderValue", `pictures: ${d.pictures} (${rate} /s), failed: ${d.failed}, no picture: ${d.noPicture}; ${avg} ms per attempt, ${max} ms max`,
+          { n: d.pictures, rate, failed: d.failed, none: d.noPicture, avg, max }) +
+          // key frames and fallbacks only from a client that still counts them (null: not counted)
+          (d.keyFrames === null ? "" : t("info.decoderKeyFrames", `, key frames: ${d.keyFrames}`, { key: d.keyFrames })) + hw +
           (d.fallbacks ? t("info.decoderFallbacks", `, ${d.fallbacks} fallbacks`, { n: d.fallbacks }) : "")];
     }) : []),
     [t("info.audio", "Audio"), (() => { const c = Module.freerdpAudioContext, a = Module.freerdpAudio;
