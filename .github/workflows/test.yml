@@ -31,6 +31,32 @@ jobs:
       - name: Which kit pre-release holds the client (kit-release.sh, for site.sh)
         run: ./test-kit-release.sh
 
+  # Full screen at Connect in the runner's own Google Chrome, the one the release kit's tests use
+  # (2026-11-14, kit round 43542667639: on Chrome 157 a click made by Runtime.evaluate no longer let
+  # the page go full screen, and every All screens test measured the windowed page, 602 x 456).
+  # test-fs-probe.mjs: a page with a button, clicked by script and for real; test-fs-click.mjs: the
+  # page itself, connected the way the tests connect (test-connect.mjs).
+  chrome:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}   # kit-release.sh: more GitHub API calls an hour
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: The runner's Chrome
+        run: google-chrome --version
+      - name: Full screen from a click, by script and for real (test-fs-probe.mjs)
+        run: node test-fs-probe.mjs
+      - name: The site, with the kit's newest web client
+        run: NO_MEDIA=1 ./site.sh kit
+        if: success() || failure()
+      - name: The tests' Connect puts the page in full screen (test-fs-click.mjs)
+        run: node test-fs-click.mjs dist/site
+        if: success() || failure()
+
   # The page in the browsers Chrome alone does not stand for (2026-11-13, #368: Firefox showed its
   # "Paste" box all the time and an iPhone never got past "Loading…", for weeks, because nothing ran
   # them): Firefox, WebKit as an iPhone and as the desktop's Safari, and Chrome, with the release
