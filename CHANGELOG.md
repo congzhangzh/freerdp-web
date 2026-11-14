@@ -15,6 +15,24 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261114.2
+
+- **Capture only when you ask, also against the client itself.** After 20261114.1 the page no
+  longer asked for a capture at a click, but the client still could: SDL turns on its relative
+  mouse mode when the app moves a hidden mouse to the window's centre twice within 30 ms ("warp
+  emulation", meant for games; FreeRDP moves the mouse for each pointer position the server
+  sends). That mode asks the browser for the pointer lock, which Emscripten holds back until the
+  next click or key press, so the page seemed to capture by itself; and since SDL never sees the
+  lock (the page keeps it to itself), it asked again at every mouse button press, also right after
+  Ctrl + Alt. Now the page tells SDL not to emulate warps (`SDL_MOUSE_EMULATE_WARP_WITH_RELATIVE=0`),
+  and the canvas ignores any pointer lock request but the toolbar's Capture, as it already ignored
+  the client's full screen requests; the Log says so once ("the client asked to capture the
+  mouse: ignored"). A server's pointer move is handled as before: SDL takes it as a mouse motion
+  (the browser cannot move the real mouse).
+- Tests: `test-fs-click.mjs` asks for the lock from a canvas mousedown listener, the way
+  Emscripten's deferred call does, and checks that a real click on the remote desktop does not
+  capture while the toolbar's Capture still does (CI, the runner's Chrome).
+
 ## 20261114.1
 
 - **Capture only when you ask.** In full screen, a click on the remote desktop captured the mouse
