@@ -15,6 +15,18 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261113.6
+
+- **`test-page.mjs` goes into and out of full screen from a real click.** Its check called the
+  page's `toggleFullscreen` from a script (`Runtime.evaluate` with `userGesture`), which Chrome
+  157 no longer lets go full screen, the same cause as 20261113.5: the release kit's site run
+  43557603052 failed on "full screen: the page enters it and leaves it (in false, out true)",
+  every other check passing. It now puts a button over the page and clicks it with
+  `Input.dispatchMouseEvent`, the button calling `toggleFullscreen` as the toolbar's does.
+  Nothing in the page changed.
+- CI runs `test-page.mjs` in the runner's own Chrome with the kit's newest client, and the old
+  check beside it (shown, not failed). Before, CI did not run `test-page.mjs` at all.
+
 ## 20261113.5
 
 - **The tests click Connect the way a person does** (the release kit's All screens tests). From
