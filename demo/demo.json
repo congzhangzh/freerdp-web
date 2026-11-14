@@ -1,8 +1,8 @@
 {
   "recorded": {
-    "kit": "6c953458b5c4903ad281817b79c40be7b08cc3b0",
-    "web": "web-20261113.2-6c953458b5c4",
-    "xrdp": "xrdp-20261113.2-6c953458b5c4",
+    "kit": "602d77d84f581b17cab9708e7415ab4babd1bdde",
+    "web": "web-20261114.3-602d77d84f58",
+    "xrdp": "xrdp-20261114.3-602d77d84f58",
     "pipewire-module-xrdp": "pipewire-module-xrdp-20261031.1-1b78a2c01cc2"
   },
   "videos": [
@@ -224,6 +224,26 @@
       "src": "demo/freerdp-tk-uvx.mp4",
       "poster": "demo/freerdp-tk-uvx.jpg",
       "caption": "freerdp-tk from PyPI with plain uvx on a Linux desktop (Debian 13) whose Python has no Tk: freerdp-tk starts again with uv's own Python, which has it. With the FreeRDP client in its package, the kit's own, taken before Debian's: the same connection, saved with its password in the system keyring, to rdp-release-kit's xrdp with GNOME on Wayland (Fedora 45): a terminal, then Firefox there with web video and WebGL, with sound, in AV1. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD."
+    },
+    {
+      "title": "Windows Remote Desktop, freerdp-tk release (Windows)",
+      "src": "demo/freerdp-tk-windows.mp4",
+      "poster": "demo/freerdp-tk-windows.jpg",
+      "caption": "freerdp-tk on Windows (Server 2025, a CI machine): the kit's Windows client unpacked from its zip in PowerShell, freerdp-tk started from it, a connection to Windows' own Remote Desktop on the same PC: Notepad from Win+R, then Firefox in the session with web video and WebGL, its sound through the session; disconnect, freerdp-tk again, the saved connection opened with the password from Windows' Credential Manager. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD.",
+      "i18n": {
+        "zh": {
+          "title": "Windows 远程桌面，freerdp-tk 发布版（Windows）",
+          "caption": "Windows 上的 freerdp-tk（Server 2025，一台 CI 机器）：在 PowerShell 中解压 kit 的 Windows 客户端 zip，从中启动 freerdp-tk，连接同一台电脑上 Windows 自带的远程桌面：用 Win+R 打开记事本，然后在会话里的 Firefox 中播放网页视频和 WebGL，声音经会话传来；断开后再次打开 freerdp-tk，用 Windows 凭据管理器中的密码打开保存的连接。Big Buck Bunny © Blender Foundation，CC BY 3.0；WebGL Aquarium © Google，BSD。"
+        },
+        "ja": {
+          "title": "Windows リモート デスクトップ、freerdp-tk リリース版（Windows）",
+          "caption": "Windows（Server 2025、CI マシン）上の freerdp-tk です。kit の Windows クライアントを PowerShell で zip から展開し、そこから freerdp-tk を起動して、同じ PC 上の Windows 標準のリモート デスクトップに接続します。Win+R からメモ帳を開き、セッション内の Firefox で Web 動画と WebGL を再生し、音声はセッション経由で届きます。切断してから freerdp-tk をもう一度開き、Windows の資格情報マネージャーのパスワードで保存した接続を開きます。Big Buck Bunny © Blender Foundation、CC BY 3.0。WebGL Aquarium © Google、BSD。"
+        },
+        "fr": {
+          "title": "Bureau à distance Windows, freerdp-tk (version publiée, Windows)",
+          "caption": "freerdp-tk sur Windows (Server 2025, une machine de CI) : le client Windows du kit décompressé depuis son zip dans PowerShell, freerdp-tk lancé depuis celui-ci, une connexion au Bureau à distance de Windows sur le même PC : le Bloc-notes depuis Win+R, puis Firefox dans la session avec une vidéo web et du WebGL, le son passant par la session ; déconnexion, freerdp-tk à nouveau, et la connexion enregistrée ouverte avec le mot de passe du Gestionnaire d’identification de Windows. Big Buck Bunny © Blender Foundation, CC BY 3.0 ; WebGL Aquarium © Google, BSD."
+        }
+      }
     }
   ],
   "windows": [

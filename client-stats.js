@@ -84,14 +84,17 @@
     if (!p) return null;
     const key = (s) => `${p}${id}_${s}`;
     const get = (s) => now?.[key(s)] ?? 0;
+    // the ones FreeRDP stopped publishing (FreeRDP#14076, trimmed): null when absent, never a 0
+    // that looks measured
+    const opt = (s) => now?.[key(s)] ?? null;
     const pictures = get("PICTURES"), failed = get("FAILED"), noPicture = get("NO_PICTURE");
     const tries = pictures + failed + noPicture;
     if (!tries) return null;
-    const hardware = get("HARDWARE");
-    return { pictures, failed, noPicture, perSecond: rate(now, prev, key("PICTURES"), dt), keyFrames: get("KEY_FRAMES"),
+    const hardware = opt("HARDWARE");
+    return { pictures, failed, noPicture, perSecond: rate(now, prev, key("PICTURES"), dt), keyFrames: opt("KEY_FRAMES"),
       avgMs: get("DECODE_NS_SUM") / tries / 1e6, maxMs: get("DECODE_NS_MAX") / 1e6,
       lastPictureS: get("LAST_PICTURE_AGE_NS") / 1e9, hardware: hardware === 2 ? true : hardware === 1 ? false : null,
-      fallbacks: get("FALLBACKS") };
+      fallbacks: opt("FALLBACKS") };
   }
   // what the counters under AV1's codec ID are: "AV2" when the server confirmed FRDP_2, "AV1" for
   // any other caps version, null when the page can't know (caps: 0 before the confirm, or
