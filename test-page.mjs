@@ -288,10 +288,25 @@ await ev("document.getElementById('vaultLock').click(), document.querySelector('
 logs.length = 0;
 
 // full screen, the page's own way in and out (toggleFullscreen, as the toolbar and the hotkey do):
-// it binds the browser's exitFullscreen when it may be missing (iPhone, #368), so it must still work here
-const fsIn = await ev("toggleFullscreen(), new Promise((r) => setTimeout(() => r(!!document.fullscreenElement), 1000))");
-const fsOut = await ev("toggleFullscreen(), new Promise((r) => setTimeout(() => r(!document.fullscreenElement), 1000))");
-check("full screen: the page enters it and leaves it", fsIn && fsOut, `in ${fsIn}, out ${fsOut}`);
+// it binds the browser's exitFullscreen when it may be missing (iPhone, #368), so it must still work here.
+// Called from a real click (Input.dispatchMouseEvent) on a button put over the page for it, as the
+// toolbar's button calls it: on Chrome 157 a click made by Runtime.evaluate no longer lets a page go
+// full screen (#371, the release kit's site run 43557603052: "in false").
+async function realClick(code) {
+  const at = await ev(`(() => { const b = document.createElement("button"); b.id = "testRealClick"; b.textContent = "test";
+    b.style.cssText = "position:fixed;left:0;top:0;width:48px;height:48px;z-index:2147483647";
+    b.onclick = () => { b.remove(); window.__realClicked = true; ${code}; }; window.__realClicked = false; document.body.append(b);
+    return document.elementFromPoint(24, 24) === b; })()`);
+  for (const type of ["mouseMoved", "mousePressed", "mouseReleased"])
+    await send("Input.dispatchMouseEvent", { type, x: 24, y: 24, button: type === "mouseMoved" ? "none" : "left", clickCount: 1 });
+  const clicked = await ev("window.__realClicked"); await ev("document.getElementById('testRealClick')?.remove(), true");
+  return at && clicked;
+}
+const clickIn = await realClick("toggleFullscreen()"); await sleep(1000);
+const fsIn = await ev("!!document.fullscreenElement");
+const clickOut = await realClick("toggleFullscreen()"); await sleep(1000);
+const fsOut = await ev("!document.fullscreenElement");
+check("full screen: the page enters it and leaves it", clickIn && clickOut && fsIn && fsOut, `in ${fsIn}, out ${fsOut}, clicked for real ${clickIn}, ${clickOut}`);
 
 // session settings as a user clicks them; the mstsc shortcuts; a gateway port with no server
 await ev(`(() => { for (const s of ['input[name=codec][value="bandwidth"]', 'input[name=strategy][value="bandwidth"]',

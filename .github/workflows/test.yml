@@ -38,7 +38,7 @@ jobs:
   # page itself, connected the way the tests connect (test-connect.mjs).
   chrome:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       GH_TOKEN: ${{ github.token }}   # kit-release.sh: more GitHub API calls an hour
     steps:
@@ -63,6 +63,17 @@ jobs:
           git fetch -q --depth=1 origin 35eed3f74898f7f4c2ca22edf72817fe06707fd5
           mkdir -p "$RUNNER_TEMP/old" && git show 35eed3f74898f7f4c2ca22edf72817fe06707fd5:test-connect.mjs > "$RUNNER_TEMP/old/test-connect.mjs"
           cp test-fs-click.mjs serve.py "$RUNNER_TEMP/old/" && node "$RUNNER_TEMP/old/test-fs-click.mjs" dist/site
+      # (2026-11-14, the kit's site run 43557603052: test-page's full screen in and out, called from a click
+      # by script, "in false" on Chrome 157; it now clicks for real, as the toolbar's button is clicked)
+      - name: The page with the client, full screen in and out from a real click (test-page.mjs)
+        run: node test-page.mjs dist/site "$RUNNER_TEMP/page"
+        if: success() || failure()
+      - name: The same with the click by script, test-page.mjs of 20261113.5 (shown, not failed)
+        continue-on-error: true
+        if: success() || failure()
+        run: |
+          git fetch -q --depth=1 origin e83a13a8227ea686ffe20db204da33d263ee0930
+          git show e83a13a8227ea686ffe20db204da33d263ee0930:test-page.mjs > test-page.old.mjs && node test-page.old.mjs dist/site "$RUNNER_TEMP/page-old"
 
   # The page in the browsers Chrome alone does not stand for (2026-11-13, #368: Firefox showed its
   # "Paste" box all the time and an iPhone never got past "Loading…", for weeks, because nothing ran
