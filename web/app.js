@@ -518,9 +518,7 @@ function moduleConfig() {
   // the page's own input boxes. SDL reads hints from the environment: limit it to the canvas.
   // FreeRDP reads its hotkeys from $XDG_CONFIG_HOME/freerdp/sdl-freerdp.json; the C runtime
   // copies ENV into environ before main(), so this has to be set here (the file comes at connect)
-  // SDL_MOUSE_EMULATE_WARP_WITH_RELATIVE=0: SDL must not turn a move of a hidden mouse into its
-  // relative mode, which locks the pointer (Capture, below, says why)
-  preRun: [() => { m.ENV.SDL_EMSCRIPTEN_KEYBOARD_ELEMENT = "#canvas"; m.ENV.XDG_CONFIG_HOME = HOTKEY_DIR; m.ENV.SDL_MOUSE_EMULATE_WARP_WITH_RELATIVE = "0"; }],
+  preRun: [() => { m.ENV.SDL_EMSCRIPTEN_KEYBOARD_ELEMENT = "#canvas"; m.ENV.XDG_CONFIG_HOME = HOTKEY_DIR; }],
   print: (t) => log(t),
   printErr: (t) => log(t),
   // the server's clipboard, from the client's clipboard bridge (below)
@@ -820,29 +818,12 @@ function syncCaptured() {
   document.body.classList.toggle("captured", pointerLocked());
   $("tbCapture").classList.toggle("on", pointerLocked());
 }
-// SDL locks the pointer by itself too, in its relative mouse mode. SDL turns that on when the
-// app moves a hidden mouse to the window's centre twice within 30 ms ("warp emulation", for games;
-// FreeRDP moves the mouse for each pointer position the server sends). Emscripten defers the
-// lock request to the next click or key press, so the page seemed to capture by itself; and SDL
-// never sees the lock (the page keeps pointerlockchange from it), so it asks again at every press
-// of a mouse button, also after Ctrl + Alt. The hint in preRun (above) keeps SDL out of that mode;
-// and the page owns capture, as it owns full screen: the canvas ignores any request but Capture's.
-const nativePointerLock = HTMLCanvasElement.prototype.requestPointerLock;
-let pageLocks = false, clientAskedLock = false;
-if (nativePointerLock)
-  HTMLCanvasElement.prototype.requestPointerLock = function (...args) {
-    if (pageLocks) return nativePointerLock.apply(this, args);
-    if (!clientAskedLock) { clientAskedLock = true; log("[page] the client asked to capture the mouse: ignored, only the toolbar's Capture captures"); }
-    return Promise.resolve();
-  };
 function capture(x, y) {
   if (!document.body.classList.contains("session") || pointerLocked()) return;
   const r = $("canvas").getBoundingClientRect();
   cap.x = x ?? r.width / 2; cap.y = y ?? r.height / 2;
   lockKeyboard();
-  pageLocks = true;
-  let asked;
-  try { asked = $("canvas").requestPointerLock(); } finally { pageLocks = false; }
+  const asked = $("canvas").requestPointerLock();
   asked?.catch?.((e) => log("[page] mouse capture refused: " + e.message));
 }
 function releasePointer() { if (pointerLocked()) document.exitPointerLock(); }
