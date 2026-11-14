@@ -15,6 +15,15 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261113.4
+
+- **Info shows no key frames or fallbacks a client does not count.** The next FreeRDP stops
+  publishing each decoder's key frames, hardware and fallbacks counters (FreeRDP#14076, trimmed).
+  The page read a missing counter as 0, so Info would have said "key frames: 0" as if measured;
+  now the decoder row leaves them out, and hardware stays what the page asks WebCodecs itself.
+  A client that still counts them shows them as before (key frames now after the times).
+- Test: `web/tests/client-stats.test.cjs` reads a fixture of the new names without the three.
+
 ## 20261113.3
 
 - **A connection that dies without closing comes back by itself** (#369). A hung ssh tunnel or a
