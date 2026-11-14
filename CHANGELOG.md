@@ -15,6 +15,28 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261114.1
+
+- **Capture only when you ask.** In full screen, a click on the remote desktop captured the mouse
+  and the keyboard, and until Ctrl + Alt the mouse could not reach the toolbar or a download. Now
+  only the toolbar's Capture button captures, in full screen as in a window; a click is just a
+  click on the remote desktop. Full screen is unchanged (it still holds the keyboard, which
+  Ctrl + Alt gives back). No key for Capture: the mouse is never held now, so the toolbar is
+  always within reach.
+- **The toolbar waits for Chrome's own notice.** When full screen starts, and when the keyboard
+  lock engages, Chrome shows "Press and hold Esc to exit full screen" at the top centre for about
+  5 s, where the toolbar comes in. The toolbar now waits until the notice is gone, then shows if
+  it is still asked for. It stays at the top centre, not a corner: the corners belong to the
+  remote desktop (a maximized window's close button, its menus).
+- **Info: Network in (RDP) and Network out (RDP)**, RDP's own bytes as FreeRDP counts them
+  (`NETWORK_BYTES_RECEIVED` / `_SENT`, above TLS), beside the WebSocket's rows: the difference
+  is TLS and the WebSocket. Hidden for a client without them.
+- The GFX caps version that tells AV1 from AV2 comes from FreeRDP's own `GFX_CAPS_VERSION` when
+  a client has it, else from the web client as before.
+- Tests: `test-fs-click.mjs` checks on the runner's Chrome (157) that a click in full screen does
+  not capture, that Capture does, and that the toolbar waits for the notice; `test-capture.mjs`
+  (the xrdp bed) checks the same in a session.
+
 ## 20261113.6
 
 - **`test-page.mjs` goes into and out of full screen from a real click.** Its check called the
