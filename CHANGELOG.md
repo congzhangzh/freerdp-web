@@ -15,6 +15,22 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261115.4
+
+- **Safari's first visit gets to Connect again.** On a first visit the page is not cross-origin
+  isolated yet: coi-serviceworker registers its worker and then reloads the page, and the reloaded
+  page is the one that stays. The client may fail before that reload (desktop Safari: "The object
+  can not be cloned"), and 20261115.3 then said at once that the page was not isolated, with
+  "Could not start" on the button: the kit's check before publishing stopped there in desktop
+  WebKit (site run 43697564359), and a Safari user's first visit could too. Now, while such a reload
+  can still come (a secure context, service workers, none controlling the page yet), that failure
+  is said only 8 s later, if the page is still here; until then the button says "Loading…". Where
+  no reload comes (an app's built-in browser) the line still shows.
+- Tests: `test-mixed.mjs` holds the service worker's registration back 4 s, so the client always
+  fails before the reload, and checks the page still gets to Connect, in WebKit and Firefox (on
+  20261115.3's page it stops at "Could not start"); CI also runs the kit's own
+  `test/site-browsers.mjs`, as the kit runs it before it publishes.
+
 ## 20261115.3
 
 - **One pointer under Capture on a Mac.** Under Pointer Lock macOS leaves its own arrow where the
