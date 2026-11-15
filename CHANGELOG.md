@@ -15,6 +15,30 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261115.1
+
+- **Safari says why it cannot connect.** An https page may not open a plain `ws://` socket (mixed
+  content). Chrome, Edge and Firefox make an exception for the loopback (127.0.0.1, localhost,
+  [::1]), where the SSH tunnel puts the gateway; Safari makes none, and every browser on iPhone and
+  iPad is Safari underneath (WebKit). It blocks the socket before anything leaves and says so only
+  in its own console ("requested insecure content from ws://127.0.0.1:3390/. This content was
+  blocked"); FreeRDP logged "Connection refused", and the page showed "Connection lost.
+  Reconnecting in 2 s (try 1 of 8)…" and tried again eight times. Now the Log says the browser
+  blocked it, before FreeRDP's own lines, and the end bar explains it with the gateway's address,
+  without Reconnect (it would be blocked again). A `ws://` socket to another computer is blocked
+  in every browser and gets its own line. Safari still cannot connect: that needs a `wss://`
+  gateway or the page served from the gateway's own address.
+- **Connect asks for an empty password.** FreeRDP sent an empty one, a server that wants one
+  (FreeRDP's shadow server) hung up after the TLS handshake, and the Log said only
+  `ERRINFO_RPC_INITIATED_DISCONNECT` ("initiated by an administrative tool"). Seen in Firefox,
+  whose saved hosts and passwords are its own, not Chrome's. Now Connect stops once, says "Enter
+  the password first", and puts the cursor in the field; Connect again goes on without one (a
+  server with its own logon screen, an account without a password).
+- Tests: `test-mixed.mjs` serves the page over https (`serve.py` takes `TLS_CERT` / `TLS_KEY`)
+  with a gateway at ws://127.0.0.1, in WebKit and Firefox (CI's `browsers` job): WebKit's blocked
+  socket is explained and not retried, Firefox's reaches the gateway, and an empty password stops
+  Connect in both.
+
 ## 20261114.2
 
 - **Capture only when you ask, also against the client itself.** After 20261114.1 the page no
