@@ -67,22 +67,30 @@ const click = async (css) => wd("POST", `/session/${sid}/element/${await el(css)
 const type = async (css, text) => { const e = await el(css); await wd("POST", `/session/${sid}/element/${e}/clear`, {}); await wd("POST", `/session/${sid}/element/${e}/value`, { text }); };
 const status = () => js("return document.getElementById('status') ? document.getElementById('status').textContent : null");
 async function open(url) {
-  await wd("POST", `/session/${sid}/url`, { url });
   let s = null;
-  for (let i = 0; i < 120 && s !== "ready"; i++) { await sleep(500); s = await status().catch(() => null); }
+  for (let attempt = 0; attempt < 2 && s !== "ready"; attempt++) {
+    await wd("POST", `/session/${sid}/url`, { url });
+    for (let i = 0; i < 90 && s !== "ready"; i++) { await sleep(500); s = await status().catch(() => null); }
+  }
+  if (s !== "ready") console.log(`INFO  ${url}: status ${s}, title "${await js("return document.title").catch((e) => e.message)}", at ${await js("return location.href").catch(() => "?")}`);
   return s;
 }
 async function connect(pass = "test") { await type("#pass", pass); await click("#go"); }
 const waitFor = async (test, ms) => { for (let t = 0; t < ms && !(await test()); t += 500) await sleep(500); return test(); };
 
-for (let i = 0; i < 50; i++) { await sleep(200); if (await fetch(`http://127.0.0.1:${WD}/status`).then((r) => r.ok, () => false)) break; }
+// the page's servers first: Safari shows its own error page for an address nothing answers yet
+const up = (url) => fetch(url).then((r) => r.ok, () => false);
+for (let i = 0; i < 100 && !(await up(`http://127.0.0.1:${HTTP}/index.html`)); i++) await sleep(200);
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";   // only this check of our own https server
+for (let i = 0; TLS_CERT && i < 100 && !(await up(`https://127.0.0.1:${HTTPS}/index.html`)); i++) await sleep(200);
+for (let i = 0; i < 50; i++) { await sleep(200); if (await up(`http://127.0.0.1:${WD}/status`)) break; }
 try {
   sid = (await wd("POST", "/session", { capabilities: { alwaysMatch: { browserName: "safari" } } })).sessionId;
   console.log("browser:", await js("return navigator.userAgent"));
 
   // A: the page at http://127.0.0.1, a plain ws:// gateway
   const a = await open(`http://127.0.0.1:${HTTP}/index.html?v=127.0.0.1:${WS}&u=test&fs=0`);
-  const env = await js("return JSON.stringify({ isolated: crossOriginIsolated, sab: typeof SharedArrayBuffer, version: (document.getElementById('log').textContent.match(/FreeRDP Web \\S+/) || [''])[0] })");
+  const env = await js("const l = document.getElementById('log'); return JSON.stringify({ isolated: self.crossOriginIsolated, sab: typeof SharedArrayBuffer, version: ((l && l.textContent.match(/FreeRDP Web \\S+/)) || [''])[0] })");
   check("A: the page loads in Safari from http://127.0.0.1, cross-origin isolated", a === "ready" && JSON.parse(env).isolated, `status ${a}, ${env}`);
   reached.ws = 0;
   await connect();
