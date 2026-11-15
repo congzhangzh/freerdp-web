@@ -31,12 +31,14 @@ kit | kit:*)
     fi
     dir=$CACHE/kit/$tag
     mkdir -p "$dir"
-    if ! (cd "$dir" && sha256sum -c --quiet freerdp-web-page.zip.sha256 2> /dev/null); then
+    # sha256sum on Linux, shasum on macOS (CI's safari job)
+    sha256check() { if command -v sha256sum > /dev/null; then sha256sum -c --status "$@"; else shasum -a 256 -c --status "$@"; fi; }
+    if ! (cd "$dir" && sha256check freerdp-web-page.zip.sha256 2> /dev/null); then
         echo "== the kit's tested client: $tag" >&2
         base=https://github.com/$KIT/releases/download/$tag
         curl -fsSL -o "$dir/freerdp-web-page.zip.sha256" "$base/freerdp-web-page.zip.sha256"
         curl -fsSL -o "$dir/freerdp-web-page.zip" "$base/freerdp-web-page.zip"
-        (cd "$dir" && sha256sum -c --quiet freerdp-web-page.zip.sha256)
+        (cd "$dir" && sha256check freerdp-web-page.zip.sha256)
     fi
     rm -rf "${SITE:?}"; mkdir -p "$SITE"
     (cd "$SITE" && python3 -m zipfile -e "$dir/freerdp-web-page.zip" .)
