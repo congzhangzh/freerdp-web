@@ -15,6 +15,28 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261115.2
+
+- **Safari's way in: the page from the gateway itself.** Safari blocks the https site's `ws://`
+  socket to the gateway at 127.0.0.1 (mixed content, 20261115.1). A page served by the gateway
+  itself, at `http://localhost:<port>/` (websockify `--web <site dir>`, through the same SSH
+  tunnel), may open `ws://` there, in Safari too: the message about the block now says so and
+  has a button, "Open it from the gateway", with this page's settings and the gateway (never a
+  password). It opens `localhost`, not 127.0.0.1: a passkey belongs to a site name, and WebAuthn
+  takes no IP address for one, so the vault works there; its saved hosts are its own. Tested on
+  聪哥's MacBook Air through his SSH tunnel.
+- **A `wss://` gateway.** The gateway can be one with a certificate: written `wss://host` (port
+  443) or `wss://host:port`, and FreeRDP gets `host:port`. From the https page a gateway on
+  another computer goes over `wss://` by itself (a plain `ws://` to it is blocked in every browser).
+  It is the way in from an iPhone or iPad, where no SSH tunnel to 127.0.0.1 is at hand. The page
+  creates `Module.websocket` before the client starts: Emscripten's socket layer takes it then.
+- **Tests:** CI's new `safari` job runs the page in **real Safari** on a macOS runner
+  (`test-safari.mjs`, Safari's own WebDriver, a certificate the runner trusts for 127.0.0.1): the
+  page from `http://127.0.0.1` reaches a `ws://` gateway, the https page's `ws://127.0.0.1` is
+  blocked and explained, and the https page reaches a `wss://` gateway. `test-mixed.mjs` follows
+  the new button in WebKit and connects to a `wss://` gateway in WebKit and Firefox. `site.sh`
+  checks downloads with `shasum` where there is no `sha256sum` (macOS).
+
 ## 20261115.1
 
 - **Safari says why it cannot connect.** An https page may not open a plain `ws://` socket (mixed
