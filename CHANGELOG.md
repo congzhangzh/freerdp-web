@@ -15,6 +15,23 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261115.6
+
+- **Safari's first visit, again.** 20261115.4 held the "not cross-origin isolated" line for 8 s
+  while coi-serviceworker's reload could still come. In the kit's site gate (site run
+  43740474401) desktop WebKit logged "Reloading page to make use of updated COOP/COEP Service
+  Worker." and then stayed on the old page longer than that: Safari holds that navigation until
+  the new worker is ready. The page then said "Could not start" on a page about to go, and the gate
+  stopped 20261115.5. Two more things count now: coi-serviceworker sets
+  `sessionStorage.coiReloadedBySelf` just before it reloads, and while it is set nothing is said,
+  for up to 45 s; and its worker takes control of this very page once active (`clients.claim()`),
+  so a controller is no sign the reload failed while one was asked for. A page still not
+  isolated 45 s after asking, or where no reload can come at all (an app's built-in browser),
+  still says so.
+- Tests: `test-mixed.mjs` makes the reload navigate 12 s after coi-serviceworker asks for it
+  (its own `window.coi.doReload` hook), in WebKit and Firefox: 20261115.5's code stops at "Could
+  not start", this one gets to Connect.
+
 ## 20261115.5
 
 - **Info's server rows (item 8, batch B),** the same rows and words as the SDL3 client's overlay,
