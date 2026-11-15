@@ -15,6 +15,27 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261115.5
+
+- **Info's server rows (item 8, batch B),** the same rows and words as the SDL3 client's overlay,
+  from the same reader (names agreed with comp-sdl-g1, who adds them to FreeRDP's
+  `client_stats.c`; nothing new on the wire): **Host** (where this client connected,
+  `SERVER_HOSTNAME:SERVER_PORT`; on the web that is the WebSocket gateway, so it takes the place of
+  the page's own "Server" row), **RDP version** (the agreed one, "(server X)" when the server
+  announced another), **Server OS** (its General capability set), **Graphics caps** (the version
+  and flags it confirmed), **Surface 1–4** (size and the codec of its last command, then
+  "Surfaces: +N more"), **Certificate** (its subject CN, the name of the server behind the gateway).
+  The names for the numbers come from the library's own tables (`freerdp_web_rdp_version_name`,
+  `_os_name`, `_caps_version_name`, `_caps_flags_name`, `_codec_name`), so the two clients say the
+  same words; strings come from the list's new string side (`freerdp_web_info_*`). Every value is
+  0 until the server's core data and caps arrive, and a row hides then, or with a client that
+  lacks the name: with today's clients nothing changes. Read only while Info is open.
+- Round trip and bandwidth are labelled "(measured by the server)", as in the overlay.
+- Tests: `client-stats.test.cjs` covers the reader (0 is not known, the slots, codec 0 vs "no
+  picture yet", the strings); `test-stats.mjs` checks each row in a real session against that
+  connection where it can (the gateway it used, the canvas's size, the page's own CapsConfirm
+  reading) and the library's names, and says SKIP with a client that has none yet.
+
 ## 20261115.4
 
 - **Safari's first visit gets to Connect again.** On a first visit the page is not cross-origin
