@@ -14,15 +14,17 @@
 //  - WebKit: no socket reaches the gateway, the end bar says Safari blocked it (no Reconnect), and
 //    the Log says so before FreeRDP's own lines
 //  - Firefox: the socket reaches the gateway, and the page says nothing about mixed content
+//  - both: a gateway written wss://host:port (one with a certificate) is reached over wss://
 import { spawn, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { createServer as createHttpsServer } from "node:https";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import net from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-const site = resolve(process.argv[2] || "dist/site"), port = 8265, wsPort = 8266;
+const site = resolve(process.argv[2] || "dist/site"), port = 8265, wsPort = 8266, wssPort = 8267;
 const require = createRequire(import.meta.url);
 const pw = require(process.env.PLAYWRIGHT || "playwright");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -42,10 +44,19 @@ const gateway = net.createServer((c) => {
   c.on("error", () => {});
 });
 await new Promise((r) => gateway.listen(wsPort, "127.0.0.1", r));
+// a gateway with a certificate (wss://), as freerdp.congzhang.li's will be: the page's address says wss://
+let reachedTls = 0;
+const tlsGateway = createHttpsServer({ key: readFileSync(`${dir}/key.pem`), cert: readFileSync(`${dir}/cert.pem`) });
+tlsGateway.on("upgrade", (q, c) => {
+  reachedTls++;
+  c.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${createHash("sha1").update(q.headers["sec-websocket-key"] + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").digest("base64")}\r\nSec-WebSocket-Protocol: binary\r\n\r\n`);
+  c.on("error", () => {});
+});
+await new Promise((r) => tlsGateway.listen(wssPort, "127.0.0.1", r));
 if (await fetch(`http://127.0.0.1:${port}/`).then(() => true, () => false)) { console.log(`FAIL  port ${port} is in use`); process.exit(1); }
 const server = spawn("python3", [new URL("serve.py", import.meta.url).pathname, String(port), site], { stdio: "ignore",
   env: { ...process.env, TLS_CERT: `${dir}/cert.pem`, TLS_KEY: `${dir}/key.pem` } });
-const cleanup = () => { server.kill(); gateway.close(); rmSync(dir, { recursive: true, force: true }); };
+const cleanup = () => { server.kill(); gateway.close(); tlsGateway.close(); rmSync(dir, { recursive: true, force: true }); };
 for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => { cleanup(); process.exit(1); });
 await sleep(1000);
 
@@ -87,6 +98,17 @@ for (const which of (process.env.BROWSERS || "webkit firefox").split(/\s+/).filt
     check(`${which}: the gateway's socket reaches the gateway from the https page`, reached > 0, `${reached} socket(s)`);
     check("…and the page says nothing about mixed content", said < 0 && !/Safari does not let/.test(bar?.text || ""), said >= 0 ? log[said] : "");
   }
+  // the gateway at wss://: no mixed content in any browser, WebKit included
+  await page.goto(`https://127.0.0.1:${port}/index.html?v=${encodeURIComponent(`wss://127.0.0.1:${wssPort}`)}&u=test&fs=0`);
+  for (let i = 0; i < 60 && await page.evaluate(() => document.getElementById("status")?.textContent) !== "ready"; i++) await sleep(500);
+  await page.fill("#host", `wss://127.0.0.1:${wssPort}`);   // typed, as a person does (the saved host wins over ?v=)
+  reachedTls = 0; consoleLines.length = 0;
+  await page.fill("#pass", "test"); await page.click("#go");
+  for (let i = 0; i < 30 && !reachedTls; i++) await sleep(500);
+  const cmd = (await page.evaluate(() => document.getElementById("log").textContent)).split("\n").find((l) => l.startsWith("[page] sdl-freerdp ")) || "";
+  check(`${which}: a gateway written wss://127.0.0.1:${wssPort} is reached over wss:// from the https page`, reachedTls > 0 &&
+    !consoleLines.some((l) => /\[blocked\]|requested insecure content/i.test(l)), `${reachedTls} socket(s)`);
+  check("…and FreeRDP gets host:port, no scheme", cmd.includes(` /v:127.0.0.1:${wssPort} `), cmd.slice(0, 60));
   await browser.close();
 }
 cleanup();

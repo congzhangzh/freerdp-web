@@ -514,6 +514,9 @@ const modularClient = () => typeof window.createFreeRDP === "function";
 function moduleConfig() {
   const m = {
   canvas: $("canvas"),
+  // the client's sockets: ws:// or wss:// (Connect sets url, gatewayRoute). Emscripten's socket layer
+  // takes this object when it starts, so it has to exist before that
+  websocket: {},
   // SDL listens for keys on the whole window and calls preventDefault(), which blocks typing in
   // the page's own input boxes. SDL reads hints from the environment: limit it to the canvas.
   // FreeRDP reads its hotkeys from $XDG_CONFIG_HOME/freerdp/sdl-freerdp.json; the C runtime
@@ -1752,7 +1755,9 @@ async function connect(againPassword = null, retrying = false) {
     }
     noPassword.asked = false;
     const session = readSession();
-    const resolved = { ...host, extra: FreeRDPOptions.resolve(session, host.extra, codecEnv()).join(" ") };
+    const route = gatewayRoute(host.host, host.direct);
+    if (!host.direct) Module.websocket.url = route.secure ? "wss://" : "ws://";
+    const resolved = { ...host, host: route.host, extra: FreeRDPOptions.resolve(session, host.extra, codecEnv()).join(" ") };
     let args;
     try { args = FreeRDPVault.connectionArgs(resolved, size, scale); } finally { resolved.password = ""; }
     clipboardOn = !args.some((a) => /^-clipboard$|^[/+]clipboard:(?:off|false)$/i.test(a));
@@ -1883,6 +1888,19 @@ const conn = { began: 0, paints: null, mixed: null, opened: false };
 // what happened instead: the host and port of the blocked socket, or null.
 const webkitEngine = () => /AppleWebKit\//.test(navigator.userAgent) && !/Chrome\/|Chromium\/|Firefox\//.test(navigator.userAgent);
 const loopbackHost = (h) => /^(127\.\d+\.\d+\.\d+|localhost|\[::1\])$/i.test(h);
+// The gateway's WebSocket: wss:// when the address says so, or when this page is https and the gateway
+// is on another computer (a plain ws:// to it is blocked there in every browser: mixed content); else
+// ws://. A wss:// gateway needs a certificate the browser trusts for its name (Let's Encrypt), and is
+// the one way in from an iPhone (聪哥, 2026-11-15: freerdp.congzhang.li). Its port is 443 unless given.
+// Returns FreeRDP's /v: (host:port, no scheme) and whether the socket is wss://.
+function gatewayRoute(address, direct = false) {
+  const a = String(address).trim();
+  if (direct) return { host: a, secure: false };
+  const m = /^(wss?):\/\/([^/?#]+)\/?$/i.exec(a);
+  const hop = m ? m[2] : a, name = hop.replace(/:\d+$/, "");
+  const secure = m ? m[1].toLowerCase() === "wss" : location.protocol === "https:" && !loopbackHost(name);
+  return { host: secure && !/:\d+$/.test(hop) ? hop + ":443" : hop, secure };
+}
 function mixedBlocked(url) {
   const m = location.protocol === "https:" && /^ws:\/\/((\[[^\]]+\]|[^:/]+)(:\d+)?)/i.exec(url);
   return m && (webkitEngine() || !loopbackHost(m[2])) ? m[1] : null;
