@@ -33,26 +33,11 @@ if (window.trustedTypes && !trustedTypes.defaultPolicy) {
   window.freerdpNotIsolated = () => (globalThis.crossOriginIsolated === false
     ? t("status.notIsolated", "The client did not start: this page is not cross-origin isolated, which the client's threads need. Open it over https or at http://localhost, from a server that sends the COOP and COEP headers (an app's built-in browser may not run the page's service worker, which adds them).")
     : null);
-  // On a first visit the page is not isolated yet: coi-serviceworker registers its worker and then
-  // reloads the page, which is the one that stays; the client may fail in the meantime (desktop
-  // Safari: "The object can not be cloned"). While such a reload can still come (a secure context,
-  // service workers, none controlling the page yet), a failure for want of isolation is said only
-  // NOT_ISOLATED_WAIT_MS later, if the page is still here: until then the button says "Loading…".
-  // (20261115.3 said it at once, and desktop Safari's first visit stopped at "Could not start".)
-  const NOT_ISOLATED_WAIT_MS = 8000;
-  const reloadMayCome = () => window.isSecureContext && !!navigator.serviceWorker && !navigator.serviceWorker.controller;
-  window.freerdpAfterReloadChance = (fn) => {
-    if (globalThis.crossOriginIsolated === false && reloadMayCome()) setTimeout(fn, NOT_ISOLATED_WAIT_MS);
-    else fn();
-  };
   const show = (what) => {
     if (window.freerdpPageReady) return;
-    window.freerdpAfterReloadChance(() => {
-      if (window.freerdpPageReady) return;
-      const go = document.getElementById("go"), status = document.getElementById("status");
-      if (go) { go.disabled = true; go.textContent = t("form.failed", "Could not start"); }
-      if (status) status.textContent = window.freerdpNotIsolated() ?? t("status.noStart", `the client did not start: ${what}`, { what });
-    });
+    const go = document.getElementById("go"), status = document.getElementById("status");
+    if (go) { go.disabled = true; go.textContent = t("form.failed", "Could not start"); }
+    if (status) status.textContent = window.freerdpNotIsolated() ?? t("status.noStart", `the client did not start: ${what}`, { what });
   };
   window.addEventListener("error", (e) => { if (e.message) show(e.message); });
   window.addEventListener("unhandledrejection", (e) => show(e.reason?.message || String(e.reason)));
