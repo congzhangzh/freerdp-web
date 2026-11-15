@@ -101,6 +101,11 @@ jobs:
       - name: The https site and a gateway at ws://127.0.0.1, in WebKit and Firefox (test-mixed.mjs)
         run: PLAYWRIGHT="$RUNNER_TEMP/pw/node_modules/playwright" node test-mixed.mjs dist/site
         if: success() || failure()
+      - name: The kit's own check before it publishes (its test/site-browsers.mjs, served as GitHub Pages serves, no COOP/COEP)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/site-browsers.mjs" https://raw.githubusercontent.com/congzhangzh/rdp-release-kit/4ce15fdb90d340f18e8d5c4bc8bd59b6ba4a8daa/test/site-browsers.mjs
+          PLAYWRIGHT="$RUNNER_TEMP/pw/node_modules/playwright" node "$RUNNER_TEMP/site-browsers.mjs" dist/site
+        if: success() || failure()
       - name: The clipboard in Firefox and Chrome, full screen in Firefox (test-clipboard.mjs)
         run: PLAYWRIGHT="$RUNNER_TEMP/pw/node_modules/playwright" node test-clipboard.mjs dist/site
         if: success() || failure()
