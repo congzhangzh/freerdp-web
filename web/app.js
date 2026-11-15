@@ -1562,9 +1562,9 @@ function updateInfo() {
   const named = (fn, fallback, ...args) => (typeof Module["_" + fn] === "function" ? Module.ccall(fn, "string", args.map(() => "number"), args) || fallback : fallback);
   const hex = (v) => "0x" + v.toString(16).padStart(8, "0");
   const rdpVersionName = (v) => named("freerdp_web_rdp_version_name", hex(v), v);
+  const codecName = (id) => (id === null ? t("info.surfaceNone", "no picture yet") : named("freerdp_web_codec_name", hex(id), id, srv?.capsVersion ?? 0));
   const surfaceRows = srv ? srv.surfaceList.map((x) => [t("info.surface", `Surface ${x.slot}`, { n: x.slot }),
-    t("info.surfaceValue", `${x.width} × ${x.height}, ${x.codecId ? named("freerdp_web_codec_name", hex(x.codecId), x.codecId, srv.capsVersion ?? 0) : t("info.surfaceNone", "no picture yet")}`,
-      { w: x.width, h: x.height, codec: x.codecId ? named("freerdp_web_codec_name", hex(x.codecId), x.codecId, srv.capsVersion ?? 0) : t("info.surfaceNone", "no picture yet") })]) : [];
+    t("info.surfaceValue", `${x.width} × ${x.height}, ${codecName(x.codecId)}`, { w: x.width, h: x.height, codec: codecName(x.codecId) })]) : [];
   if (srv?.moreSurfaces) surfaceRows.push([t("info.moreSurfaces", "Surfaces"), t("info.moreSurfacesValue", `+${srv.moreSurfaces} more`, { n: srv.moreSurfaces })]);
   const rows = [
     // where this client connected: FreeRDP's own host and port (on the web: the WebSocket gateway)

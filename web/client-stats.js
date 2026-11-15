@@ -91,15 +91,16 @@
   // side (strings, below). The names behind the numbers (version, OS, caps, codecs) are the
   // library's own tables, so the page and the SDL overlay say the same words.
   const known = (v) => (v ? v : null);
-  const SURFACE_SLOTS = 4;
+  const SURFACE_SLOTS = 4, NO_PICTURE = 4294967295;   // UINT32_MAX: a surface with no command yet
   function server(now, strs = {}) {
     if (!now) return null;
-    // the surfaces in surface ID order, in up to SURFACE_SLOTS fixed slots (a slot all 0 is empty),
-    // each with its size and the codec ID of its last command (0: none yet); the rest are only counted
+    // the surfaces in surface ID order, in up to SURFACE_SLOTS fixed slots (an empty slot: WIDTH 0),
+    // each with its size and the codec ID of its last command (NO_PICTURE: none yet; 0 is a codec,
+    // RDPGFX_CODECID_UNCOMPRESSED); the rest are only counted
     const surfaceList = [];
     for (let i = 1; i <= SURFACE_SLOTS; i++) {
-      const w = now[`RDPGFX_SURFACE${i}_WIDTH`] ?? 0, h = now[`RDPGFX_SURFACE${i}_HEIGHT`] ?? 0, codecId = now[`RDPGFX_SURFACE${i}_CODECID`] ?? 0;
-      if (w || h || codecId) surfaceList.push({ slot: i, width: w, height: h, codecId });
+      const w = now[`RDPGFX_SURFACE${i}_WIDTH`] ?? 0, h = now[`RDPGFX_SURFACE${i}_HEIGHT`] ?? 0, codecId = now[`RDPGFX_SURFACE${i}_CODECID`] ?? NO_PICTURE;
+      if (w) surfaceList.push({ slot: i, width: w, height: h, codecId: codecId === NO_PICTURE ? null : codecId });
     }
     const count = now.RDPGFX_SURFACES ?? null;
     return {

@@ -107,7 +107,7 @@ else {
     !!gfx && !!capsName && gfx.startsWith(capsName + ", flags: ") && (caps === null || caps === second.GFX_CAPS_VERSION), `${gfx} | reader 0x${(second.GFX_CAPS_VERSION || 0).toString(16)}, page ${caps === null ? "–" : "0x" + caps.toString(16)}`);
   const s1 = row("Surface 1"), cw = await ev("document.getElementById('canvas').width"), ch = await ev("document.getElementById('canvas').height");
   check("batch B: Surface 1 is the desktop: the canvas's size", !!s1 && s1.startsWith(`${cw} × ${ch}, `), `${s1} | canvas ${cw} × ${ch}`);
-  if (s1 && second.RDPGFX_SURFACE1_CODECID) {
+  if (s1 && second.RDPGFX_SURFACE1_CODECID !== undefined && second.RDPGFX_SURFACE1_CODECID !== 4294967295) {
     const codecName = await name("freerdp_web_codec_name", second.RDPGFX_SURFACE1_CODECID, second.GFX_CAPS_VERSION || 0);
     check("batch B: Surface 1's codec is the library's name for its last command's codec", !!codecName && s1.endsWith(", " + codecName), `${s1} | codec 0x${second.RDPGFX_SURFACE1_CODECID.toString(16)} = ${codecName}`);
   }

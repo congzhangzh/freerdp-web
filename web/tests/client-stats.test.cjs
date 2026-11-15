@@ -186,7 +186,7 @@ test("the caps version: FreeRDP's GFX_CAPS_VERSION when the client has it, else 
 
 test("server (batch B): 0 is not known yet, so nothing shows before the capability exchange", () => {
   const s = S.server({ RDP_VERSION: 0, SERVER_RDP_VERSION: 0, SERVER_OS_MAJOR_TYPE: 0, SERVER_OS_MINOR_TYPE: 0, GFX_CAPS_VERSION: 0, RDPGFX_SURFACES: 0,
-    RDPGFX_SURFACE1_CODECID: 0, RDPGFX_SURFACE1_WIDTH: 0, RDPGFX_SURFACE1_HEIGHT: 0 });
+    RDPGFX_SURFACE1_CODECID: 0, RDPGFX_SURFACE1_WIDTH: 0, RDPGFX_SURFACE1_HEIGHT: 0 });   // all 0: an empty slot
   assert.equal(s.rdpVersion, null); assert.equal(s.rdpVersionServer, null); assert.equal(s.osMajor, null); assert.equal(s.capsVersion, null);
   assert.equal(s.host, null); assert.equal(s.certificate, null); assert.deepEqual(s.surfaceList, []); assert.equal(s.moreSurfaces, 0);
 });
@@ -195,10 +195,13 @@ test("server (batch B): the values, the surfaces in their slots (an empty slot l
     GFX_CAPS_FLAGS: 0, RDPGFX_SURFACES: 6,
     RDPGFX_SURFACE1_CODECID: 0x0011, RDPGFX_SURFACE1_WIDTH: 1280, RDPGFX_SURFACE1_HEIGHT: 720,
     RDPGFX_SURFACE2_CODECID: 0, RDPGFX_SURFACE2_WIDTH: 640, RDPGFX_SURFACE2_HEIGHT: 480,
-    RDPGFX_SURFACE3_CODECID: 0, RDPGFX_SURFACE3_WIDTH: 0, RDPGFX_SURFACE3_HEIGHT: 0, SERVER_PORT: 3390 },
+    RDPGFX_SURFACE3_CODECID: 4294967295, RDPGFX_SURFACE3_WIDTH: 800, RDPGFX_SURFACE3_HEIGHT: 600,
+    RDPGFX_SURFACE4_CODECID: 0, RDPGFX_SURFACE4_WIDTH: 0, RDPGFX_SURFACE4_HEIGHT: 0, SERVER_PORT: 3390 },
     { SERVER_HOSTNAME: "127.0.0.1", SERVER_CERT_CN: "desktop.example" });
   assert.equal(s.rdpVersion, 0x80011); assert.equal(s.osMajor, 4); assert.equal(s.osMinor, 7); assert.equal(s.capsFlags, 0); assert.equal(s.surfaces, 6);
-  assert.deepEqual(s.surfaceList, [{ slot: 1, width: 1280, height: 720, codecId: 0x11 }, { slot: 2, width: 640, height: 480, codecId: 0 }]);
+  // codec 0 is RDPGFX_CODECID_UNCOMPRESSED, a real one; UINT32_MAX is "no picture yet"; WIDTH 0 is an empty slot
+  assert.deepEqual(s.surfaceList, [{ slot: 1, width: 1280, height: 720, codecId: 0x11 }, { slot: 2, width: 640, height: 480, codecId: 0 },
+    { slot: 3, width: 800, height: 600, codecId: null }]);
   assert.equal(s.moreSurfaces, 2);
   assert.equal(s.host, "127.0.0.1"); assert.equal(s.port, 3390); assert.equal(s.certificate, "desktop.example");
 });
