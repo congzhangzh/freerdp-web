@@ -1883,6 +1883,13 @@ const conn = { began: 0, paints: null, mixed: null, opened: false };
 // what happened instead: the host and port of the blocked socket, or null.
 const webkitEngine = () => /AppleWebKit\//.test(navigator.userAgent) && !/Chrome\/|Chromium\/|Firefox\//.test(navigator.userAgent);
 const loopbackHost = (h) => /^(127\.\d+\.\d+\.\d+|localhost|\[::1\])$/i.test(h);
+// the same page from the gateway itself (websockify --web serves it on the gateway's port), over
+// http: a page on 127.0.0.1 may open ws://127.0.0.1 in Safari too. The address and the settings
+// in this page's address go along (never a password: loadSettings keeps none in it)
+function localPage(hop) {
+  const u = new URL(`http://${hop}/index.html`), q = new URLSearchParams(location.search);
+  q.delete("p"); q.set("v", hop); u.search = q.toString(); return u.href;
+}
 function mixedBlocked(url) {
   const m = location.protocol === "https:" && /^ws:\/\/((\[[^\]]+\]|[^:/]+)(:\d+)?)/i.exec(url);
   return m && (webkitEngine() || !loopbackHost(m[2])) ? m[1] : null;
@@ -1893,8 +1900,9 @@ const codecReading = () => { const cs = window.freerdpCodecStats;
 const refusedBeforePicture = () => connLog.some((l) => HUNG_UP.test(l)) && Date.now() - conn.began < HUNG_UP_MS &&
   window.freerdpCodecStats?.paintedNothing(conn.paints, codecReading()) === true;
 const LOGON_FAILED = /ERRCONNECT_(LOGON_FAILURE|WRONG_PASSWORD|ACCESS_DENIED|ACCOUNT_\w+|PASSWORD_\w+|NO_OR_MISSING_CREDENTIALS)|credentials do not work/;
-function showEnd(text, canReconnect) {
+function showEnd(text, canReconnect, local = null) {
   $("endText").textContent = text;
+  $("endLocal").hidden = !local; if (local) $("endLocal").href = local;
   $("endReconnect").hidden = !canReconnect;
   $("endReconnect").textContent = modularClient() && again.has(HostsUI.selected) ? t("tb.reconnect", "Reconnect") : t("end.reload", "Reload and connect");
   $("endBar").hidden = false;
@@ -1906,9 +1914,11 @@ function sessionEnded(unexpected, why = "") {
   if (modularClient()) newClient();   // ready for Reconnect, while the bar says what happened
   if (conn.mixed && !conn.opened) {   // the browser blocked the gateway's socket: trying again changes nothing
     again.forget(); retry.count = 0; endCapture();
-    showEnd(loopbackHost(conn.mixed.replace(/:\d+$/, ""))
-      ? t("end.mixedLocal", `Safari does not let this https page reach the gateway at ${conn.mixed}: an https page may not open a plain ws:// connection, and Safari, unlike Chrome, Edge and Firefox, makes no exception for 127.0.0.1. On iPhone and iPad every browser is Safari underneath. On a computer, use Chrome, Edge or Firefox for now.`, { hop: conn.mixed })
-      : t("end.mixedRemote", `This https page may not open a plain ws:// connection to ${conn.mixed}, in any browser. Reach the gateway through the SSH tunnel at 127.0.0.1 (the safety notice has the command).`, { hop: conn.mixed }), false);
+    const local = loopbackHost(conn.mixed.replace(/:\d+$/, ""));
+    showEnd(local
+      ? t("end.mixedLocal", `Safari does not let this https page reach the gateway at ${conn.mixed}: an https page may not open a plain ws:// connection, and Safari, unlike Chrome, Edge and Firefox, makes no exception for 127.0.0.1. A gateway that serves this page too (websockify --web) opens it at http://${conn.mixed}/, where Safari connects (its saved hosts are its own). Or use Chrome, Edge or Firefox.`, { hop: conn.mixed })
+      : t("end.mixedRemote", `This https page may not open a plain ws:// connection to ${conn.mixed}, in any browser. Reach the gateway through the SSH tunnel at 127.0.0.1 (the safety notice has the command).`, { hop: conn.mixed }), false,
+      local ? localPage(conn.mixed) : null);
     return;
   }
   const passwordRefused = connLog.some((l) => LOGON_FAILED.test(l));

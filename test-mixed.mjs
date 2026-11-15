@@ -12,15 +12,16 @@
 // when it is not installed here. WebKit needs libraries a newer Linux may lack: run it in
 // Playwright's image (test-webkit.mjs has the docker line). Checks, per browser:
 //  - WebKit: no socket reaches the gateway, the end bar says Safari blocked it (no Reconnect), and
-//    the Log says so before FreeRDP's own lines
+//    the Log says so before FreeRDP's own lines; its button opens the page from the gateway itself
+//    (served over http on the gateway's port, as websockify --web does), where Safari connects
 //  - Firefox: the socket reaches the gateway, and the page says nothing about mixed content
 import { spawn, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import net from "node:net";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { extname, join, normalize, resolve } from "node:path";
 
 const site = resolve(process.argv[2] || "dist/site"), port = 8265, wsPort = 8266;
 const require = createRequire(import.meta.url);
@@ -33,8 +34,20 @@ const dir = mkdtempSync(join(tmpdir(), "mixed-"));
 execFileSync("openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", `${dir}/key.pem`, "-out", `${dir}/cert.pem`, "-days", "2",
   "-subj", "/CN=127.0.0.1", "-addext", "subjectAltName=IP:127.0.0.1,DNS:localhost"], { stdio: "ignore" });
 let reached = 0;
+// the gateway also serves the site over plain http on its port, as websockify --web does (no
+// COOP/COEP headers either: the page's coi-serviceworker makes it cross-origin isolated)
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".wasm": "application/wasm", ".css": "text/css",
+  ".json": "application/json", ".webmanifest": "application/manifest+json", ".png": "image/png", ".svg": "image/svg+xml", ".ico": "image/x-icon" };
+const serveFile = (c, head) => {
+  const path = decodeURIComponent((/^GET (\S+)/.exec(head)?.[1] || "/").split("?")[0]).replace(/\/$/, "/index.html");
+  const file = join(site, normalize(path).replace(/^(\.\.[/\\])+/, ""));
+  let body = null; try { body = readFileSync(file); } catch {}
+  c.end(body ? Buffer.concat([Buffer.from(`HTTP/1.1 200 OK\r\nContent-Type: ${TYPES[extname(file)] || "application/octet-stream"}\r\nContent-Length: ${body.length}\r\nConnection: close\r\n\r\n`), body])
+    : "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+};
 const gateway = net.createServer((c) => {
   c.once("data", (h) => {
+    if (!/^Upgrade: websocket/im.test(h.toString())) return serveFile(c, h.toString());
     reached++;
     const key = /Sec-WebSocket-Key: (.+)\r\n/i.exec(h.toString())?.[1].trim();
     c.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${createHash("sha1").update(key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").digest("base64")}\r\nSec-WebSocket-Protocol: binary\r\n\r\n`);
@@ -83,6 +96,21 @@ for (const which of (process.env.BROWSERS || "webkit firefox").split(/\s+/).filt
     check("…the end bar says Safari blocked it, with the gateway's address", bar?.shown && new RegExp(`Safari does not let this https page reach the gateway at 127\\.0\\.0\\.1:${wsPort}`).test(bar.text), JSON.stringify(bar));
     check("…and offers no Reconnect (it would be blocked again)", bar?.shown && !bar.reconnect);
     check("…and the Log says so before FreeRDP's own lines", said >= 0 && (refused < 0 || said < refused), said >= 0 ? log[said].slice(0, 100) : "no line");
+    // Safari's way in (聪哥, 2026-11-15): the same page from the gateway itself, over http
+    const local = await page.evaluate(() => { const a = document.getElementById("endLocal"); return { shown: !a.hidden, href: a.href }; });
+    const want = `http://127.0.0.1:${wsPort}/index.html?`;
+    check("…and offers the page from the gateway itself, with the gateway and the settings", local.shown && local.href.startsWith(want) &&
+      new URL(local.href).searchParams.get("v") === `127.0.0.1:${wsPort}` && new URL(local.href).searchParams.get("u") === "test", JSON.stringify(local));
+    if (local.shown) {
+      await page.click("#endLocal");
+      for (let i = 0; i < 80 && await page.evaluate(() => location.protocol === "http:" && document.getElementById("status")?.textContent === "ready").catch(() => false) !== true; i++) await sleep(500);
+      const there = await page.evaluate(() => ({ url: location.href, isolated: crossOriginIsolated, status: document.getElementById("status")?.textContent }));
+      reached = 0; consoleLines.length = 0;
+      await page.fill("#pass", "test"); await page.click("#go");
+      for (let i = 0; i < 30 && !reached; i++) await sleep(500);
+      check("…where Safari reaches the gateway (http://127.0.0.1, the page cross-origin isolated)", there.isolated && reached > 0 &&
+        !consoleLines.some((l) => /\[blocked\]|requested insecure content/i.test(l)), JSON.stringify({ ...there, sockets: reached }));
+    }
   } else {
     check(`${which}: the gateway's socket reaches the gateway from the https page`, reached > 0, `${reached} socket(s)`);
     check("…and the page says nothing about mixed content", said < 0 && !/Safari does not let/.test(bar?.text || ""), said >= 0 ? log[said] : "");
