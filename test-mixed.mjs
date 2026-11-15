@@ -172,6 +172,24 @@ for (const which of (process.env.BROWSERS || "webkit firefox").split(/\s+/).filt
   check(`${which}: a first visit whose client fails before the service worker's reload still gets to Connect`, first?.text === "Connect" && first.isolated,
     JSON.stringify({ ...first, seen }).slice(0, 200));
   await slowCtx.close();
+  // a first visit whose reload, once asked for, navigates late (desktop Safari holds it until the new
+  // worker is ready: the kit's site gate, 2026-11-15): coi-serviceworker's own hook (window.coi.doReload)
+  // navigates 12 s after it asks. The page must not say "Could not start" on the page about to go
+  const lateCtx = await browser.newContext();
+  await lateCtx.addInitScript(() => { window.coi = { doReload: () => setTimeout(() => location.reload(), 12000) }; });
+  const late = await lateCtx.newPage();
+  await late.goto(`http://localhost:${wsPort}/index.html`);
+  let lateGo = null; const lateSeen = [];
+  for (let i = 0; i < 80; i++) {
+    lateGo = await late.evaluate(() => ({ text: document.getElementById("go")?.textContent, isolated: self.crossOriginIsolated,
+      status: document.getElementById("status")?.textContent })).catch(() => null);
+    if (lateGo && !lateSeen.includes(lateGo.text)) lateSeen.push(lateGo.text);
+    if (lateGo && lateGo.text !== "Loading…" && lateGo.text !== undefined) break;
+    await sleep(500);
+  }
+  check(`${which}: a first visit whose reload navigates late still gets to Connect`, lateGo?.text === "Connect" && lateGo.isolated,
+    JSON.stringify({ ...lateGo, seen: lateSeen }).slice(0, 200));
+  await lateCtx.close();
   // not cross-origin isolated (no COOP/COEP from the server, no service worker: an app's built-in browser)
   const bare = await (await browser.newContext({ serviceWorkers: "block" })).newPage();
   await bare.goto(`http://localhost:${wsPort}/index.html`);
