@@ -8,6 +8,7 @@ Usage: python3 serve.py [port] [dir]   (default 8080 and ./dist)
 - Caching: HTML is always revalidated; js/wasm are cached for a day, and the page loads them
   with ?v=<version> (set by deploy-web.sh) so a new deployment is never served stale.
 - IWA_CSP=1 adds the Content-Security-Policy Chrome enforces on Isolated Web Apps.
+- TLS_CERT=<cert.pem> TLS_KEY=<key.pem> serves https (test-mixed.mjs: an https page, as the site).
 """
 import functools, http.server, os, sys
 
@@ -54,4 +55,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 port = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
 here = os.path.dirname(os.path.abspath(__file__))
 root = os.path.join(here, sys.argv[2] if len(sys.argv) > 2 else "dist")
-http.server.ThreadingHTTPServer(("127.0.0.1", port), functools.partial(Handler, directory=root)).serve_forever()
+srv = http.server.ThreadingHTTPServer(("127.0.0.1", port), functools.partial(Handler, directory=root))
+if os.environ.get("TLS_CERT"):   # https, as the published site: TLS_CERT=<cert.pem> TLS_KEY=<key.pem>
+    import ssl
+    tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    tls.load_cert_chain(os.environ["TLS_CERT"], os.environ["TLS_KEY"])
+    srv.socket = tls.wrap_socket(srv.socket, server_side=True)
+srv.serve_forever()

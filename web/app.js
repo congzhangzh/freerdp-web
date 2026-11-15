@@ -1751,6 +1751,12 @@ async function connect(againPassword = null, retrying = false) {
       const Base = window.WebSocket;
       window.WebSocket = class extends Base {
         static counted = true;
+        constructor(url, protocols) {
+          super(url, protocols);
+          this.addEventListener("open", () => { conn.opened = true; });
+          const hop = mixedBlocked(String(url));
+          if (hop && !conn.mixed) { conn.mixed = hop; log(`[page] this browser does not let an https page open ws://${hop} (mixed content): the gateway cannot be reached from here`); }
+        }
         send(d) { window.freerdpNet.tx += d.byteLength ?? d.length ?? 0; super.send(d); }
         set onmessage(fn) { super.onmessage = e => { window.freerdpNet.rx += e.data.byteLength ?? 0; fn(e); }; }
         get onmessage() { return super.onmessage; }
@@ -1768,7 +1774,7 @@ async function connect(againPassword = null, retrying = false) {
     placeToolbar();
     // the page's own retry leaves someone reading the Log alone: a drop is when it matters most
     if (!retrying || logView.following) { $("logPanel").open = false; $("canvas").focus(); }
-    crash.running = true; crash.userEnded = false; crashStore("running"); connLog.length = 0; conn.began = Date.now(); conn.paints = codecReading(); conn.refused = false;
+    crash.running = true; crash.userEnded = false; crashStore("running"); connLog.length = 0; conn.began = Date.now(); conn.paints = codecReading(); conn.refused = false; conn.mixed = null; conn.opened = false;
     crash.timer = setInterval(() => crashStore("running"), 5000);
     // callMain is one-shot. FreeRDP copies argv into its runtime settings; JS drops its copies.
     handedToWasm = true;
@@ -1855,7 +1861,20 @@ const retry = { count: 0, timer: 0, max: 8 };
 // (RDPGFX) only, so a session without them is judged by nothing but the clock: after this long
 // it was a session, and the normal end applies.
 const HUNG_UP = /ERRINFO_RPC_INITIATED_DISCONNECT/, HUNG_UP_MS = 60000;
-const conn = { began: 0, paints: null };
+const conn = { began: 0, paints: null, mixed: null, opened: false };
+// An https page may not open a plain ws:// socket (mixed content). Chrome, Edge and Firefox make
+// an exception for the loopback (127.0.0.1, localhost, [::1]), where the SSH tunnel puts the
+// gateway; Safari makes none, and every browser on iPhone and iPad is Safari underneath (WebKit).
+// It blocks the socket before anything leaves, says so only in its own console ("requested
+// insecure content from ws://127.0.0.1:3390/. This content was blocked"), and FreeRDP logs
+// "Connection refused": it looked as if 127.0.0.1 were refused (聪哥, 2026-11-15). The page says
+// what happened instead: the host and port of the blocked socket, or null.
+const webkitEngine = () => /AppleWebKit\//.test(navigator.userAgent) && !/Chrome\/|Chromium\/|Firefox\//.test(navigator.userAgent);
+const loopbackHost = (h) => /^(127\.\d+\.\d+\.\d+|localhost|\[::1\])$/i.test(h);
+function mixedBlocked(url) {
+  const m = location.protocol === "https:" && /^ws:\/\/((\[[^\]]+\]|[^:/]+)(:\d+)?)/i.exec(url);
+  return m && (webkitEngine() || !loopbackHost(m[2])) ? m[1] : null;
+}
 const codecReading = () => { const cs = window.freerdpCodecStats;
   return cs && typeof Module._freerdp_web_codec_stats === "function" ? cs.read(Module.HEAPU8, Module._freerdp_web_codec_stats()) : null; };
 // the server ended this connection before it showed anything: the password, most likely
@@ -1873,6 +1892,13 @@ function sessionEnded(unexpected, why = "") {
   if (modularClient()) connectStarted = false;   // an older client runs once
   if (crash.userEnded) { endCapture(); return; }
   if (modularClient()) newClient();   // ready for Reconnect, while the bar says what happened
+  if (conn.mixed && !conn.opened) {   // the browser blocked the gateway's socket: trying again changes nothing
+    again.forget(); retry.count = 0; endCapture();
+    showEnd(loopbackHost(conn.mixed.replace(/:\d+$/, ""))
+      ? t("end.mixedLocal", `Safari does not let this https page reach the gateway at ${conn.mixed}: an https page may not open a plain ws:// connection, and Safari, unlike Chrome, Edge and Firefox, makes no exception for 127.0.0.1. On iPhone and iPad every browser is Safari underneath. On a computer, use Chrome, Edge or Firefox for now.`, { hop: conn.mixed })
+      : t("end.mixedRemote", `This https page may not open a plain ws:// connection to ${conn.mixed}, in any browser. Reach the gateway through the SSH tunnel at 127.0.0.1 (the safety notice has the command).`, { hop: conn.mixed }), false);
+    return;
+  }
   const passwordRefused = connLog.some((l) => LOGON_FAILED.test(l));
   if (passwordRefused || conn.refused) {
     again.forget(); retry.count = 0; endCapture();

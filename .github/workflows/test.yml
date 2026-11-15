@@ -98,6 +98,9 @@ jobs:
         run: NO_MEDIA=1 ./site.sh kit
       - name: WebKit as an iPhone and as the desktop's Safari (test-webkit.mjs)
         run: PLAYWRIGHT="$RUNNER_TEMP/pw/node_modules/playwright" node test-webkit.mjs dist/site
+      - name: The https site and a gateway at ws://127.0.0.1, in WebKit and Firefox (test-mixed.mjs)
+        run: PLAYWRIGHT="$RUNNER_TEMP/pw/node_modules/playwright" node test-mixed.mjs dist/site
+        if: success() || failure()
       - name: The clipboard in Firefox and Chrome, full screen in Firefox (test-clipboard.mjs)
         run: PLAYWRIGHT="$RUNNER_TEMP/pw/node_modules/playwright" node test-clipboard.mjs dist/site
         if: success() || failure()
