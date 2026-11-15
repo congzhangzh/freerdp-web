@@ -557,8 +557,16 @@ function moduleConfig() {
   },
   onAbort(what) { runtimeFailed = true; resolveRuntime(false); HostsUI.lock(); log("[page] aborted: " + what); crashEnd(true, "wasm abort: " + what);
     // a client that never got ready: say so, or the button says "Loading…" for good (#368)
-    if (!goReady) { $("go").disabled = true; $("go").textContent = t("form.failed", "Could not start");
-      status("the client did not start: " + what, "status.noStart", { what }); } },
+    // (not isolated on a first visit: once coi-serviceworker's reload has had its chance, tt-policy.js)
+    if (!goReady) (window.freerdpAfterReloadChance ?? ((f) => f()))(() => {
+      if (goReady) return;
+      $("go").disabled = true; $("go").textContent = t("form.failed", "Could not start");
+      const notIsolated = window.freerdpNotIsolated?.();   // tt-policy.js says why
+      if (notIsolated) {
+        log("[page] this page is not cross-origin isolated (crossOriginIsolated false): the client's threads cannot start");
+        status(notIsolated, "status.notIsolated");
+      } else status("the client did not start: " + what, "status.noStart", { what });
+    }); },
   };
   return m;
 }

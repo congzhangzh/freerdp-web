@@ -226,6 +226,12 @@ body.fs.tbhide:not(.tbpinned):not(.captured) #tbGrip { display:block; }
 #toolbar button { font-size:12px; padding:4px 10px; border:0; background:#34404d; color:#fff; }
 #toolbar button:hover { background:#2f6fde; }
 #toolbar #tbCapture.on { background:#2f6fde; }
+/* While the mouse is captured, no element has a pointer image: under Pointer Lock macOS leaves its own
+   arrow where the mouse was (the toolbar's Capture button), and in full screen Chrome shows it again at
+   a click, with the cursor of whatever lies under that spot: a second, frozen pointer beside the page's
+   own (聪哥, Mac + Chrome; dbg-rdp-g1's diagnosis, 2026-11-15). !important wins over SDL's inline cursor
+   on the canvas, which app.js still reads (readCursor: canvas.style.cursor) for the pointer it draws. */
+body.captured, body.captured * { cursor:none !important; }
 /* the remote pointer while the mouse is captured (app.js draws it; the browser hides its own) */
 #vcursor { position:fixed; left:0; top:0; z-index:11; pointer-events:none; image-rendering:pixelated; }
 #captureToast, #hotkeyToast, #screensToast { position:fixed; top:calc(var(--tbtop, 8px) + 52px); left:50%; transform:translateX(-50%); z-index:12; padding:8px 14px; border-radius:6px;
