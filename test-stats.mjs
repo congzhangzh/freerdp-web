@@ -90,5 +90,30 @@ check("the network was counted", second.NETWORK_BYTES_RECEIVED > 0 && second.NET
 // RDP's own bytes in Info (20261114.1), beside the WebSocket's: a rate and this connection's total
 const rdpIn = /Network in \(RDP\)\s+(\d+ kbit\/s|–), ([\d.]+) MB total/.exec(info || ""), rdpOut = /Network out \(RDP\)\s+(\d+ kbit\/s|–), ([\d.]+) MB total/.exec(info || "");
 check("Info shows RDP's own bytes, in and out", !!rdpIn && !!rdpOut && +rdpIn[2] > 0, rdpIn && rdpOut ? `in ${rdpIn[1]}, ${rdpIn[2]} MB; out ${rdpOut[1]}, ${rdpOut[2]} MB` : "no rows");
+// Item 8 batch B: the server's rows, as the SDL overlay shows them, each checked against this
+// connection's own facts where there is one (the gateway it used, the canvas, the confirmed caps)
+if (second.RDP_VERSION === undefined) console.log("SKIP  batch B: this client has no RDP_VERSION (no server rows yet)");
+else {
+  const row = (label) => new RegExp(`^${label.replace(/[()]/g, "\\$&")}\t(.+)$`, "m").exec(info || "")?.[1] ?? null;
+  const name = (fn, ...a) => ev(`Module.ccall(${JSON.stringify(fn)}, "string", ${JSON.stringify(a.map(() => "number"))}, ${JSON.stringify(a)})`).catch(() => null);
+  const rdp = row("RDP version"), rdpName = await name("freerdp_web_rdp_version_name", second.RDP_VERSION);
+  check("batch B: Info's RDP version is the library's name for the agreed version", !!rdp && !!rdpName && rdp.startsWith(rdpName), `${rdp} | 0x${second.RDP_VERSION.toString(16)} = ${rdpName}`);
+  const host = row("Host");
+  check("batch B: Info's Host is where this client connected (the gateway)", host === GATEWAY, `${host} vs ${GATEWAY}`);
+  const os = row("Server OS"), osName = second.SERVER_OS_MAJOR_TYPE ? await name("freerdp_web_os_name", second.SERVER_OS_MAJOR_TYPE, second.SERVER_OS_MINOR_TYPE ?? 0) : null;
+  check("batch B: Info's Server OS is the library's name for the server's General caps", second.SERVER_OS_MAJOR_TYPE ? os === osName : os === null, `${os} | ${second.SERVER_OS_MAJOR_TYPE}/${second.SERVER_OS_MINOR_TYPE} = ${osName}`);
+  const gfx = row("Graphics caps"), capsName = second.GFX_CAPS_VERSION ? await name("freerdp_web_caps_version_name", second.GFX_CAPS_VERSION) : null;
+  check("batch B: Info's Graphics caps is the version the server confirmed (the page's own CapsConfirm reading agrees)",
+    !!gfx && !!capsName && gfx.startsWith(capsName + ", flags: ") && (caps === null || caps === second.GFX_CAPS_VERSION), `${gfx} | reader 0x${(second.GFX_CAPS_VERSION || 0).toString(16)}, page ${caps === null ? "–" : "0x" + caps.toString(16)}`);
+  const s1 = row("Surface 1"), cw = await ev("document.getElementById('canvas').width"), ch = await ev("document.getElementById('canvas').height");
+  check("batch B: Surface 1 is the desktop: the canvas's size", !!s1 && s1.startsWith(`${cw} × ${ch}, `), `${s1} | canvas ${cw} × ${ch}`);
+  if (s1 && second.RDPGFX_SURFACE1_CODECID) {
+    const codecName = await name("freerdp_web_codec_name", second.RDPGFX_SURFACE1_CODECID, second.GFX_CAPS_VERSION || 0);
+    check("batch B: Surface 1's codec is the library's name for its last command's codec", !!codecName && s1.endsWith(", " + codecName), `${s1} | codec 0x${second.RDPGFX_SURFACE1_CODECID.toString(16)} = ${codecName}`);
+  }
+  const cert = row("Certificate");
+  console.log(`INFO  batch B rows: RDP version ${rdp} | Server OS ${os} | Graphics caps ${gfx} | Surface 1 ${s1} | Host ${host} | Certificate ${cert}`);
+  check("batch B: Info names the certificate (its subject CN) when the client has it", cert === null || cert.length > 0, `${cert}`);
+}
 console.log(`${fails ? "FAILED" : "PASSED"}`);
 done(fails ? 1 : 0);

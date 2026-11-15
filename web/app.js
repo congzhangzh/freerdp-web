@@ -1556,8 +1556,28 @@ function updateInfo() {
   const rdpNet = stats && cs.rdpBytes(stats, last.stats, dt);
   const kbitPer = (v) => (v === null ? "–" : (v * 8 / 1000).toFixed(0) + " kbit/s");
   const notMeasured = t("info.notMeasured", "not measured");
+  // Item 8 batch B: the server as the protocol tells it, the same rows and words as the SDL overlay
+  // (comp-sdl-g1's reader: the numbers, the strings, and the library's names for the numbers)
+  const srv = stats && cs.server(stats, cs.strings(Module));
+  const named = (fn, fallback, ...args) => (typeof Module["_" + fn] === "function" ? Module.ccall(fn, "string", args.map(() => "number"), args) || fallback : fallback);
+  const hex = (v) => "0x" + v.toString(16).padStart(8, "0");
+  const rdpVersionName = (v) => named("freerdp_web_rdp_version_name", hex(v), v);
+  const surfaceRows = srv ? srv.surfaceList.map((x) => [t("info.surface", `Surface ${x.slot}`, { n: x.slot }),
+    t("info.surfaceValue", `${x.width} × ${x.height}, ${x.codecId ? named("freerdp_web_codec_name", hex(x.codecId), x.codecId, srv.capsVersion ?? 0) : t("info.surfaceNone", "no picture yet")}`,
+      { w: x.width, h: x.height, codec: x.codecId ? named("freerdp_web_codec_name", hex(x.codecId), x.codecId, srv.capsVersion ?? 0) : t("info.surfaceNone", "no picture yet") })]) : [];
+  if (srv?.moreSurfaces) surfaceRows.push([t("info.moreSurfaces", "Surfaces"), t("info.moreSurfacesValue", `+${srv.moreSurfaces} more`, { n: srv.moreSurfaces })]);
   const rows = [
-    [t("info.server", "Server"), info.server], [t("info.transport", "Transport"), info.transport],
+    // where this client connected: FreeRDP's own host and port (on the web: the WebSocket gateway)
+    srv?.host ? [t("info.host", "Host"), srv.port ? `${srv.host}:${srv.port}` : srv.host] : [t("info.server", "Server"), info.server],
+    [t("info.transport", "Transport"), info.transport],
+    [t("info.rdpVersion", "RDP version"), srv?.rdpVersion ? (srv.rdpVersionServer && srv.rdpVersionServer !== srv.rdpVersion
+      ? t("info.rdpVersionBoth", `${rdpVersionName(srv.rdpVersion)} (server ${rdpVersionName(srv.rdpVersionServer)})`, { v: rdpVersionName(srv.rdpVersion), server: rdpVersionName(srv.rdpVersionServer) })
+      : rdpVersionName(srv.rdpVersion)) : null],
+    [t("info.serverOs", "Server OS"), srv?.osMajor ? named("freerdp_web_os_name", `${srv.osMajor} / ${srv.osMinor ?? 0}`, srv.osMajor, srv.osMinor ?? 0) : null],
+    [t("info.gfxCaps", "Graphics caps"), srv?.capsVersion ? t("info.gfxCapsValue", `${named("freerdp_web_caps_version_name", hex(srv.capsVersion), srv.capsVersion)}, flags: ${named("freerdp_web_caps_flags_name", hex(srv.capsFlags ?? 0), srv.capsFlags ?? 0)}`,
+      { caps: named("freerdp_web_caps_version_name", hex(srv.capsVersion), srv.capsVersion), flags: named("freerdp_web_caps_flags_name", hex(srv.capsFlags ?? 0), srv.capsFlags ?? 0) }) : null],
+    ...surfaceRows,
+    [t("info.certificate", "Certificate"), srv?.certificate ?? null],
     [t("info.resolution", "Resolution"), `${$("canvas").width} × ${$("canvas").height}`],
     [t("info.canvas", "Canvas"), (() => { const c = $("canvas"), b = c.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
       const bw = Math.round(b.width * dpr), bh = Math.round(b.height * dpr);
@@ -1636,8 +1656,8 @@ function updateInfo() {
     [t("info.netOutRdp", "Network out (RDP)"), rdpNet ? net2(kbitPer(rdpNet.txPerSecond), mb(rdpNet.tx)) : null],
     // the server's own measurements: a client without them hides the rows, and 0 is not measured,
     // for now or for good: not every server measures (xrdp 0.10 here did not)
-    [t("info.rtt", "Round trip"), statsNet ? (statsNet.rtt ? t("info.rttValue", `${statsNet.rtt} ms (lowest ${statsNet.rttBase})`, { ms: statsNet.rtt, base: statsNet.rttBase }) : notMeasured) : null],
-    [t("info.bandwidth", "Bandwidth"), statsNet ? (statsNet.kbps ? `${statsNet.kbps} kbit/s` : notMeasured) : null],
+    [t("info.rtt", "Round trip (measured by the server)"), statsNet ? (statsNet.rtt ? t("info.rttValue", `${statsNet.rtt} ms (lowest ${statsNet.rttBase})`, { ms: statsNet.rtt, base: statsNet.rttBase }) : notMeasured) : null],
+    [t("info.bandwidth", "Bandwidth (measured by the server)"), statsNet ? (statsNet.kbps ? `${statsNet.kbps} kbit/s` : notMeasured) : null],
     [t("info.session", "Session"), `${Math.floor(dur / 60)}:${String(dur % 60).padStart(2, "0")}`],
   ];
   const tbl = $("infoTable"); tbl.textContent = "";
