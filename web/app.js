@@ -1904,8 +1904,11 @@ function gatewayRoute(address, direct = false) {
 // the same page from the gateway itself (websockify --web serves it on the gateway's port), over
 // http: a page on 127.0.0.1 may open ws://127.0.0.1 in Safari too. The address and the settings
 // in this page's address go along (never a password: loadSettings keeps none in it)
+// It goes by the name localhost, not 127.0.0.1: a passkey belongs to a site name, and WebAuthn takes
+// no IP address for one, so the vault would not work there (聪哥, 2026-11-15)
+const localName = (hop) => hop.replace(/^(127\.\d+\.\d+\.\d+|\[::1\])(?=:\d+$|$)/, "localhost");
 function localPage(hop) {
-  const u = new URL(`http://${hop}/index.html`), q = new URLSearchParams(location.search);
+  const u = new URL(`http://${localName(hop)}/index.html`), q = new URLSearchParams(location.search);
   q.delete("p"); q.set("v", hop); u.search = q.toString(); return u.href;
 }
 function mixedBlocked(url) {
@@ -1934,7 +1937,7 @@ function sessionEnded(unexpected, why = "") {
     again.forget(); retry.count = 0; endCapture();
     const local = loopbackHost(conn.mixed.replace(/:\d+$/, ""));
     showEnd(local
-      ? t("end.mixedLocal", `Safari does not let this https page reach the gateway at ${conn.mixed}: an https page may not open a plain ws:// connection, and Safari, unlike Chrome, Edge and Firefox, makes no exception for 127.0.0.1. A gateway that serves this page too (websockify --web) opens it at http://${conn.mixed}/, where Safari connects (its saved hosts are its own). Or use Chrome, Edge or Firefox.`, { hop: conn.mixed })
+      ? t("end.mixedLocal", `Safari does not let this https page reach the gateway at ${conn.mixed}: an https page may not open a plain ws:// connection, and Safari, unlike Chrome, Edge and Firefox, makes no exception for 127.0.0.1. A gateway that serves this page too (websockify --web) opens it at http://${localName(conn.mixed)}/, where Safari connects (its saved hosts are its own). Or use Chrome, Edge or Firefox.`, { hop: conn.mixed, local: localName(conn.mixed) })
       : t("end.mixedRemote", `This https page may not open a plain ws:// connection to ${conn.mixed}, in any browser. Reach the gateway through the SSH tunnel at 127.0.0.1 (the safety notice has the command).`, { hop: conn.mixed }), false,
       local ? localPage(conn.mixed) : null);
     return;

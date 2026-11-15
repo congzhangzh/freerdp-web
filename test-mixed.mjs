@@ -57,6 +57,9 @@ const gateway = net.createServer((c) => {
   c.on("error", () => {});
 });
 await new Promise((r) => gateway.listen(wsPort, "127.0.0.1", r));
+// localhost may resolve to ::1 first: the gateway answers there too (the button opens localhost)
+const gateway6 = net.createServer((c) => gateway.emit("connection", c));
+await new Promise((r) => { gateway6.once("error", () => r()); gateway6.listen(wsPort, "::1", r); });
 // a gateway with a certificate (wss://), as freerdp.congzhang.li's will be: the page's address says wss://
 let reachedTls = 0;
 const tlsGateway = createHttpsServer({ key: readFileSync(`${dir}/key.pem`), cert: readFileSync(`${dir}/cert.pem`) });
@@ -69,7 +72,7 @@ await new Promise((r) => tlsGateway.listen(wssPort, "127.0.0.1", r));
 if (await fetch(`http://127.0.0.1:${port}/`).then(() => true, () => false)) { console.log(`FAIL  port ${port} is in use`); process.exit(1); }
 const server = spawn("python3", [new URL("serve.py", import.meta.url).pathname, String(port), site], { stdio: "ignore",
   env: { ...process.env, TLS_CERT: `${dir}/cert.pem`, TLS_KEY: `${dir}/key.pem` } });
-const cleanup = () => { server.kill(); gateway.close(); tlsGateway.close(); rmSync(dir, { recursive: true, force: true }); };
+const cleanup = () => { server.kill(); gateway.close(); gateway6.close(); tlsGateway.close(); rmSync(dir, { recursive: true, force: true }); };
 for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => { cleanup(); process.exit(1); });
 await sleep(1000);
 
@@ -109,7 +112,7 @@ for (const which of (process.env.BROWSERS || "webkit firefox").split(/\s+/).filt
     check("…and the Log says so before FreeRDP's own lines", said >= 0 && (refused < 0 || said < refused), said >= 0 ? log[said].slice(0, 100) : "no line");
     // Safari's way in (聪哥, 2026-11-15): the same page from the gateway itself, over http
     const local = await page.evaluate(() => { const a = document.getElementById("endLocal"); return { shown: !a.hidden, href: a.href }; });
-    const want = `http://127.0.0.1:${wsPort}/index.html?`;
+    const want = `http://localhost:${wsPort}/index.html?`;   // a name: passkeys take no IP address
     check("…and offers the page from the gateway itself, with the gateway and the settings", local.shown && local.href.startsWith(want) &&
       new URL(local.href).searchParams.get("v") === `127.0.0.1:${wsPort}` && new URL(local.href).searchParams.get("u") === "test", JSON.stringify(local));
     if (local.shown) {
@@ -119,7 +122,7 @@ for (const which of (process.env.BROWSERS || "webkit firefox").split(/\s+/).filt
       reached = 0; consoleLines.length = 0;
       await page.fill("#pass", "test"); await page.click("#go");
       for (let i = 0; i < 30 && !reached; i++) await sleep(500);
-      check("…where Safari reaches the gateway (http://127.0.0.1, the page cross-origin isolated)", there.isolated && reached > 0 &&
+      check("…where Safari reaches the gateway (http://localhost, the page cross-origin isolated)", there.isolated && reached > 0 &&
         !consoleLines.some((l) => /\[blocked\]|requested insecure content/i.test(l)), JSON.stringify({ ...there, sockets: reached }));
     }
   } else {
