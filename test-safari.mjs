@@ -43,7 +43,9 @@ if (TLS_CERT) {
   await new Promise((r) => wss.listen(WSS, "127.0.0.1", r));
 }
 const serve = new URL("serve.py", import.meta.url).pathname;
-const servers = [spawn("python3", [serve, String(HTTP), site], { stdio: ["ignore", "ignore", "pipe"] })];
+// the plain http one without TLS_CERT: serve.py serves https whenever it is set
+const plainEnv = { ...process.env }; delete plainEnv.TLS_CERT; delete plainEnv.TLS_KEY;
+const servers = [spawn("python3", [serve, String(HTTP), site], { stdio: ["ignore", "ignore", "pipe"], env: plainEnv })];
 const serverLog = []; servers[0].stderr.on("data", (d) => serverLog.push(...d.toString().split("\n").filter(Boolean)));
 servers[0].on("exit", (code, signal) => console.log(`INFO  the page server (serve.py ${HTTP}) exited: code ${code}, signal ${signal}; its last lines: ${serverLog.slice(-8).join(" | ")}`));
 servers[0].on("error", (e) => console.log(`INFO  the page server did not start: ${e.message}`));
