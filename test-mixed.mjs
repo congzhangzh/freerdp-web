@@ -150,6 +150,28 @@ for (const which of (process.env.BROWSERS || "webkit firefox").split(/\s+/).filt
   const vaultText = await page.evaluate(() => document.getElementById("vaultStatus")?.textContent || "");
   check(`${which}: at http://127.0.0.1 the vault says a passkey needs a site name, and where it works`,
     /belongs to a site name/.test(vaultText) && vaultText.includes(`http://localhost:${wsPort}/`), vaultText.slice(0, 120));
+  // a first visit where the client fails before coi-serviceworker's reload (the kit's desktop WebKit,
+  // 2026-11-15): the worker's registration held back 4 s, so the race is lost every time. The page
+  // that stays must get to Connect, cross-origin isolated, never stopping at "Could not start"
+  const slowCtx = await browser.newContext();
+  await slowCtx.addInitScript(() => {
+    const sw = navigator.serviceWorker; if (!sw) return;
+    const register = sw.register.bind(sw);
+    sw.register = (...a) => new Promise((ok, no) => setTimeout(() => register(...a).then(ok, no), 4000));
+  });
+  const slow = await slowCtx.newPage();
+  await slow.goto(`http://localhost:${wsPort}/index.html`);
+  let first = null, seen = [];
+  for (let i = 0; i < 60; i++) {
+    first = await slow.evaluate(() => ({ text: document.getElementById("go")?.textContent, isolated: self.crossOriginIsolated,
+      status: document.getElementById("status")?.textContent })).catch(() => null);
+    if (first && !seen.includes(first.text)) seen.push(first.text);
+    if (first && first.text !== "Loading…" && first.text !== undefined) break;
+    await sleep(500);
+  }
+  check(`${which}: a first visit whose client fails before the service worker's reload still gets to Connect`, first?.text === "Connect" && first.isolated,
+    JSON.stringify({ ...first, seen }).slice(0, 200));
+  await slowCtx.close();
   // not cross-origin isolated (no COOP/COEP from the server, no service worker: an app's built-in browser)
   const bare = await (await browser.newContext({ serviceWorkers: "block" })).newPage();
   await bare.goto(`http://localhost:${wsPort}/index.html`);
