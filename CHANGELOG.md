@@ -15,6 +15,30 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261115.3
+
+- **One pointer under Capture on a Mac.** Under Pointer Lock macOS leaves its own arrow where the
+  mouse was (the toolbar's Capture button), and in full screen Chrome showed it again at a click,
+  with the cursor of whatever lay under that spot: a second pointer, frozen, beside the one the
+  page draws, which shrank and grew at each click (聪哥, Mac + Chrome; dbg-rdp-g1 found it). Now no
+  element has a pointer image while the mouse is captured (`body.captured * { cursor: none
+  !important }`); the canvas keeps SDL's own inline cursor, which the page reads for the pointer it
+  draws. Ctrl + Alt gives the normal pointers back.
+- **"Not cross-origin isolated" in so many words.** The client's threads share memory (a
+  SharedArrayBuffer), which a browser gives only to a page that is cross-origin isolated: COOP
+  and COEP headers from the server, or the page's coi-serviceworker, which adds them. An app's
+  built-in browser runs no service worker, so from a gateway without those headers the client
+  failed with "The object can not be cloned" (WebKit) or "The WebAssembly.Memory object cannot be
+  serialized" (Firefox) (聪哥's iPhone in an SSH app). Now the page says the page is not cross-origin
+  isolated and what to do, from its first script on (`tt-policy.js`) and when the client aborts.
+  A gateway that sends the two headers itself works there: tried on 聪哥's iPhone.
+- **The vault at an IP address.** A passkey belongs to a site name, and WebAuthn takes no IP
+  address for one: at `http://127.0.0.1:<port>` the vault now says to open the page at
+  `http://localhost:<port>/` (a vault of its own there) instead of failing at create.
+- Tests: `test-fs-click.mjs` checks that nothing shows a pointer while captured and that it all
+  comes back on release; `test-mixed.mjs` checks the vault's line at 127.0.0.1 and the "not
+  cross-origin isolated" line with the service worker blocked, in WebKit and Firefox.
+
 ## 20261115.2
 
 - **Safari's way in: the page from the gateway itself.** Safari blocks the https site's `ws://`

@@ -33,6 +33,13 @@
   <!-- shown only in Chinese (i18n.js): the entries below stay in English -->
   <p class="note" data-i18n="notes.english" data-i18n-only="zh ja fr" hidden></p>
 
+  <h2>20261115.3 <span class="muted">· 15 November 2026</span></h2>
+  <ul>
+    <li><b>Capture</b> on a Mac shows one pointer: the Mac's own arrow no longer stays frozen beside the remote one (it came back at a click in full screen).</li>
+    <li>A browser that cannot run the client's threads (the page is not cross-origin isolated, e.g. an app's built-in browser) now says so and what to do, instead of "The object can not be cloned".</li>
+    <li>At an address like 127.0.0.1 the passkey vault says to open the page at localhost: a passkey needs a site name.</li>
+  </ul>
+
   <h2>20261115.2 <span class="muted">· 15 November 2026</span></h2>
   <ul>
     <li><b>Safari</b> can connect: when Safari blocks this https page from the gateway, the message offers the same page from the gateway itself (http://localhost:&lt;port&gt;/, when the gateway serves it with websockify --web), where Safari connects and passkeys work.</li>
