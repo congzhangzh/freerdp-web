@@ -100,7 +100,16 @@ check("in full screen a click on the remote desktop is just a click: no capture"
 const capClick = await clickForReal(send, "#tbCapture"); await sleep(800);
 const afterCapture = await ev("document.pointerLockElement === canvas && document.body.classList.contains('captured')");
 check("…and the toolbar's Capture captures", capClick && afterCapture === true, `clicked for real: ${capClick}, captured: ${afterCapture}`);
+// no element shows a pointer image while captured (macOS's frozen second pointer), the canvas's own
+// inline cursor (SDL's) is still there for the pointer the page draws, and it all comes back on release
+const cursors = () => ev("JSON.stringify({ button: getComputedStyle(tbCapture).cursor, canvas: getComputedStyle(canvas).cursor, body: getComputedStyle(document.body).cursor })");
+await ev("canvas.style.cursor = 'text', true");   // as SDL sets the remote pointer
+const lockedCursors = JSON.parse(await cursors()), inline = await ev("canvas.style.cursor");
+check("…and while captured no element shows a pointer (the Mac's frozen second one)", lockedCursors.button === "none" && lockedCursors.canvas === "none" && lockedCursors.body === "none" && inline === "text",
+  JSON.stringify({ ...lockedCursors, inline }));
 await ev("release(), true"); await sleep(500);
+const freeCursors = JSON.parse(await cursors());
+check("…and after the release the pointers are back", freeCursors.button === "pointer" && freeCursors.canvas === "text", JSON.stringify(freeCursors));
 // The client's own requests for a capture (SDL's relative mouse mode, #369 again): Emscripten runs
 // a deferred pointer lock request inside its next mouse button handler, so here a mousedown
 // listener on the canvas asks the way it does. A real click on the remote desktop must not capture.
