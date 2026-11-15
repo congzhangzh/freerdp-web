@@ -33,6 +33,12 @@
   <!-- shown only in Chinese (i18n.js): the entries below stay in English -->
   <p class="note" data-i18n="notes.english" data-i18n-only="zh ja fr" hidden></p>
 
+  <h2>20261115.2 <span class="muted">· 15 November 2026</span></h2>
+  <ul>
+    <li><b>Safari</b> can connect: when Safari blocks this https page from the gateway, the message offers the same page from the gateway itself (http://localhost:&lt;port&gt;/, when the gateway serves it with websockify --web), where Safari connects and passkeys work.</li>
+    <li>The gateway can be <b>wss://</b> (one with a certificate): write wss://host or wss://host:port. From this https page, a gateway on another computer is reached over wss:// by itself.</li>
+  </ul>
+
   <h2>20261115.1 <span class="muted">· 15 November 2026</span></h2>
   <ul>
     <li><b>Safari</b>, and every browser on iPhone and iPad, does not let this https page reach a gateway at 127.0.0.1. The page now says so, instead of "Connection lost" and retrying. Chrome, Edge and Firefox are not affected.</li>

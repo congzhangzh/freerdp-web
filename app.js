@@ -514,6 +514,9 @@ const modularClient = () => typeof window.createFreeRDP === "function";
 function moduleConfig() {
   const m = {
   canvas: $("canvas"),
+  // the client's sockets: ws:// or wss:// (Connect sets url, gatewayRoute). Emscripten's socket layer
+  // takes this object when it starts, so it has to exist before that
+  websocket: {},
   // SDL listens for keys on the whole window and calls preventDefault(), which blocks typing in
   // the page's own input boxes. SDL reads hints from the environment: limit it to the canvas.
   // FreeRDP reads its hotkeys from $XDG_CONFIG_HOME/freerdp/sdl-freerdp.json; the C runtime
@@ -1752,7 +1755,9 @@ async function connect(againPassword = null, retrying = false) {
     }
     noPassword.asked = false;
     const session = readSession();
-    const resolved = { ...host, extra: FreeRDPOptions.resolve(session, host.extra, codecEnv()).join(" ") };
+    const route = gatewayRoute(host.host, host.direct);
+    if (!host.direct) Module.websocket.url = route.secure ? "wss://" : "ws://";
+    const resolved = { ...host, host: route.host, extra: FreeRDPOptions.resolve(session, host.extra, codecEnv()).join(" ") };
     let args;
     try { args = FreeRDPVault.connectionArgs(resolved, size, scale); } finally { resolved.password = ""; }
     clipboardOn = !args.some((a) => /^-clipboard$|^[/+]clipboard:(?:off|false)$/i.test(a));
@@ -1883,6 +1888,29 @@ const conn = { began: 0, paints: null, mixed: null, opened: false };
 // what happened instead: the host and port of the blocked socket, or null.
 const webkitEngine = () => /AppleWebKit\//.test(navigator.userAgent) && !/Chrome\/|Chromium\/|Firefox\//.test(navigator.userAgent);
 const loopbackHost = (h) => /^(127\.\d+\.\d+\.\d+|localhost|\[::1\])$/i.test(h);
+// The gateway's WebSocket: wss:// when the address says so, or when this page is https and the gateway
+// is on another computer (a plain ws:// to it is blocked there in every browser: mixed content); else
+// ws://. A wss:// gateway needs a certificate the browser trusts for its name (Let's Encrypt), and is
+// the one way in from an iPhone (聪哥, 2026-11-15: freerdp.congzhang.li). Its port is 443 unless given.
+// Returns FreeRDP's /v: (host:port, no scheme) and whether the socket is wss://.
+function gatewayRoute(address, direct = false) {
+  const a = String(address).trim();
+  if (direct) return { host: a, secure: false };
+  const m = /^(wss?):\/\/([^/?#]+)\/?$/i.exec(a);
+  const hop = m ? m[2] : a, name = hop.replace(/:\d+$/, "");
+  const secure = m ? m[1].toLowerCase() === "wss" : location.protocol === "https:" && !loopbackHost(name);
+  return { host: secure && !/:\d+$/.test(hop) ? hop + ":443" : hop, secure };
+}
+// the same page from the gateway itself (websockify --web serves it on the gateway's port), over
+// http: a page on 127.0.0.1 may open ws://127.0.0.1 in Safari too. The address and the settings
+// in this page's address go along (never a password: loadSettings keeps none in it)
+// It goes by the name localhost, not 127.0.0.1: a passkey belongs to a site name, and WebAuthn takes
+// no IP address for one, so the vault would not work there (聪哥, 2026-11-15)
+const localName = (hop) => hop.replace(/^(127\.\d+\.\d+\.\d+|\[::1\])(?=:\d+$|$)/, "localhost");
+function localPage(hop) {
+  const u = new URL(`http://${localName(hop)}/index.html`), q = new URLSearchParams(location.search);
+  q.delete("p"); q.set("v", hop); u.search = q.toString(); return u.href;
+}
 function mixedBlocked(url) {
   const m = location.protocol === "https:" && /^ws:\/\/((\[[^\]]+\]|[^:/]+)(:\d+)?)/i.exec(url);
   return m && (webkitEngine() || !loopbackHost(m[2])) ? m[1] : null;
@@ -1893,8 +1921,9 @@ const codecReading = () => { const cs = window.freerdpCodecStats;
 const refusedBeforePicture = () => connLog.some((l) => HUNG_UP.test(l)) && Date.now() - conn.began < HUNG_UP_MS &&
   window.freerdpCodecStats?.paintedNothing(conn.paints, codecReading()) === true;
 const LOGON_FAILED = /ERRCONNECT_(LOGON_FAILURE|WRONG_PASSWORD|ACCESS_DENIED|ACCOUNT_\w+|PASSWORD_\w+|NO_OR_MISSING_CREDENTIALS)|credentials do not work/;
-function showEnd(text, canReconnect) {
+function showEnd(text, canReconnect, local = null) {
   $("endText").textContent = text;
+  $("endLocal").hidden = !local; if (local) $("endLocal").href = local;
   $("endReconnect").hidden = !canReconnect;
   $("endReconnect").textContent = modularClient() && again.has(HostsUI.selected) ? t("tb.reconnect", "Reconnect") : t("end.reload", "Reload and connect");
   $("endBar").hidden = false;
@@ -1906,9 +1935,11 @@ function sessionEnded(unexpected, why = "") {
   if (modularClient()) newClient();   // ready for Reconnect, while the bar says what happened
   if (conn.mixed && !conn.opened) {   // the browser blocked the gateway's socket: trying again changes nothing
     again.forget(); retry.count = 0; endCapture();
-    showEnd(loopbackHost(conn.mixed.replace(/:\d+$/, ""))
-      ? t("end.mixedLocal", `Safari does not let this https page reach the gateway at ${conn.mixed}: an https page may not open a plain ws:// connection, and Safari, unlike Chrome, Edge and Firefox, makes no exception for 127.0.0.1. On iPhone and iPad every browser is Safari underneath. On a computer, use Chrome, Edge or Firefox for now.`, { hop: conn.mixed })
-      : t("end.mixedRemote", `This https page may not open a plain ws:// connection to ${conn.mixed}, in any browser. Reach the gateway through the SSH tunnel at 127.0.0.1 (the safety notice has the command).`, { hop: conn.mixed }), false);
+    const local = loopbackHost(conn.mixed.replace(/:\d+$/, ""));
+    showEnd(local
+      ? t("end.mixedLocal", `Safari does not let this https page reach the gateway at ${conn.mixed}: an https page may not open a plain ws:// connection, and Safari, unlike Chrome, Edge and Firefox, makes no exception for 127.0.0.1. A gateway that serves this page too (websockify --web) opens it at http://${localName(conn.mixed)}/, where Safari connects (its saved hosts are its own). Or use Chrome, Edge or Firefox.`, { hop: conn.mixed, local: localName(conn.mixed) })
+      : t("end.mixedRemote", `This https page may not open a plain ws:// connection to ${conn.mixed}, in any browser. Reach the gateway through the SSH tunnel at 127.0.0.1 (the safety notice has the command).`, { hop: conn.mixed }), false,
+      local ? localPage(conn.mixed) : null);
     return;
   }
   const passwordRefused = connLog.some((l) => LOGON_FAILED.test(l));
