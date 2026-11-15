@@ -43,7 +43,8 @@ if (TLS_CERT) {
   await new Promise((r) => wss.listen(WSS, "127.0.0.1", r));
 }
 const serve = new URL("serve.py", import.meta.url).pathname;
-const servers = [spawn("python3", [serve, String(HTTP), site], { stdio: "ignore" })];
+const servers = [spawn("python3", [serve, String(HTTP), site], { stdio: ["ignore", "ignore", "pipe"] })];
+const serverLog = []; servers[0].stderr.on("data", (d) => serverLog.push(...d.toString().split("\n").filter(Boolean)));
 if (TLS_CERT) servers.push(spawn("python3", [serve, String(HTTPS), site], { stdio: "ignore", env: { ...process.env, TLS_CERT, TLS_KEY } }));
 const driver = spawn("safaridriver", ["-p", String(WD)], { stdio: "inherit" });
 let sid = null;
@@ -72,7 +73,11 @@ async function open(url) {
     await wd("POST", `/session/${sid}/url`, { url });
     for (let i = 0; i < 90 && s !== "ready"; i++) { await sleep(500); s = await status().catch(() => null); }
   }
-  if (s !== "ready") console.log(`INFO  ${url}: status ${s}, title "${await js("return document.title").catch((e) => e.message)}", at ${await js("return location.href").catch(() => "?")}`);
+  if (s !== "ready") {
+    console.log(`INFO  ${url}: status ${s}, title "${await js("return document.title").catch((e) => e.message)}", at ${await js("return location.href").catch(() => "?")}`);
+    console.log(`INFO  the same address from node now: ${await fetch(url).then((r) => r.status + " " + r.headers.get("content-type"), (e) => e.message)}`);
+    console.log(`INFO  the page server's last requests: ${serverLog.slice(-6).join(" | ") || "none"}`);
+  }
   return s;
 }
 async function connect(pass = "test") { await type("#pass", pass); await click("#go"); }
@@ -89,7 +94,12 @@ try {
   console.log("browser:", await js("return navigator.userAgent"));
 
   // A: the page at http://127.0.0.1, a plain ws:// gateway
-  const a = await open(`http://127.0.0.1:${HTTP}/index.html?v=127.0.0.1:${WS}&u=test&fs=0`);
+  let a = await open(`http://127.0.0.1:${HTTP}/index.html?v=127.0.0.1:${WS}&u=test&fs=0`);
+  if (a !== "ready") {   // the same page by name: does Safari treat the address differently?
+    const byName = await open(`http://localhost:${HTTP}/index.html?v=127.0.0.1:${WS}&u=test&fs=0`);
+    console.log(`INFO  by name, http://localhost:${HTTP}: status ${byName}`);
+    if (byName === "ready") a = byName;
+  }
   const env = await js("const l = document.getElementById('log'); return JSON.stringify({ isolated: self.crossOriginIsolated, sab: typeof SharedArrayBuffer, version: ((l && l.textContent.match(/FreeRDP Web \\S+/)) || [''])[0] })");
   check("A: the page loads in Safari from http://127.0.0.1, cross-origin isolated", a === "ready" && JSON.parse(env).isolated, `status ${a}, ${env}`);
   reached.ws = 0;
