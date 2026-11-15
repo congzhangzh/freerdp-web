@@ -117,13 +117,18 @@
   }
   async function unlockAndAdopt() { await vault.unlock(); adopt(); }
   async function refreshMethods() { methods = await vault.methods(); exists = !!methods; }
+  // WebAuthn takes no IP address for a passkey's site (its RP ID): at http://127.0.0.1:<port> creating
+  // one fails, so the vault says where it works instead (localhost: the same server, by name)
+  const ipHost = /^(\d+\.\d+\.\d+\.\d+|\[[0-9a-f:.]+\])$/i.test(location.hostname);
+  const byName = `${location.protocol}//localhost${location.port ? ":" + location.port : ""}/`;
   function renderVault() {
     const h = current(), on = h.vault, unlocked = !!vault?.unlocked;
     $("vaultKeep").checked = on;
     $("vaultPanel").hidden = !on;
     $("pass").placeholder = on && h.vaultSaved ? t("vault.kept", "Kept in the vault: leave empty") : "";
     let text;
-    if (!available) text = t("vault.needs", "The vault needs HTTPS (or localhost) and a browser with passkeys that support PRF.");
+    if (!available && ipHost) text = t("vault.ipHost", `A passkey belongs to a site name, not to an address like ${location.hostname}: open this page at ${byName} for the vault (it is a vault of its own there).`, { ip: location.hostname, url: byName });
+    else if (!available) text = t("vault.needs", "The vault needs HTTPS (or localhost) and a browser with passkeys that support PRF.");
     else if (!exists) text = t("vault.none", "There is no vault in this browser yet: create one, with a passkey.");
     else if (!unlocked) text = (h.vaultSaved ? t("vault.savedLocked", "Saved. Connect asks for your passkey.") : t("vault.unlockToSave", "Unlock the vault to save this host's password in it.")) +
       (methods?.passkeys > 1 ? t("vault.anyOf", ` Any of its ${methods.passkeys} passkeys opens it.`, { n: methods.passkeys }) : "") +
@@ -419,7 +424,7 @@
   render();
   (async () => {
     try {
-      if (!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials || !window.crypto?.subtle) return;
+      if (!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials || !window.crypto?.subtle || ipHost) return;
       vault = new FreeRDPVault.Vault(); available = true;
       try { await refreshMethods(); } catch (e) { exists = await vault.exists(); }   // a record this page cannot read
     } catch (e) { /* no vault here: renderVault says why */ }

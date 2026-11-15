@@ -15,7 +15,9 @@
 //    the Log says so before FreeRDP's own lines; its button opens the page from the gateway itself
 //    (served over http on the gateway's port, as websockify --web does), where Safari connects
 //  - Firefox: the socket reaches the gateway, and the page says nothing about mixed content
-//  - both: a gateway written wss://host:port (one with a certificate) is reached over wss://
+//  - both: a gateway written wss://host:port (one with a certificate) is reached over wss://; at an
+//    IP address the vault says a passkey needs a site name; a page that is not cross-origin
+//    isolated (no headers, no service worker) says so
 import { spawn, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createServer as createHttpsServer } from "node:https";
@@ -140,6 +142,21 @@ for (const which of (process.env.BROWSERS || "webkit firefox").split(/\s+/).filt
   check(`${which}: a gateway written wss://127.0.0.1:${wssPort} is reached over wss:// from the https page`, reachedTls > 0 &&
     !consoleLines.some((l) => /\[blocked\]|requested insecure content/i.test(l)), `${reachedTls} socket(s)`);
   check("…and FreeRDP gets host:port, no scheme", cmd.includes(` /v:127.0.0.1:${wssPort} `), cmd.slice(0, 60));
+  // the vault at an IP address: a passkey takes no IP for its site, so the vault says where it works
+  await page.goto(`http://127.0.0.1:${wsPort}/index.html?v=127.0.0.1:${wsPort}&u=test&fs=0`);
+  for (let i = 0; i < 60 && await page.evaluate(() => document.getElementById("status")?.textContent).catch(() => "") !== "ready"; i++) await sleep(500);
+  await page.check("#vaultKeep").catch(() => {});
+  await sleep(500);
+  const vaultText = await page.evaluate(() => document.getElementById("vaultStatus")?.textContent || "");
+  check(`${which}: at http://127.0.0.1 the vault says a passkey needs a site name, and where it works`,
+    /belongs to a site name/.test(vaultText) && vaultText.includes(`http://localhost:${wsPort}/`), vaultText.slice(0, 120));
+  // not cross-origin isolated (no COOP/COEP from the server, no service worker: an app's built-in browser)
+  const bare = await (await browser.newContext({ serviceWorkers: "block" })).newPage();
+  await bare.goto(`http://localhost:${wsPort}/index.html`);
+  let bareStatus = "";
+  for (let i = 0; i < 60 && !/did not start|ready/.test(bareStatus); i++) { await sleep(500); bareStatus = await bare.evaluate(() => document.getElementById("status")?.textContent || "").catch(() => ""); }
+  const isolated = await bare.evaluate(() => crossOriginIsolated);
+  check(`${which}: a page that is not cross-origin isolated says so, not a cryptic error`, !isolated && /not cross-origin isolated/.test(bareStatus), `isolated ${isolated}: ${bareStatus.slice(0, 110)}`);
   await browser.close();
 }
 cleanup();
