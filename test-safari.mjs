@@ -45,6 +45,8 @@ if (TLS_CERT) {
 const serve = new URL("serve.py", import.meta.url).pathname;
 const servers = [spawn("python3", [serve, String(HTTP), site], { stdio: ["ignore", "ignore", "pipe"] })];
 const serverLog = []; servers[0].stderr.on("data", (d) => serverLog.push(...d.toString().split("\n").filter(Boolean)));
+servers[0].on("exit", (code, signal) => console.log(`INFO  the page server (serve.py ${HTTP}) exited: code ${code}, signal ${signal}; its last lines: ${serverLog.slice(-8).join(" | ")}`));
+servers[0].on("error", (e) => console.log(`INFO  the page server did not start: ${e.message}`));
 if (TLS_CERT) servers.push(spawn("python3", [serve, String(HTTPS), site], { stdio: "ignore", env: { ...process.env, TLS_CERT, TLS_KEY } }));
 const driver = spawn("safaridriver", ["-p", String(WD)], { stdio: "inherit" });
 let sid = null;
@@ -85,7 +87,10 @@ const waitFor = async (test, ms) => { for (let t = 0; t < ms && !(await test());
 
 // the page's servers first: Safari shows its own error page for an address nothing answers yet
 const up = (url) => fetch(url).then((r) => r.ok, () => false);
-for (let i = 0; i < 100 && !(await up(`http://127.0.0.1:${HTTP}/index.html`)); i++) await sleep(200);
+let httpUp = false;
+for (let i = 0; i < 100 && !(httpUp = await up(`http://127.0.0.1:${HTTP}/index.html`)); i++) await sleep(200);
+console.log(`INFO  the page server answers at http://127.0.0.1:${HTTP}: ${httpUp}`);
+if (!httpUp) { console.log(`FAIL  the page server never answered; its lines: ${serverLog.slice(-8).join(" | ") || "none"}`); await done(1); }
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";   // only this check of our own https server
 for (let i = 0; TLS_CERT && i < 100 && !(await up(`https://127.0.0.1:${HTTPS}/index.html`)); i++) await sleep(200);
 for (let i = 0; i < 50; i++) { await sleep(200); if (await up(`http://127.0.0.1:${WD}/status`)) break; }
