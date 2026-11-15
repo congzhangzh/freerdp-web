@@ -2,7 +2,8 @@
 // plain ws:// socket (mixed content). Chrome, Edge and Firefox make an exception for the loopback;
 // Safari (WebKit, also every browser on iPhone and iPad) does not, and blocks the socket with only a
 // console line, while FreeRDP logs "Connection refused" (聪哥 on a MacBook, 2026-11-15). The page
-// must say what happened. Served over https here (a self-signed certificate made with openssl);
+// must say what happened. And Connect with an empty password asks for it first (a server that
+// wants one hangs up with "ERRINFO_RPC_INITIATED_DISCONNECT", 聪哥 in Firefox). Served over https here (a self-signed certificate made with openssl);
 // the gateway is a WebSocket server that accepts and then stays silent (no RDP server is needed).
 //
 //   node test-mixed.mjs <site dir>          e.g. dist/site (./site.sh makes one)
@@ -55,6 +56,14 @@ for (const which of (process.env.BROWSERS || "webkit firefox").split(/\s+/).filt
   const consoleLines = []; page.on("console", (m) => consoleLines.push(m.text()));
   await page.goto(`https://127.0.0.1:${port}/index.html?v=127.0.0.1:${wsPort}&u=test&fs=0`);
   for (let i = 0; i < 60 && await page.evaluate(() => document.getElementById("status")?.textContent) !== "ready"; i++) await sleep(500);
+  // Connect with the password field empty: the page asks for it, and nothing starts
+  reached = 0;
+  await page.fill("#pass", "");
+  await page.click("#go"); await sleep(1500);
+  const asked = await page.evaluate(() => ({ status: document.getElementById("status").textContent, focus: document.activeElement?.id,
+    started: document.getElementById("log").textContent.includes("[page] sdl-freerdp ") }));
+  check(`${which}: Connect with no password asks for it first, and starts nothing`, /Enter the password first/.test(asked.status) && asked.focus === "pass" && !asked.started && reached === 0,
+    JSON.stringify({ ...asked, sockets: reached }));
   reached = 0;
   await page.fill("#pass", "test");
   await page.click("#go");

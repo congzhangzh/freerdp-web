@@ -1686,6 +1686,7 @@ window.addEventListener("resize", syncHeader); syncHeader();
 
 let audioContext = null;
 // again: a reconnection with the password kept in memory (no passkey, no typing)
+const noPassword = { asked: false };   // Connect stopped once for an empty password (connect, below)
 async function connect(againPassword = null, retrying = false) {
   if (connectStarted || runtimeFailed) return;
   try { HostsUI.check(); } catch (e) { status(e.message); return; }
@@ -1740,6 +1741,16 @@ async function connect(againPassword = null, retrying = false) {
   checkSelection();
   HostsUI.use(againPassword, host => {
     if (host.direct && !window.directSocketsAvailable) throw new Error(t("status.needsDirect", "This saved host needs Direct TCP. Install and open the isolated app."));
+    // No password: FreeRDP sends an empty one, a server that wants one hangs up after the TLS
+    // handshake, and the Log says "ERRINFO_RPC_INITIATED_DISCONNECT" (an administrative tool?),
+    // which reads as anything but a password (聪哥 in Firefox, 2026-11-15: his saved host and
+    // password live in Chrome's storage). Connect asks for it first; Connect again with the field
+    // still empty goes without one (a server with its own logon screen, an account without one).
+    if (againPassword === null && !host.password && !noPassword.asked) {
+      noPassword.asked = true;
+      throw Object.assign(new Error(t("status.passwordFirst", "Enter the password first. Connect again to go without one.")), { focus: "pass" });
+    }
+    noPassword.asked = false;
     const session = readSession();
     const resolved = { ...host, extra: FreeRDPOptions.resolve(session, host.extra, codecEnv()).join(" ") };
     let args;
@@ -1787,6 +1798,7 @@ async function connect(againPassword = null, retrying = false) {
     status(e.message);
     if (againPassword === null) { document.body.classList.remove("session"); syncHeader(); }
     if (!handedToWasm) { connectStarted = false; $("go").disabled = !runtimeReady; }
+    if (e.focus) setTimeout(() => $(e.focus)?.focus(), 0);   // the field to fill in, once the form is back
     if (againPassword !== null) showEnd(t("end.notAgain", "Not reconnected: " + e.message, { why: e.message }), true);
   }
 }
