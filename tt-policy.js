@@ -39,11 +39,22 @@ if (window.trustedTypes && !trustedTypes.defaultPolicy) {
   // service workers, none controlling the page yet), a failure for want of isolation is said only
   // NOT_ISOLATED_WAIT_MS later, if the page is still here: until then the button says "Loading…".
   // (20261115.3 said it at once, and desktop Safari's first visit stopped at "Could not start".)
-  const NOT_ISOLATED_WAIT_MS = 8000;
+  // And once coi-serviceworker has asked for its reload (it sets sessionStorage coiReloadedBySelf just
+  // before), the reload is underway: desktop Safari holds that navigation until the new worker is
+  // ready, longer than NOT_ISOLATED_WAIT_MS on a slow machine (the kit's site gate, 2026-11-15:
+  // "Reloading page…", then this page stayed, and 20261115.5 said "Could not start" on it). So
+  // while it is underway nothing is said, for up to RELOAD_GIVE_UP_MS: a page still here after
+  // that has a reload that will not come, and says why.
+  const NOT_ISOLATED_WAIT_MS = 8000, RELOAD_GIVE_UP_MS = 45000;
   const reloadMayCome = () => window.isSecureContext && !!navigator.serviceWorker && !navigator.serviceWorker.controller;
+  const reloadAsked = () => { try { return !!sessionStorage.getItem("coiReloadedBySelf"); } catch (e) { return false; } };
+  // (Once its worker is active it also takes control of this very page, clients.claim(), so a
+  // controller is no sign that the reload has failed while one has been asked for.)
   window.freerdpAfterReloadChance = (fn) => {
-    if (globalThis.crossOriginIsolated === false && reloadMayCome()) setTimeout(fn, NOT_ISOLATED_WAIT_MS);
-    else fn();
+    if (globalThis.crossOriginIsolated !== false || !(reloadMayCome() || reloadAsked())) return fn();
+    const since = Date.now();
+    const later = () => (reloadAsked() && Date.now() - since < RELOAD_GIVE_UP_MS ? setTimeout(later, 1000) : fn());
+    setTimeout(later, NOT_ISOLATED_WAIT_MS);
   };
   const show = (what) => {
     if (window.freerdpPageReady) return;

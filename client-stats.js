@@ -85,6 +85,42 @@
   // undefined for a client without it, which then leaves the web client's own reading to the page
   // (codec-stats.js [1])
   const capsVersion = (now) => now?.GFX_CAPS_VERSION;
+  // Item 8 batch B, the server as the protocol already tells it (names agreed with comp-sdl-g1, who
+  // adds them to the reader, 2026-11-15): 0 is "not known yet" (before the capability exchange), so
+  // each is null then and its row hides. Strings (host, certificate) come from the list's string
+  // side (strings, below). The names behind the numbers (version, OS, caps, codecs) are the
+  // library's own tables, so the page and the SDL overlay say the same words.
+  const known = (v) => (v ? v : null);
+  const SURFACE_SLOTS = 4, NO_PICTURE = 4294967295;   // UINT32_MAX: a surface with no command yet
+  function server(now, strs = {}) {
+    if (!now) return null;
+    // the surfaces in surface ID order, in up to SURFACE_SLOTS fixed slots (an empty slot: WIDTH 0),
+    // each with its size and the codec ID of its last command (NO_PICTURE: none yet; 0 is a codec,
+    // RDPGFX_CODECID_UNCOMPRESSED); the rest are only counted
+    const surfaceList = [];
+    for (let i = 1; i <= SURFACE_SLOTS; i++) {
+      const w = now[`RDPGFX_SURFACE${i}_WIDTH`] ?? 0, h = now[`RDPGFX_SURFACE${i}_HEIGHT`] ?? 0, codecId = now[`RDPGFX_SURFACE${i}_CODECID`] ?? NO_PICTURE;
+      if (w) surfaceList.push({ slot: i, width: w, height: h, codecId: codecId === NO_PICTURE ? null : codecId });
+    }
+    const count = now.RDPGFX_SURFACES ?? null;
+    return {
+      rdpVersion: known(now.RDP_VERSION), rdpVersionServer: known(now.SERVER_RDP_VERSION),
+      osMajor: known(now.SERVER_OS_MAJOR_TYPE), osMinor: now.SERVER_OS_MINOR_TYPE ?? null,
+      capsVersion: known(now.GFX_CAPS_VERSION), capsFlags: now.GFX_CAPS_FLAGS ?? null,
+      surfaces: count, surfaceList, moreSurfaces: count > SURFACE_SLOTS ? count - SURFACE_SLOTS : 0,
+      host: strs.SERVER_HOSTNAME || null, port: known(now.SERVER_PORT), certificate: strs.SERVER_CERT_CN || null,
+    };
+  }
+  // the list's string side: freerdp_web_info_count/name/value(i) (a name and its string, or none)
+  function strings(m) {
+    if (typeof m?._freerdp_web_info_count !== "function") return {};
+    const out = {}, n = Number(m._freerdp_web_info_count());
+    for (let i = 0; i < n; i++) {
+      const name = m.ccall("freerdp_web_info_name", "string", ["number"], [i]);
+      if (name) out[name] = m.ccall("freerdp_web_info_value", "string", ["number"], [i]) || "";
+    }
+    return out;
+  }
   // sound from the server (rdpsnd; the microphone is not counted); null until the first wave
   function audio(now, prev, dt) {
     if (!now?.AUDIO_WAVES) return null;
@@ -129,7 +165,7 @@
     });
   }
 
-  const api = { FRDP_2, index, read, rate, network, rdpBytes, capsVersion, audio, decoder, decoders, hasDecoders, av1Slot };
+  const api = { FRDP_2, index, read, rate, network, rdpBytes, capsVersion, server, strings, audio, decoder, decoders, hasDecoders, av1Slot };
   if (typeof module !== "undefined" && module.exports) { module.exports = api; return; }
   root.freerdpClientStats = api;
 })(typeof window !== "undefined" ? window : globalThis);
