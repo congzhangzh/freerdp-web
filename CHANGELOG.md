@@ -15,6 +15,31 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261116.1
+
+- **Fill the window, a full screen of the page's own** (聪哥, 2026-11-16: "the Esc problem").
+  Firefox and Safari have no Keyboard Lock, so Esc ended the page's full screen and never
+  reached the remote side, and Claude Code (and much else) needs Esc; an iPhone has no page full
+  screen at all. In fill mode the page drops its own chrome and the remote desktop takes exactly
+  the browser's visible area (fixed, `100dvh`, inside the safe areas: `viewport-fit=cover`), the
+  toolbar hides at the top edge as in full screen, and Esc is an ordinary key. The browser's own
+  full screen (F11, Ctrl + Cmd + F, an installed app, iOS's "Add to Home Screen") makes it the
+  whole screen, and nothing in the page can end that. The toolbar's Full screen (and "full screen
+  at Connect") is fill where page full screen has no Keyboard Lock (Firefox, Safari) or none at all
+  (iPhone); Chrome and Edge keep the real one, with Keyboard Lock.
+- **Driven from outside**, for a page or a shell that hosts this one (brahman's PO: the browser is
+  the base, a shell only drives it): `?fill=1`, `freerdpWeb.setFill(true | false)`,
+  `freerdpWeb.fill`, and the window event `freerdpfillchange` (`detail.fill`).
+- **A round toolbar button on touch screens** (聪哥's idea, like iOS's AssistiveTouch): a finger
+  has no mouse to rest at the top edge, so while the toolbar is hidden a button shows it, the next
+  tap hides it, and a drag moves the button (kept in this browser); its touches never reach the
+  remote side. The edge toolbar now follows a real mouse only (`pointermove`, `pointerType`), so a
+  tap's emulated mouse move no longer hides it again.
+- Tests: `test-fill.mjs` in Chromium, Firefox, WebKit and an iPhone (CI's `browsers` job): fill
+  takes exactly the viewport, Esc reaches the canvas and the page stays, the button's choice per
+  Keyboard Lock, `?fill=1`, the round button's tap, stay and drag; `test-webkit` and
+  `test-clipboard` expect fill from Full screen in WebKit and Firefox.
+
 ## 20261115.6
 
 - **Safari's first visit, again.** 20261115.4 held the "not cross-origin isolated" line for 8 s
