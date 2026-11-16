@@ -51,9 +51,11 @@ for (const [name, profile] of [["iPhone", devices["iPhone 14"]], ["desktop Safar
   check(`${name}: the page gets ready`, b.text === "Connect" && !b.disabled, JSON.stringify(b));
   check(`${name}: no page error`, !errors.length, errors.join("; "));
   if (name !== "iPhone") {   // full screen in and out, the page's own way (the toolbar's, the hotkey's)
-    const fs = await page.evaluate(async () => { toggleFullscreen(); await new Promise((r) => setTimeout(r, 1000)); const inside = !!document.fullscreenElement;
-    toggleFullscreen(); await new Promise((r) => setTimeout(r, 1000)); return { in: inside, out: !document.fullscreenElement }; });
-    check(`${name}: full screen, in and out`, fs.in && fs.out, JSON.stringify(fs));
+    const fs = await page.evaluate(async () => { toggleFullscreen(); await new Promise((r) => setTimeout(r, 1000));
+    // since 20261115.7 the toolbar's Full screen is fill the window where there is no Keyboard Lock (Esc must reach the remote side)
+    const inside = !!document.fullscreenElement || !!window.freerdpWeb?.fill, mode = document.fullscreenElement ? "page full screen" : window.freerdpWeb?.fill ? "fill" : "none";
+    toggleFullscreen(); await new Promise((r) => setTimeout(r, 1000)); return { in: inside, mode, out: !document.fullscreenElement && !window.freerdpWeb?.fill }; });
+    check(`${name}: full screen (fill the window without Keyboard Lock), in and out`, fs.in && fs.out, JSON.stringify(fs));
   } else {
     const fs = await page.evaluate(() => { try { toggleFullscreen(); return "no error"; } catch (e) { return e.message; } });
     await sleep(300);

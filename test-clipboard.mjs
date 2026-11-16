@@ -92,9 +92,11 @@ await run("Firefox", firefox, {}, {}, async (page) => {
 
 // full screen in Firefox, the page's own way in and out (#368 changed how it leaves full screen)
 await run("Firefox full screen", firefox, {}, {}, async (page) => {
-  const fs = await page.evaluate(async () => { toggleFullscreen(); await new Promise((r) => setTimeout(r, 1000)); const inside = !!document.fullscreenElement;
-    toggleFullscreen(); await new Promise((r) => setTimeout(r, 1000)); return { in: inside, out: !document.fullscreenElement }; });
-  check("Firefox: full screen, in and out", fs.in && fs.out, JSON.stringify(fs));
+  const fs = await page.evaluate(async () => { toggleFullscreen(); await new Promise((r) => setTimeout(r, 1000));
+    // since 20261115.7 the toolbar's Full screen is fill the window where there is no Keyboard Lock (Esc must reach the remote side)
+    const inside = !!document.fullscreenElement || !!window.freerdpWeb?.fill, mode = document.fullscreenElement ? "page full screen" : window.freerdpWeb?.fill ? "fill" : "none";
+    toggleFullscreen(); await new Promise((r) => setTimeout(r, 1000)); return { in: inside, mode, out: !document.fullscreenElement && !window.freerdpWeb?.fill }; });
+  check("Firefox: full screen (fill the window: no Keyboard Lock), in and out", fs.in && fs.out, JSON.stringify(fs));
 });
 
 await run("Chrome", chromium, { executablePath: process.env.CHROME || (existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : undefined) }, { permissions: ["clipboard-read", "clipboard-write"] }, async (page) => {
