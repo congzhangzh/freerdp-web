@@ -669,7 +669,10 @@ function setFill(on) {
 }
 // for a page or shell that drives this one: freerdpWeb.setFill(true | false), freerdpWeb.fill, and
 // the window event "freerdpfillchange" (detail.fill)
-window.freerdpWeb = Object.assign(window.freerdpWeb || {}, { setFill, get fill() { return filling; } });
+// (defineProperty, not Object.assign: that would copy the getter's value once, not the getter)
+window.freerdpWeb ??= {};
+window.freerdpWeb.setFill = setFill;
+Object.defineProperty(window.freerdpWeb, "fill", { get: () => filling, configurable: true, enumerable: true });
 // ?fill=1: fill the window from the start (it takes effect once a session shows)
 document.addEventListener("DOMContentLoaded", () => { if (new URLSearchParams(location.search).get("fill") === "1") setFill(true); });
 function toggleFullscreen() {
@@ -1762,8 +1765,10 @@ function showToolbar(timeout = 2500) {
   document.body.classList.remove("tbhide");
   clearTimeout(tbTimer); tbTimer = timeout ? setTimeout(hideToolbar, timeout) : 0;
 }
-window.addEventListener("mousemove", (e) => {
-  if (!edgeToolbar() || document.pointerLockElement) return;
+// a mouse only: a tap on a touch screen also makes an emulated mousemove, which would take the
+// toolbar the round button just showed for a pointer that left it (pointer events say which it is)
+window.addEventListener("pointermove", (e) => {
+  if (e.pointerType !== "mouse" || !edgeToolbar() || document.pointerLockElement) return;
   pointer = { x: e.clientX, y: e.clientY };
   if (!document.body.classList.contains("tbhide")) {
     if (nearToolbar(e.clientX, e.clientY)) { clearTimeout(tbTimer); clearTimeout(tbAway); tbTimer = tbAway = 0; }
