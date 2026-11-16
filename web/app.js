@@ -642,8 +642,40 @@ async function lockKeyboard() {
   catch (e) { log("[page] keyboard lock unavailable: " + e.message); }
 }
 function unlockKeyboard() { navigator.keyboard?.unlock?.(); kbLocked = false; syncCaptured(); }
+// Fill the window: a full screen of the page's own (聪哥, 2026-11-16). The page's full screen is
+// fragile where the remote side needs Esc (Claude Code does, all the time): Firefox and Safari have
+// no Keyboard Lock, so Esc ends their page full screen and never reaches the remote side, and an
+// iPhone has no page full screen at all. In fill mode the page drops its own chrome and the remote
+// desktop takes exactly the browser's visible area (ui.css body.fill), Esc is an ordinary key, and
+// the browser's own full screen (F11, Ctrl + Cmd + F, an installed app, "Add to Home Screen")
+// makes it the whole screen, which nothing in the page can end. Where page full screen comes
+// with Keyboard Lock (Chrome, Edge) the toolbar's Full screen is still that; ?fill=1 and
+// freerdpWeb.setFill choose fill anywhere (brahman, po-brahman-a8: a shell drives the same page).
+const fillByDefault = () => !document.documentElement.requestFullscreen || !navigator.keyboard?.lock;
+let filling = false;
+function setFill(on) {
+  on = !!on;
+  if (on === filling) return filling;
+  if (on && document.fullscreenElement) { unlockKeyboard(); realExitFullscreen(); }
+  filling = on;
+  document.body.classList.toggle("fill", on);
+  document.body.classList.toggle("tbhide", on);
+  showFsButton();
+  log("[page] " + (on ? "fill the window (the browser's own full screen makes it the whole screen)" : "left fill the window"));
+  requestAnimationFrame(() => { placeToolbar(); window.dispatchEvent(new Event("resize")); });
+  window.dispatchEvent(new CustomEvent("freerdpfillchange", { detail: { fill: on } }));
+  if (on && document.body.classList.contains("session")) $("canvas").focus();
+  return filling;
+}
+// for a page or shell that drives this one: freerdpWeb.setFill(true | false), freerdpWeb.fill, and
+// the window event "freerdpfillchange" (detail.fill)
+window.freerdpWeb = Object.assign(window.freerdpWeb || {}, { setFill, get fill() { return filling; } });
+// ?fill=1: fill the window from the start (it takes effect once a session shows)
+document.addEventListener("DOMContentLoaded", () => { if (new URLSearchParams(location.search).get("fill") === "1") setFill(true); });
 function toggleFullscreen() {
+  if (filling) { setFill(false); return; }
   if (document.fullscreenElement) { unlockKeyboard(); releasePointer(); realExitFullscreen(); }
+  else if (fillByDefault()) setFill(true);
   else enterFullscreen();
 }
 // The page's full screen is not SDL's: SDL 3.2 marks its window full screen on this event and
@@ -1682,9 +1714,45 @@ function browserNotice() { noticeUntil = Date.now() + BROWSER_NOTICE_MS; }
 const noticeLeft = () => (document.fullscreenElement ? Math.max(0, noticeUntil - Date.now()) : 0);
 const nearToolbar = (x, y) => { const r = toolbar.getBoundingClientRect();
   return x >= r.left - TB_AWAY && x <= r.right + TB_AWAY && y <= r.bottom + TB_AWAY; };
+// A touch screen (an iPhone) has no mouse to rest at the top edge: the round button (ui.css #tbFab,
+// shown only there) shows the hidden toolbar and hides it again at a tap, and moves where a finger
+// drags it (kept in this browser, a convenience only). Its touches never reach the remote side.
+(() => {
+  const fab = $("tbFab"), KEY = "freerdp.tbFab";
+  let drag = null;
+  const place = (x, y) => {
+    const w = fab.offsetWidth || 44, h = fab.offsetHeight || 44;
+    fab.style.left = Math.min(Math.max(x, 0), innerWidth - w) + "px"; fab.style.top = Math.min(Math.max(y, 0), innerHeight - h) + "px";
+    fab.style.right = fab.style.bottom = "auto";
+  };
+  try { const p = JSON.parse(localStorage.getItem(KEY) || "null"); if (p && isFinite(p.x) && isFinite(p.y)) requestAnimationFrame(() => place(p.x, p.y)); } catch (e) { /* none kept */ }
+  fab.addEventListener("pointerdown", (e) => {
+    e.stopPropagation(); e.preventDefault();
+    const r = fab.getBoundingClientRect();
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, left: r.left, top: r.top, moved: false };
+    try { fab.setPointerCapture(e.pointerId); } catch (err) { /* not capturable */ }
+  });
+  fab.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!drag.moved && Math.hypot(dx, dy) > 8) drag.moved = true;
+    if (drag.moved) place(drag.left + dx, drag.top + dy);
+  });
+  const end = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const moved = drag.moved; drag = null;
+    if (moved) { const r = fab.getBoundingClientRect(); try { localStorage.setItem(KEY, JSON.stringify({ x: r.left, y: r.top })); } catch (err) { /* not kept */ } }
+    else if (document.body.classList.contains("tbhide")) showToolbar(0);   // stays until the next tap
+    else hideToolbar();
+  };
+  fab.addEventListener("pointerup", end); fab.addEventListener("pointercancel", (e) => { if (drag && e.pointerId === drag.id) drag = null; });
+  fab.addEventListener("click", (e) => e.stopPropagation());
+})();
+// the toolbar hides at the top edge in full screen and in fill the window alike
+const edgeToolbar = () => document.body.classList.contains("fs") || document.body.classList.contains("fill");
 function hideToolbar() {
   clearTimeout(tbTimer); clearTimeout(tbAway); tbTimer = tbAway = 0;
-  if (!document.body.classList.contains("fs") || (pointer && nearToolbar(pointer.x, pointer.y))) return;
+  if (!edgeToolbar() || (pointer && nearToolbar(pointer.x, pointer.y))) return;
   document.body.classList.add("tbhide");
 }
 function showToolbar(timeout = 2500) {
@@ -1695,7 +1763,7 @@ function showToolbar(timeout = 2500) {
   clearTimeout(tbTimer); tbTimer = timeout ? setTimeout(hideToolbar, timeout) : 0;
 }
 window.addEventListener("mousemove", (e) => {
-  if (!document.body.classList.contains("fs") || document.pointerLockElement) return;
+  if (!edgeToolbar() || document.pointerLockElement) return;
   pointer = { x: e.clientX, y: e.clientY };
   if (!document.body.classList.contains("tbhide")) {
     if (nearToolbar(e.clientX, e.clientY)) { clearTimeout(tbTimer); clearTimeout(tbAway); tbTimer = tbAway = 0; }
@@ -1742,7 +1810,7 @@ async function connect(againPassword = null, retrying = false) {
   checkSelection();
   if (!await runtime) throw new Error(t("status.noRuntime", "WebAssembly runtime unavailable."));
   checkSelection();
-  if ($("fs").checked) await enterFullscreen();
+  if ($("fs").checked) { if (filling || fillByDefault()) setFill(true); else await enterFullscreen(); }
   // SDL3 applies FreeRDP's windowed state with document.exitFullscreen(); the page owns full
   // screen, so ignore programmatic exits (toggleFullscreen and holding Esc still work).
   document.exitFullscreen = () => Promise.resolve();   // likewise for SDL leaving full screen
@@ -2058,7 +2126,7 @@ function showMicTitle() {
   $("optMic").parentElement.title = micReady ? t("set.micTitle", "Send this browser's microphone to the remote session (the browser asks first)")
     : t("set.micNone", "This build of the client has no microphone support");
 }
-function showFsButton() { $("tbFs").textContent = document.fullscreenElement ? t("tb.window", "Window") : t("tb.fullscreen", "Full screen"); }
+function showFsButton() { $("tbFs").textContent = document.fullscreenElement || filling ? t("tb.window", "Window") : t("tb.fullscreen", "Full screen"); }
 globalThis.FreeRDPi18n?.onChange(() => {
   showTargetLabel(); showGo(); showMicTitle(); showFsButton(); showPinTitle(); showScreensButton(); showDirectHint(); showLogView();
   updateSessionText(); showHotkeys(); updateRoute(); status(...statusLine);
