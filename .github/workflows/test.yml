@@ -106,6 +106,9 @@ jobs:
           curl -fsSL -o "$RUNNER_TEMP/site-browsers.mjs" https://raw.githubusercontent.com/congzhangzh/rdp-release-kit/4ce15fdb90d340f18e8d5c4bc8bd59b6ba4a8daa/test/site-browsers.mjs
           PLAYWRIGHT="$RUNNER_TEMP/pw/node_modules/playwright" node "$RUNNER_TEMP/site-browsers.mjs" dist/site
         if: success() || failure()
+      - name: Fill the window in Chromium, Firefox, WebKit and an iPhone (test-fill.mjs)
+        run: PLAYWRIGHT="$RUNNER_TEMP/pw/node_modules/playwright" node test-fill.mjs dist/site
+        if: success() || failure()
       - name: The clipboard in Firefox and Chrome, full screen in Firefox (test-clipboard.mjs)
         run: PLAYWRIGHT="$RUNNER_TEMP/pw/node_modules/playwright" node test-clipboard.mjs dist/site
         if: success() || failure()

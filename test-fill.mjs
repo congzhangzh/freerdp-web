@@ -16,6 +16,7 @@
 //  - with a mouse the round toolbar button is hidden; on the iPhone it shows, a tap shows the
 //    toolbar and the next hides it, a drag moves it, and its taps never reach the remote side
 import { spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 
@@ -29,6 +30,7 @@ const check = (name, ok, detail = "") => { console.log(`${ok ? "PASS" : "FAIL"} 
 if (await fetch(`http://127.0.0.1:${port}/`).then(() => true, () => false)) { console.log(`FAIL  port ${port} is in use`); process.exit(1); }
 const server = spawn("python3", [new URL("serve.py", import.meta.url).pathname, String(port), site], { stdio: "ignore" });
 for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => { server.kill(); process.exit(1); });
+process.on("exit", () => server.kill());   // also when a browser fails to start
 for (let i = 0; i < 50 && !(await fetch(`http://127.0.0.1:${port}/index.html`).then(() => true, () => false)); i++) await sleep(100);
 
 async function ready(page, url) {
@@ -52,7 +54,9 @@ const fills = (g) => g.fill && g.x === 0 && g.y === 0 && Math.abs(g.w - g.vw) <=
 
 for (const which of (process.env.BROWSERS || "chromium firefox webkit iphone").split(/\s+/).filter(Boolean)) {
   const phone = which === "iphone", type = phone ? "webkit" : which;
-  const browser = await pw[type].launch();
+  // Chromium: the system's Chrome where there is one (CHROME=<binary> for another), else Playwright's
+  const chrome = process.env.CHROME || (existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : undefined);
+  const browser = await pw[type].launch(type === "chromium" && chrome ? { executablePath: chrome } : {});
   console.log(`browser: ${which} ${browser.version()}`);
   const ctx = await browser.newContext(phone ? { ...pw.devices["iPhone 14"] } : { viewport: { width: 1000, height: 700 } });
   const page = await ctx.newPage();
