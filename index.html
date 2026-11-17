@@ -5,7 +5,7 @@
 <!-- threads need cross-origin isolation (COOP/COEP); on hosts that cannot send those headers,
      such as GitHub Pages, this service worker adds them (it does nothing where the server does) -->
 <script src="coi-serviceworker.js"></script>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>FreeRDP Web</title>
 <meta name="description" content="Lightning-fast remote desktop in your browser: FreeRDP in WebAssembly, AV1, multi-user sessions with xrdp, no client to install.">
 <meta property="og:title" content="FreeRDP Web">
@@ -284,6 +284,7 @@
   <button role="menuitem" data-mode="span"><span data-i18n="screens.span">One wide desktop</span><small data-i18n="screens.spanSub">one monitor across all of them</small></button>
 </div>
 <div id="tbGrip" aria-hidden="true"></div>
+<button id="tbFab" type="button" aria-label="Show the session toolbar" data-i18n-attr="aria-label:tb.fab">⋯</button>
 <div id="info" hidden><table id="infoTable"></table></div>
 <canvas id="canvas" tabindex="-1"></canvas>
 <img id="vcursor" alt="" hidden>
