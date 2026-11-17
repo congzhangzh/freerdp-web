@@ -14,6 +14,10 @@
   //     freerdp          20261026.4 <git commit, 40 hex>
   //     dav1d            1.5.4     <tarball SHA-256, 64 hex>
   // and, from this repository's site.sh, "page from site.sh: this checkout, <commit>".
+  // Since kit e462e7c / 8129436 (2026-11-17) also, before "sources":
+  //   kit: rdp-release-kit <kit commit>
+  //   freerdp-upstream: master <sha> +<our commits on top>
+  // and each source line has a fourth column, the source's address (possibly none). Both formats parse.
   function parseManifest(text) {
     const m = { sources: {}, overrides: [] };
     for (const line of String(text || "").split("\n")) {
@@ -22,8 +26,10 @@
       else if ((r = /^page: freerdp-web ([0-9a-f]{7,40})/.exec(line))) m.page = r[1];
       else if ((r = /^page from site\.sh: this checkout, (.+)$/.exec(line))) m.localPage = r[1].trim();
       else if ((r = /^OVERRIDE ([\w.-]+):/.exec(line))) m.overrides.push(r[1]);
-      else if ((r = /^\s+([\w.-]+)\s+(\S+)\s+([0-9a-f]{40}|[0-9a-f]{64})\s*$/.exec(line)))
-        m.sources[r[1]] = { version: r[2], commit: r[3].length === 40 ? r[3] : "" };
+      else if ((r = /^kit: rdp-release-kit ([0-9a-f]{7,40})/.exec(line))) m.kit = r[1];
+      else if ((r = /^freerdp-upstream: (\S+) ([0-9a-f]{7,40})(?: \+(\d+))?/.exec(line))) m.upstream = { branch: r[1], commit: r[2], ahead: r[3] === undefined ? null : +r[3] };
+      else if ((r = /^\s+([\w.-]+)\s+(\S+)\s+([0-9a-f]{40}|[0-9a-f]{64})(?:\s+(\S+))?\s*$/.exec(line)))
+        m.sources[r[1]] = { version: r[2], commit: r[3].length === 40 ? r[3] : "", ...(r[4] ? { url: r[4] } : {}) };
     }
     return m;
   }

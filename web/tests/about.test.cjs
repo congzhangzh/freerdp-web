@@ -45,3 +45,29 @@ test("About without MANIFEST or RELEASE (a local build): only what the page know
     ["AV1 decoder", "WebCodecs (browser); fallback: dav1d (in this page)"], ["H.264 decoder", "WebCodecs (browser)"]]);
   assert.deepEqual(A.parseManifest("<html>not a manifest</html>"), {sources: {}, overrides: []});
 });
+
+// since kit e462e7c / 8129436 (2026-11-17): a kit line, a freerdp-upstream line, and each source's
+// address as a fourth column (possibly none); the site gate stopped on it ("About names FreeRDP and
+// SDL from the client's MANIFEST (undefined / undefined)")
+const MANIFEST_2 = `FreeRDP web client (preview), built 2026-11-17 with emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.13 (e13ee988ce3d87a738dd8f3661d02223308c412a)
+page: freerdp-web 41113cf07873a6100aa59eba490bf7e0f358c2af
+
+kit: rdp-release-kit 8129436aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+freerdp-upstream: master 0123456789abcdef0123456789abcdef01234567 +213
+sources (sources.lock):
+  freerdp          20261117.1 5be282e0a95f2e5040c063b2fb2a6ba60c3075ed https://github.com/congzhangzh/FreeRDP
+  sdl3_wasm        3.4.18+timer 1d615c14f95a3389bf0026e719144ad51378e40c https://github.com/congzhangzh/SDL
+  dav1d            1.5.4     686616b7c69eb88d44459391ab25cac13b6647a3b288835c5784e71c1514a5c5 https://downloads.videolan.org/pub/videolan/dav1d/1.5.4/dav1d-1.5.4.tar.xz
+  zlib             1.3.2     bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16 
+`;
+test("MANIFEST since 2026-11-17: the kit and upstream lines, the sources with their address, and About still names FreeRDP and SDL", () => {
+  const m = A.parseManifest(MANIFEST_2);
+  assert.equal(m.kit, "8129436aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+  assert.deepEqual(m.upstream, {branch: "master", commit: "0123456789abcdef0123456789abcdef01234567", ahead: 213});
+  assert.deepEqual(m.sources.freerdp, {version: "20261117.1", commit: "5be282e0a95f2e5040c063b2fb2a6ba60c3075ed", url: "https://github.com/congzhangzh/FreeRDP"});
+  assert.deepEqual(m.sources.zlib, {version: "1.3.2", commit: ""});   // an empty address: none
+  assert.deepEqual(Object.keys(m.sources), ["freerdp", "sdl3_wasm", "dav1d", "zlib"]);
+  const rows = Object.fromEntries(A.rows({version: "20261117.2", engine: "JSPI", manifest: m}));
+  assert.equal(rows.FreeRDP, "20261117.1 (commit 5be282e0a9)");
+  assert.equal(rows.SDL, "3.4.18+timer (commit 1d615c14f9)");
+});
