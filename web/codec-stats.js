@@ -47,7 +47,7 @@
   // AV1's id 1 tells them apart by the caps version the server confirmed. AV1's chroma ("4:4:4")
   // comes from its stream (app.js).
   function name(id, caps, av1Chroma) {
-    if (id === 2 || (id === 1 && caps === FRDP_2)) return "AV2";
+    if (id === 2 || (id === 1 && caps === FRDP_2)) return av1Chroma ? `AV2 ${av1Chroma}` : "AV2";
     if (id === 1) return av1Chroma ? `AV1 ${av1Chroma}` : "AV1";
     return NAMES[id] ?? "codec " + id;
   }

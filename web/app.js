@@ -925,6 +925,12 @@ for (const type of ["pointerlockchange", "webkitpointerlockchange"])
     if (type !== "pointerlockchange") return;
     readCursor(); syncCaptured();
     if (pointerLocked()) {
+      // the last pointer position was the toolbar's own Capture button, and under the lock the mouse
+      // reports none (pointermove stops for the edge toolbar): forget it, or hideToolbar kept the
+      // toolbar for good, "near" a pointer that no longer moves (聪哥, 2026-11-17). Ctrl + Alt shows
+      // it again (release, below)
+      pointer = null;
+      if (edgeToolbar()) { clearTimeout(tbTimer); tbTimer = setTimeout(hideToolbar, 600); }
       log("[page] mouse captured; Ctrl + Alt releases it");
       clearTimeout(cap.toast); $("captureToast").hidden = false;
       cap.toast = setTimeout(() => { $("captureToast").hidden = true; }, 3000);
@@ -1629,7 +1635,10 @@ function updateInfo() {
       const now = cs.read(Module.HEAPU8, Module._freerdp_web_codec_stats()); if (!now) return null;
       const prev = last.codecs?.length === now.length ? last.codecs : null;
       last.codecsNext = now;
-      return cs.describe(now, prev, dt, AV1_CHROMA[av1Profile()]) || t("info.noUpdates", "no updates yet"); })()],
+      // the chroma from FreeRDP's own decoder (RDPGFX_CODECID_AV1_CHROMA), as the SDL overlay shows it;
+      // none from a client without it (the page no longer reads the stream for it)
+      const chroma = window.freerdpClientStats?.chromaName(stats?.RDPGFX_CODECID_AV1_CHROMA) ?? undefined;
+      return cs.describe(now, prev, dt, chroma) || t("info.noUpdates", "no updates yet"); })()],
     [t("info.screens", "Screens"), (() => {
       if (!multiOn()) return t("info.thisScreen", "this one");
       const n = multi.wins.size + 1, w = multi.box.width, h = multi.box.height;

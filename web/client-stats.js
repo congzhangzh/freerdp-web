@@ -144,8 +144,12 @@
     return { pictures, failed, noPicture, perSecond: rate(now, prev, key("PICTURES"), dt), keyFrames: opt("KEY_FRAMES"),
       avgMs: get("DECODE_NS_SUM") / tries / 1e6, maxMs: get("DECODE_NS_MAX") / 1e6,
       lastPictureS: get("LAST_PICTURE_AGE_NS") / 1e9, hardware: hardware === 2 ? true : hardware === 1 ? false : null,
-      fallbacks: opt("FALLBACKS") };
+      fallbacks: opt("FALLBACKS"), chroma: chromaName(get("CHROMA")) };
   }
+  // the chroma of an AV stream (RDPGFX_CODECID_AV1_CHROMA, agreed with comp-sdl-g1, 2026-11-17: the
+  // decoder's own reading of the latest sequence header, AV2's under AV1's codec ID): 420 / 422 /
+  // 444 as "4:2:0" / "4:2:2" / "4:4:4", the overlay's words; 0 (not known yet) and anything else: null
+  const chromaName = (v) => ({ 420: "4:2:0", 422: "4:2:2", 444: "4:4:4" })[v] ?? null;
   // what the counters under AV1's codec ID are: "AV2" when the server confirmed FRDP_2, "AV1" for
   // any other caps version, null when the page can't know (caps: 0 before the confirm, or
   // undefined for a client without Module._freerdp_web_codec_stats)
@@ -159,13 +163,14 @@
       if (!d) return [];
       if (id === "AV1" && prefix(now, id) === PREFIXES[0]) {
         const slot = av1Slot(caps);
-        return [{ id: slot ?? "AV1", label: slot ?? "AV1/AV2", ...d }];
+        // the chroma after the codec's name, never after "AV1/AV2" (before the caps confirm)
+        return [{ id: slot ?? "AV1", label: slot && d.chroma ? `${slot} ${d.chroma}` : slot ?? "AV1/AV2", ...d }];
       }
       return [{ id, label, ...d }];
     });
   }
 
-  const api = { FRDP_2, index, read, rate, network, rdpBytes, capsVersion, server, strings, audio, decoder, decoders, hasDecoders, av1Slot };
+  const api = { FRDP_2, index, read, rate, network, rdpBytes, capsVersion, server, strings, audio, decoder, decoders, hasDecoders, av1Slot, chromaName };
   if (typeof module !== "undefined" && module.exports) { module.exports = api; return; }
   root.freerdpClientStats = api;
 })(typeof window !== "undefined" ? window : globalThis);

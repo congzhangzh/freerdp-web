@@ -100,6 +100,11 @@ check("in full screen a click on the remote desktop is just a click: no capture"
 const capClick = await clickForReal(send, "#tbCapture"); await sleep(800);
 const afterCapture = await ev("document.pointerLockElement === canvas && document.body.classList.contains('captured')");
 check("…and the toolbar's Capture captures", capClick && afterCapture === true, `clicked for real: ${capClick}, captured: ${afterCapture}`);
+// under the lock the mouse reports no position to the page: the toolbar must not stay up for good
+// because the last one was its own Capture button (聪哥, 2026-11-17)
+await sleep(1200);
+const lockedBar = await ev("JSON.stringify({ locked: document.pointerLockElement === canvas, hidden: document.body.classList.contains('tbhide') })");
+check("…and under the capture the toolbar hides by itself", lockedBar === JSON.stringify({ locked: true, hidden: true }), lockedBar);
 // no element shows a pointer image while captured (macOS's frozen second pointer), the canvas's own
 // inline cursor (SDL's) is still there for the pointer the page draws, and it all comes back on release
 const cursors = () => ev("JSON.stringify({ button: getComputedStyle(tbCapture).cursor, canvas: getComputedStyle(canvas).cursor, body: getComputedStyle(document.body).cursor })");

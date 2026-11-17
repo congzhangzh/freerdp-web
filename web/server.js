@@ -293,7 +293,9 @@
       el("p", { text: t("cli.pipWhy", "Into a Python 3.10 or newer that has Tk. A Linux system Python often lacks it: freerdp-tk then says what to install.") }),
       copyable("pip install freerdp-tk"),
       el("h3", { id: "freerdp-tk", text: t("srv.tk", "freerdp-tk, the connection window") }),
-      el("p", { text: t("srv.tkWhy", "All three give you freerdp-tk: a window that keeps your connections, their passwords in the system's own keyring, and starts the client.") }));
+      el("p", { text: t("srv.tkWhy", "All three give you freerdp-tk: a window that keeps your connections, their passwords in the system's own keyring, and starts the client.") }),
+      el("p", {}, t("srv.tkLinks", "Its code and how to use it: "), link("https://github.com/congzhangzh/freerdp-tk", "github.com/congzhangzh/freerdp-tk"),
+        " · ", link("https://pypi.org/project/freerdp-tk/", "PyPI")));
     if (videos.length) out.append(shelf(videos));
     out.append(all(k));
     into.replaceChildren(out);

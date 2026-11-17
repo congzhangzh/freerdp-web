@@ -58,7 +58,7 @@ test("a decoder: the average covers every attempt, the failed ones too", () => {
   const k = (s) => `RDPGFX_DECODER_AV1_${s}`;
   const d = S.decoder({ [k("PICTURES")]: 6, [k("FAILED")]: 3, [k("NO_PICTURE")]: 1, [k("KEY_FRAMES")]: 2, [k("DECODE_NS_SUM")]: 40e6, [k("DECODE_NS_MAX")]: 9e6,
     [k("LAST_PICTURE_AGE_NS")]: 5e8, [k("HARDWARE")]: 1, [k("FALLBACKS")]: 1 }, { [k("PICTURES")]: 2 }, 2, "AV1");
-  assert.deepStrictEqual(d, { pictures: 6, failed: 3, noPicture: 1, perSecond: 2, keyFrames: 2, avgMs: 4, maxMs: 9, lastPictureS: 0.5, hardware: false, fallbacks: 1 });
+  assert.deepStrictEqual(d, { pictures: 6, failed: 3, noPicture: 1, perSecond: 2, keyFrames: 2, avgMs: 4, maxMs: 9, lastPictureS: 0.5, hardware: false, fallbacks: 1, chroma: null });
 });
 
 test("a decoder that only fails still shows: that is when the row matters", () => {
@@ -210,4 +210,16 @@ test("strings: a client without the string side has none; one with it gives name
   const vals = [["SERVER_HOSTNAME", "gw"], ["SERVER_CERT_CN", null]];
   const m = { _freerdp_web_info_count: () => 2, ccall: (fn, r, t, [i]) => (fn === "freerdp_web_info_name" ? vals[i][0] : vals[i][1]) };
   assert.deepEqual(S.strings(m), { SERVER_HOSTNAME: "gw", SERVER_CERT_CN: "" });
+});
+
+test("chroma (RDPGFX_CODECID_AV1_CHROMA): 420/422/444 as the overlay writes them, 0 or anything else is none", () => {
+  assert.equal(S.chromaName(420), "4:2:0"); assert.equal(S.chromaName(422), "4:2:2"); assert.equal(S.chromaName(444), "4:4:4");
+  assert.equal(S.chromaName(0), null); assert.equal(S.chromaName(undefined), null); assert.equal(S.chromaName(411), null);
+});
+test("chroma: after the codec's name in the decoder results, AV2's too, never after AV1/AV2", () => {
+  const base = { RDPGFX_CODECID_AV1_PICTURES: 5, RDPGFX_CODECID_AV1_FAILED: 0, RDPGFX_CODECID_AV1_NO_PICTURE: 0, RDPGFX_CODECID_AV1_CHROMA: 444 };
+  assert.equal(S.decoders(base, null, 1, 0x10000)[0].label, "AV1 4:4:4");
+  assert.equal(S.decoders(base, null, 1, S.FRDP_2)[0].label, "AV2 4:4:4");
+  assert.equal(S.decoders(base, null, 1, 0)[0].label, "AV1/AV2");
+  assert.equal(S.decoders({ ...base, RDPGFX_CODECID_AV1_CHROMA: 0 }, null, 1, 0x10000)[0].label, "AV1");
 });

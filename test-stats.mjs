@@ -90,6 +90,15 @@ check("the network was counted", second.NETWORK_BYTES_RECEIVED > 0 && second.NET
 // RDP's own bytes in Info (20261114.1), beside the WebSocket's: a rate and this connection's total
 const rdpIn = /Network in \(RDP\)\s+(\d+ kbit\/s|–), ([\d.]+) MB total/.exec(info || ""), rdpOut = /Network out \(RDP\)\s+(\d+ kbit\/s|–), ([\d.]+) MB total/.exec(info || "");
 check("Info shows RDP's own bytes, in and out", !!rdpIn && !!rdpOut && +rdpIn[2] > 0, rdpIn && rdpOut ? `in ${rdpIn[1]}, ${rdpIn[2]} MB; out ${rdpOut[1]}, ${rdpOut[2]} MB` : "no rows");
+// the AV sub-codec from FreeRDP's own decoder (RDPGFX_CODECID_AV1_CHROMA, 2026-11-17): Info writes it
+// after the codec's name as the overlay does, in Video codecs and in the decoder's results
+if (second.RDPGFX_CODECID_AV1_CHROMA === undefined) console.log("SKIP  chroma: this client has no RDPGFX_CODECID_AV1_CHROMA");
+else if (!second.RDPGFX_CODECID_AV1_CHROMA) console.log("INFO  chroma: 0, no AV sequence header in this session (not AV1/AV2)");
+else {
+  const words = { 420: "4:2:0", 422: "4:2:2", 444: "4:4:4" }[second.RDPGFX_CODECID_AV1_CHROMA];
+  check("chroma: Video codecs and the decoder's results name the reader's chroma", !!words && new RegExp(`AV[12] ${words}`).test(info || "") && new RegExp(`AV[12] ${words} results`).test(info || ""),
+    `reader ${second.RDPGFX_CODECID_AV1_CHROMA} = ${words}`);
+}
 // Item 8 batch B: the server's rows, as the SDL overlay shows them, each checked against this
 // connection's own facts where there is one (the gateway it used, the canvas, the confirmed caps)
 if (second.RDP_VERSION === undefined) console.log("SKIP  batch B: this client has no RDP_VERSION (no server rows yet)");
