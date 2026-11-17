@@ -15,6 +15,18 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261117.2
+
+- **About reads the kit's new MANIFEST.** Since kit e462e7c / 8129436 a client's MANIFEST also has
+  `kit: rdp-release-kit <commit>` and `freerdp-upstream: master <sha> +<N>` before its sources, and
+  each source line a fourth column, the source's address. The page's source pattern ended right
+  after the commit, so it read no source at all: About said "undefined" for FreeRDP and SDL, and
+  the kit's site gate stopped (site run 44108710500, "About names FreeRDP and SDL from the client's
+  MANIFEST (undefined / undefined)"). Now the address is optional (and kept), the two new lines
+  are read, and the old format still parses. Checked on a real MANIFEST of the kit's newest client.
+- Tests: `about.test.cjs` parses the new format (the kit and upstream lines, a source with an
+  address and one with none) and checks About's FreeRDP and SDL rows from it.
+
 ## 20261117.1
 
 - **The toolbar hides under Capture** (聪哥, 2026-11-17). Its last pointer position was its own
