@@ -1635,9 +1635,12 @@ function updateInfo() {
       const now = cs.read(Module.HEAPU8, Module._freerdp_web_codec_stats()); if (!now) return null;
       const prev = last.codecs?.length === now.length ? last.codecs : null;
       last.codecsNext = now;
-      // the chroma from FreeRDP's own decoder (RDPGFX_CODECID_AV1_CHROMA), as the SDL overlay shows it;
-      // none from a client without it (the page no longer reads the stream for it)
-      const chroma = window.freerdpClientStats?.chromaName(stats?.RDPGFX_CODECID_AV1_CHROMA) ?? undefined;
+      // the chroma from FreeRDP's own decoder (RDPGFX_CODECID_AV1_CHROMA), as the SDL overlay shows it.
+      // Until clients have that name (comp-sdl-g1's part, next FreeRDP), the page's own reading stands in
+      // for a client without it, so "4:4:4" does not vanish meanwhile; it goes once they all have it
+      const chroma = stats?.RDPGFX_CODECID_AV1_CHROMA !== undefined
+        ? window.freerdpClientStats?.chromaName(stats.RDPGFX_CODECID_AV1_CHROMA) ?? undefined
+        : AV1_CHROMA[av1Profile()];
       return cs.describe(now, prev, dt, chroma) || t("info.noUpdates", "no updates yet"); })()],
     [t("info.screens", "Screens"), (() => {
       if (!multiOn()) return t("info.thisScreen", "this one");

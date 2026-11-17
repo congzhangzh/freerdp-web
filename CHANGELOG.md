@@ -15,6 +15,22 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261117.1
+
+- **The toolbar hides under Capture** (聪哥, 2026-11-17). Its last pointer position was its own
+  Capture button, and under Pointer Lock the mouse gives the page no position, so `hideToolbar`
+  kept it for good, "near" a pointer that no longer moved. Now a capture forgets that position and
+  starts the hide timer; Ctrl + Alt (the release) shows the toolbar again, as before.
+- **The AV sub-codec from FreeRDP's decoder**: "AV1 4:4:4" / "AV2 4:2:0" in Video codecs and in the
+  decoder's results ("AV1 4:4:4 results") from `RDPGFX_CODECID_AV1_CHROMA` (420 / 422 / 444, agreed
+  with comp-sdl-g1, who adds it to the reader; AV2's under AV1's codec ID), the overlay's words.
+  Until clients have it, the page's own reading of the stream stands in for one without it.
+- **freerdp-tk linked**: Get a server's freerdp-tk part links its code
+  (github.com/congzhangzh/freerdp-tk) and its PyPI page, in all four languages.
+- Tests: `test-fs-click.mjs` checks the toolbar hides under a capture in full screen;
+  `test-stats.mjs` checks the chroma against the reader's value (SKIP without it);
+  `client-stats.test.cjs` covers the chroma names and labels.
+
 ## 20261116.1
 
 - **Fill the window, a full screen of the page's own** (聪哥, 2026-11-16: "the Esc problem").
