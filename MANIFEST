@@ -1,7 +1,7 @@
-FreeRDP web client (preview), built 2026-11-18 with emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.13 (e13ee988ce3d87a738dd8f3661d02223308c412a)
+FreeRDP web client (preview), built 2026-11-19 with emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.13 (e13ee988ce3d87a738dd8f3661d02223308c412a)
 page: freerdp-web 42e8495371acdd020c10a2f64bb25179c006caf4
 
-kit: rdp-release-kit 0946f30b18004a58761757bb6ab9844c1ae5251d
+kit: rdp-release-kit a9aee0b290e3be89e56c5abbc69fa85ded869e87
 freerdp-upstream: master 6dddcd3e66d39d98e1de7e770a98fa654771340b +93
 sources (sources.lock):
   freerdp          20261118.3 f39c03996d1950759e276460880ca25bafafe923 https://github.com/congzhangzh/FreeRDP
@@ -11,6 +11,6 @@ sources (sources.lock):
   libressl         4.4.0     7d02522ad5070b9adb32eb253ecabce181184a3750cf65abac0675ee908687c1 https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-4.4.0.tar.gz
   opus             1.6.1     6ffcb593207be92584df15b32466ed64bbec99109f007c82205f0194572411a1 https://downloads.xiph.org/releases/opus/opus-1.6.1.tar.gz
   dav1d            1.5.4     686616b7c69eb88d44459391ab25cac13b6647a3b288835c5784e71c1514a5c5 https://downloads.videolan.org/pub/videolan/dav1d/1.5.4/dav1d-1.5.4.tar.xz
-  avm              20261118.1 d4fda5dad5abc5f554a205c99cb0f3b9c8c69962 https://github.com/congzhangzh/avm
+  avm              20261119.4 01defdb0eb5a163da178ef79474fd61a8dde0e4b https://github.com/congzhangzh/avm
   zlib             1.3.2     bb329a0a2cd0274d05519d61c667c062e06990d72e125ee2dfa8de64f0119d16 https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz
   jansson          2.15.1    0c7114dc0b2d22a670724a1f95922029d7077c19dbf79a584cb8084d2f267f2f https://github.com/akheron/jansson/releases/download/v2.15.1/jansson-2.15.1.tar.gz
