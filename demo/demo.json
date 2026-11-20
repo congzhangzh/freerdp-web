@@ -1,8 +1,8 @@
 {
   "recorded": {
-    "kit": "46151a89efadcd51862a12b739ff69c044a3e844",
-    "web": "web-20261120.3-46151a89efad",
-    "xrdp": "xrdp-20261120.3-46151a89efad",
+    "kit": "6a3d0971f133ba91b824ee7fac9873ab9121ec2b",
+    "web": "web-20261120.5-6a3d0971f133",
+    "xrdp": "xrdp-20261120.5-6a3d0971f133",
     "pipewire-module-xrdp": "pipewire-module-xrdp-20261031.1-1b78a2c01cc2"
   },
   "videos": [
@@ -200,10 +200,50 @@
   ],
   "clients": [
     {
+      "title": "xrdp + GNOME Wayland, AV1, freerdp-tk release",
+      "src": "demo/freerdp-tk-release.mp4",
+      "poster": "demo/freerdp-tk-release.jpg",
+      "caption": "freerdp-tk, the connection window that comes with the kit's native clients, on a Linux desktop (Debian 13): the Linux client unpacked from the kit's release, freerdp-tk started from it (it takes the release's own FreeRDP, though Debian's is installed too), a connection filled in and saved, the password kept in the system keyring. The kit's FreeRDP connects in AV1 to rdp-release-kit's xrdp with GNOME on Wayland (Fedora 45): a terminal, then Firefox there with web video and WebGL, with sound; then freerdp-tk is started again and a double-click on the saved connection logs in, the password from the keyring. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD.",
+      "i18n": {
+        "zh": {
+          "title": "xrdp + GNOME Wayland，AV1，freerdp-tk 发布版",
+          "caption": "freerdp-tk 是 kit 原生客户端自带的连接窗口，这里在 Linux 桌面（Debian 13）上：从 kit 的发布包解压 Linux 客户端，从中启动 freerdp-tk（它用发布包自带的 FreeRDP，尽管系统也装了 Debian 的），填写并保存一个连接，密码存入系统钥匙环。kit 的 FreeRDP 以 AV1 连接 rdp-release-kit 的 xrdp，GNOME on Wayland（Fedora 45）：打开终端，然后在那里的 Firefox 里播放网页视频和 WebGL，带声音；之后再次启动 freerdp-tk，双击保存的连接即可登录，密码来自钥匙环。Big Buck Bunny © Blender Foundation，CC BY 3.0；WebGL Aquarium © Google，BSD。"
+        },
+        "ja": {
+          "title": "xrdp + GNOME Wayland、AV1、freerdp-tk リリース版",
+          "caption": "freerdp-tk は kit のネイティブ クライアントに付属する接続ウィンドウで、ここでは Linux デスクトップ（Debian 13）上で使います。kit のリリースから Linux クライアントを展開し、そこから freerdp-tk を起動します（Debian の FreeRDP も入っていますが、リリース同梱の FreeRDP を使います）。接続を入力して保存し、パスワードはシステムのキーリングに保存します。kit の FreeRDP が AV1 で rdp-release-kit の xrdp と Wayland 上の GNOME（Fedora 45）に接続し、端末を開いてから、そこで Firefox の Web 動画と WebGL を音声付きで再生します。そのあと freerdp-tk を再び起動し、保存した接続をダブルクリックすると、キーリングのパスワードでログインします。Big Buck Bunny © Blender Foundation、CC BY 3.0。WebGL Aquarium © Google、BSD。"
+        },
+        "fr": {
+          "title": "xrdp + GNOME Wayland, AV1, freerdp-tk (version publiée)",
+          "caption": "freerdp-tk, la fenêtre de connexion fournie avec les clients natifs du kit, sur un bureau Linux (Debian 13) : le client Linux décompressé depuis la version du kit, freerdp-tk lancé depuis celui-ci (il prend le FreeRDP de la version, même si celui de Debian est installé aussi), une connexion remplie et enregistrée, le mot de passe gardé dans le trousseau du système. Le FreeRDP du kit se connecte en AV1 au xrdp de rdp-release-kit avec GNOME sous Wayland (Fedora 45) : un terminal, puis Firefox avec une vidéo web et du WebGL, avec le son ; puis freerdp-tk est relancé et un double-clic sur la connexion enregistrée ouvre la session, avec le mot de passe du trousseau. Big Buck Bunny © Blender Foundation, CC BY 3.0 ; WebGL Aquarium © Google, BSD."
+        }
+      }
+    },
+    {
       "title": "xrdp + GNOME Wayland, AV1, freerdp-tk uvx",
       "src": "demo/freerdp-tk-uvx.mp4",
       "poster": "demo/freerdp-tk-uvx.jpg",
       "caption": "freerdp-tk from PyPI with plain uvx on a Linux desktop (Debian 13) whose Python has no Tk: freerdp-tk starts again with uv's own Python, which has it. With the FreeRDP client in its package, the kit's own, taken before Debian's: the same connection, saved with its password in the system keyring, to rdp-release-kit's xrdp with GNOME on Wayland (Fedora 45): a terminal, then Firefox there with web video and WebGL, with sound, in AV1. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD."
+    },
+    {
+      "title": "Windows Remote Desktop, freerdp-tk release (Windows)",
+      "src": "demo/freerdp-tk-windows.mp4",
+      "poster": "demo/freerdp-tk-windows.jpg",
+      "caption": "freerdp-tk on Windows (Server 2025, a CI machine): the kit's Windows client unpacked from its zip in PowerShell, freerdp-tk started from it, a connection to Windows' own Remote Desktop on the same PC: Notepad from Win+R, then Firefox in the session with web video and WebGL, its sound through the session; disconnect, freerdp-tk again, the saved connection opened with the password from Windows' Credential Manager. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD.",
+      "i18n": {
+        "zh": {
+          "title": "Windows 远程桌面，freerdp-tk 发布版（Windows）",
+          "caption": "Windows 上的 freerdp-tk（Server 2025，一台 CI 机器）：在 PowerShell 中解压 kit 的 Windows 客户端 zip，从中启动 freerdp-tk，连接同一台电脑上 Windows 自带的远程桌面：用 Win+R 打开记事本，然后在会话里的 Firefox 中播放网页视频和 WebGL，声音经会话传来；断开后再次打开 freerdp-tk，用 Windows 凭据管理器中的密码打开保存的连接。Big Buck Bunny © Blender Foundation，CC BY 3.0；WebGL Aquarium © Google，BSD。"
+        },
+        "ja": {
+          "title": "Windows リモート デスクトップ、freerdp-tk リリース版（Windows）",
+          "caption": "Windows（Server 2025、CI マシン）上の freerdp-tk です。kit の Windows クライアントを PowerShell で zip から展開し、そこから freerdp-tk を起動して、同じ PC 上の Windows 標準のリモート デスクトップに接続します。Win+R からメモ帳を開き、セッション内の Firefox で Web 動画と WebGL を再生し、音声はセッション経由で届きます。切断してから freerdp-tk をもう一度開き、Windows の資格情報マネージャーのパスワードで保存した接続を開きます。Big Buck Bunny © Blender Foundation、CC BY 3.0。WebGL Aquarium © Google、BSD。"
+        },
+        "fr": {
+          "title": "Bureau à distance Windows, freerdp-tk (version publiée, Windows)",
+          "caption": "freerdp-tk sur Windows (Server 2025, une machine de CI) : le client Windows du kit décompressé depuis son zip dans PowerShell, freerdp-tk lancé depuis celui-ci, une connexion au Bureau à distance de Windows sur le même PC : le Bloc-notes depuis Win+R, puis Firefox dans la session avec une vidéo web et du WebGL, le son passant par la session ; déconnexion, freerdp-tk à nouveau, et la connexion enregistrée ouverte avec le mot de passe du Gestionnaire d’identification de Windows. Big Buck Bunny © Blender Foundation, CC BY 3.0 ; WebGL Aquarium © Google, BSD."
+        }
+      }
     }
   ],
   "windows": [
