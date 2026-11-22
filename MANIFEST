@@ -1,10 +1,10 @@
 FreeRDP web client (preview), built 2026-11-22 with emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.13 (e13ee988ce3d87a738dd8f3661d02223308c412a)
 page: freerdp-web 42e8495371acdd020c10a2f64bb25179c006caf4
 
-kit: rdp-release-kit e404332b26306133a2f105586f986d63476a711d
-freerdp-upstream: master 86afecc0a8520ca0e0b34dda511ec6e2536f36f6 +113
+kit: rdp-release-kit 6275fdbef821aef94b635d68e7419be302a7d6cf
+freerdp-upstream: master 86afecc0a8520ca0e0b34dda511ec6e2536f36f6 +114
 sources (sources.lock):
-  freerdp          20261121.5 bfcfcba90a7162ede1de1ece90defcf6a20a239a https://github.com/congzhangzh/FreeRDP
+  freerdp          20261122.1 4dc3f4fa64d7329d91947457e4ee8e6263996f0e https://github.com/congzhangzh/FreeRDP
   sdl3_wasm        3.4.18+timer 1d615c14f95a3389bf0026e719144ad51378e40c https://github.com/congzhangzh/SDL
   sdl3_ttf         3.2.2     63547d58d0185c833213885b635a2c0548201cc8f301e6587c0be1a67e1e045d https://github.com/libsdl-org/SDL_ttf/releases/download/release-3.2.2/SDL3_ttf-3.2.2.tar.gz
   freetype         2.15.0    93cd47eb719c325107f2d3cf087d06299e944c3b48a40b55537302304dea1dd5 https://download.savannah.gnu.org/releases/freetype/freetype-2.15.0.tar.xz
