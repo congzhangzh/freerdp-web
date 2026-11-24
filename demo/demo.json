@@ -1,8 +1,8 @@
 {
   "recorded": {
-    "kit": "76f22eb0dd9db49b50bf36aaaaecaf360577fd38",
-    "web": "web-20261124.8-76f22eb0dd9d",
-    "xrdp": "xrdp-20261124.8-76f22eb0dd9d",
+    "kit": "f9904337c38bb33ba4e28673636e6a2ee8ebfdc4",
+    "web": "web-20261124.9-f9904337c38b",
+    "xrdp": "xrdp-20261124.9-f9904337c38b",
     "pipewire-module-xrdp": "pipewire-module-xrdp-20261031.1-1b78a2c01cc2"
   },
   "videos": [
@@ -123,6 +123,16 @@
       "aliases": [
         "demo-gnome",
         "grd-gnome"
+      ]
+    },
+    {
+      "title": "FreeRDP shadow server + Linux, two screens, AV1",
+      "src": "demo/shadow-multimon.mp4",
+      "poster": "demo/shadow-multimon.jpg",
+      "caption": "The shadow shares one X screen as one desktop, and the client spreads it over its two screens. A server with two monitors shares only one (/monitors:N). The shadow doesn't resize. Real multi-monitor and resizing: phase 2 (xrdp).",
+      "id": "linux-shadow-two-screens",
+      "aliases": [
+        "shadow-multimon"
       ]
     },
     {
