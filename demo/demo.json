@@ -1,34 +1,11 @@
 {
   "recorded": {
-    "kit": "822238f91e913bb58a49f493b3437caecbd4fa6b",
-    "web": "web-20261125.10-822238f91e91",
-    "xrdp": "xrdp-20261125.10-822238f91e91",
+    "kit": "45169bac8d3c8a492012ef90124e4940f5ddcfa5",
+    "web": "web-20261125.11-45169bac8d3c",
+    "xrdp": "xrdp-20261125.11-45169bac8d3c",
     "pipewire-module-xrdp": "pipewire-module-xrdp-20261031.1-1b78a2c01cc2"
   },
   "videos": [
-    {
-      "title": "xrdp + GNOME Wayland, AV1",
-      "src": "demo/xrdp-gnome.mp4",
-      "poster": "demo/xrdp-gnome.jpg",
-      "caption": "rdp-release-kit's xrdp with GNOME on Wayland, Fedora 45: sesman starts a GNOME session and xrdp sends it in AV1, decoded by the browser. The same visit, the terminal started from the search, then Firefox on the server with web video and WebGL, with sound. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD.",
-      "i18n": {
-        "zh": {
-          "caption": "rdp-release-kit 的 xrdp，GNOME on Wayland，Fedora 45：sesman 启动一个 GNOME 会话，xrdp 以 AV1 发送画面，由浏览器解码。同样的流程：从搜索中打开终端，然后在服务器上的 Firefox 里播放网页视频和 WebGL，带声音。Big Buck Bunny © Blender Foundation，CC BY 3.0；WebGL Aquarium © Google，BSD。"
-        },
-        "ja": {
-          "caption": "rdp-release-kit の xrdp と Wayland 上の GNOME、Fedora 45 です。sesman が GNOME セッションを開始し、xrdp が AV1 で送り、ブラウザーがデコードします。同じ流れで、検索から端末を開き、サーバー上の Firefox で Web 動画と WebGL を音声付きで再生します。Big Buck Bunny © Blender Foundation、CC BY 3.0。WebGL Aquarium © Google、BSD。"
-        },
-        "fr": {
-          "caption": "Le xrdp de rdp-release-kit avec GNOME sous Wayland, Fedora 45 : sesman ouvre une session GNOME et xrdp l’envoie en AV1, décodé par le navigateur. La même visite : le terminal ouvert depuis la recherche, puis Firefox sur le serveur avec une vidéo web et du WebGL, avec le son. Big Buck Bunny © Blender Foundation, CC BY 3.0 ; WebGL Aquarium © Google, BSD."
-        }
-      },
-      "id": "xrdp-gnome",
-      "aliases": [
-        "demo-xrdp-gnome",
-        "xrdp-preview-gnome",
-        "xrdp-gnome"
-      ]
-    },
     {
       "title": "xrdp + GNOME Wayland, AV1, Two monitors",
       "src": "demo/xrdp-gnome-screens.mp4",
