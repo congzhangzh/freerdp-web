@@ -5,9 +5,11 @@
 //     clients: [{ platform, file, url }], windows: { file, url, command, remove } }
 // "linux" is the Linux host (since kit 2026-11-05), one entry per processor:
 //   [{ platform, file, url, unit, command, then, kickstart, log, remove }]
-// FreeRDP's shadow server as a systemd user unit. "sesman", when the kit writes it, is its session
-// manager: { command, remove, headless?, ssh? }. Its section shows only when the file has it, so the
-// kit decides when it is ready, without a new page.
+// FreeRDP's shadow server as a systemd user unit. "sesman", when the kit writes it (since kit
+// 2026-11-26), is its session manager, the first way on Linux, one command per processor:
+//   { platforms: [{ platform, file, url, command }], unit, headless?, ssh?, log?, remove }
+// Its section shows only when the file has it, first, and the user unit follows as the way without
+// root; without it the user unit is the only way, as before.
 // "windows" is the Windows host (since kit 2026-10-30): FreeRDP's shadow server and
 // freerdp-shadow-service, which share a Windows PC's own screen; Get a server shows it after xrdp.
 // "mac" is the macOS host (since kit 2026-11-02), one entry per processor:
@@ -68,8 +70,11 @@
         kickstart: text(l?.kickstart), log: text(l?.log), remove: text(l?.remove) }))
       .filter((l) => l.platform && l.url && l.command);
     const s = data.sesman;
-    const sesman = linux.length && s && typeof s === "object" && text(s.command)
-      ? { command: text(s.command), remove: text(s.remove), headless: text(s.headless), ssh: text(s.ssh) } : null;
+    const platforms = (s && typeof s === "object" && Array.isArray(s.platforms) ? s.platforms : [])
+      .map((p) => ({ platform: text(p?.platform), file: text(p?.file), url: https(p?.url), command: text(p?.command) }))
+      .filter((p) => p.platform && p.url && p.command);
+    const sesman = linux.length && platforms.length
+      ? { platforms, remove: text(s.remove), headless: text(s.headless), ssh: text(s.ssh) } : null;
     // AV2 for xrdp: the line that turns it on, when the release's packages have it
     const a = data.av2;
     const av2 = a && typeof a === "object" && text(a.command) ? { what: text(a.what), command: text(a.command) } : null;
@@ -185,8 +190,21 @@
     if (k.linux.length) {
       const first = k.linux[0];
       out.append(el("h3", { id: "linux-shadow", text: t("srv.shadowName", "FreeRDP's shadow server") }),
-        el("p", { text: t("srv.linuxWhy", "It shares this computer's own screen, the session that is already there: GNOME on Wayland or X11, and other X11 desktops such as Xfce and MATE. KDE on Wayland and sway are not supported yet. It starts with your session, so it cannot show the login screen.") }),
-        el("p", { text: t("srv.linuxInstall", "As yourself, no root: download, unpack and install a systemd user unit, which starts it with your desktop, on 127.0.0.1:3389. For your processor:") }));
+        el("p", { text: t("srv.linuxWhy", "It shares this computer's own screen: GNOME on Wayland or X11, and other X11 desktops such as Xfce and MATE. KDE on Wayland and sway are not supported yet. There are two ways to install it, both on 127.0.0.1:3388: install one or the other.") }));
+      // the session manager first (the main way on GNOME), then the user unit, the way without root
+      if (k.sesman) {
+        const m = k.sesman;
+        const sesmanList = el("div", { class: "distros" });
+        for (const p of m.platforms) sesmanList.append(el("section", { class: "distro", "aria-label": "Linux " + p.platform }, el("h5", { text: p.platform }), copyable(p.command)));
+        out.append(el("h4", { id: "session-manager", text: t("srv.sesman", "The session manager (as root)") }),
+          el("p", { text: t("srv.sesmanWhy", "The main way on GNOME. One service for every user of this computer, there before anyone logs in, on 127.0.0.1:3388: each connection reaches the GNOME session of the user it names, and the login is that user's own account. GNOME only (Mutter 45 or newer). It runs as root, so it installs in /opt/freerdp-host, owned by root. In a terminal, as an administrator, for your processor:") }),
+          sesmanList);
+        if (m.headless) out.append(el("p", { text: t("srv.sesmanHeadless", "With nobody logged in: a user of the group freerdp-headless gets a GNOME session, started by their first connection. A user with neither a session nor the group is refused with no reason given: the connection just drops.") }), copyable(m.headless));
+        out.append(el("p", { class: "warn", text: t("srv.sesmanWarn", "Anyone who can reach the port can start a session for a member of the group, before any password, and it stays running. Keep the group small and the port on 127.0.0.1 or a private network. A session gives no access: the login still happens in the shadow server. A WebSocket gateway in front of the port widens who can reach it to whoever reaches the gateway; an SSH tunnel doesn't.") }));
+        if (m.remove) out.append(el("p", { class: "hint", text: t("srv.linuxRemove", "To remove it:") }), copyable(m.remove));
+      }
+      if (k.sesman) out.append(el("h4", { id: "user-unit", text: t("srv.userUnit", "Without root: the user unit") }));
+      out.append(el("p", { text: t("srv.linuxInstall", "As yourself, no root, in the desktop session you want to share: download, unpack and install a systemd user unit, which starts it with your desktop, on 127.0.0.1:3388. It works on GNOME and on other X11 desktops such as Xfce and MATE, for your own session only, once you have logged in. For your processor:") }));
       const list = el("div", { class: "distros" });
       for (const l of k.linux) list.append(el("section", { class: "distro", "aria-label": "Linux " + l.platform }, el("h5", { text: l.platform }), copyable(l.command)));
       out.append(list, el("p", { text: t("srv.linuxLogin", "The login is your own account, the one whose desktop it is; any other is refused. Keep it on 127.0.0.1 and reach it through SSH.") }));
@@ -196,15 +214,7 @@
       k.linux.forEach((l, i) => files.append(i ? t("list.sep", ", ") : "", link(l.url, l.file || l.url)));
       files.append(t("punct.period", "."));
       out.append(files);
-      if (k.sesman) {
-        const m = k.sesman;
-        out.append(el("h4", { id: "session-manager", text: t("srv.sesman", "The session manager") }),
-          el("p", { text: t("srv.sesmanWhy", "Optional, and it runs as root: one port for every user of this computer, on 127.0.0.1:3391, for several users or a computer where nobody is logged in. Each connection reaches the GNOME session of the user it names. For one person with a logged-in desktop, the user unit above is enough. GNOME only (Mutter 45 or newer), tested with headless sessions.") }),
-          copyable(m.command));
-        if (m.headless) out.append(el("p", { text: t("srv.sesmanHeadless", "With nobody logged in: a user of the group freerdp-headless gets a GNOME session, started by their first connection. A user with neither a session nor the group is refused with no reason given: the connection just drops.") }), copyable(m.headless));
-        out.append(el("p", { class: "warn", text: t("srv.sesmanWarn", "Anyone who can reach the port can start a session for a member of the group, before any password, and it stays running. Keep the group small and the port on 127.0.0.1 or a private network. A session gives no access: the login still happens in the shadow server. A WebSocket gateway in front of the port widens who can reach it to whoever reaches the gateway; an SSH tunnel doesn't.") }));
-        if (m.remove) out.append(el("p", { class: "hint", text: t("srv.linuxRemove", "To remove it:") }), copyable(m.remove));
-      }
+      if (k.sesman) out.append(el("p", { class: "hint", text: t("srv.linuxBoth", "The session manager and the user unit both listen on 3388: install one or the other.") }));
     }
     out.append(el("h3", { id: "xrdp", text: "xrdp" }));
     if (k.families.length > 1) out.append(tabs("family", t("srv.distros", "Distributions"), k.families.map((f) => ({ id: f.id, label: f.name }))));
@@ -234,10 +244,10 @@
         el("p", { text: t("srv.winRdpWhy", "Windows Server, and Windows Pro and Enterprise, have a Remote Desktop server of their own: turn it on (Settings, System, Remote Desktop), and FreeRDP Web reaches it through a gateway on that PC, as it reaches xrdp. Each user gets a session of their own, with its sound.") }),
         el("h3", { text: t("srv.winShadow", "Share this PC's own screen: FreeRDP's shadow server") }),
         el("p", { text: t("srv.winWhy", "FreeRDP's shadow server shares the Windows PC's own screen: the desktop of whoever is logged in and, run as a service, the logon and lock screens, UAC prompts and Ctrl+Alt+Del too. It shares that one desktop, like Remote Assistance; it starts no sessions of its own. The picture is AV1, or AV2 with /gfx-av2 after /gfx-av1; logins are Windows accounts.") }),
-        el("p", { text: t("srv.winInstall", "In an administrator's PowerShell: download, unpack, install the service (it starts at once, and with Windows, on 127.0.0.1:3389):") }),
+        el("p", { text: t("srv.winInstall", "In an administrator's PowerShell: download, unpack, install the service (it starts at once, and with Windows, on 127.0.0.1:3388):") }),
         copyable(w.command));
       if (w.remove) out.append(el("p", { class: "hint", text: t("srv.winRemove", "To remove it, in the same folder:") }), copyable(w.remove));
-      out.append(el("p", { class: "hint" }, t("srv.winMore", "If Windows' own Remote Desktop is on, it holds 3389: add /port:3388. How to reach it through SSH, and the rest: README.txt in the archive, "),
+      out.append(el("p", { class: "hint" }, t("srv.winMore", "It listens on 3388, so Windows' own Remote Desktop can keep 3389. How to reach it through SSH, and the rest: README.txt in the archive, "),
         link(w.url, w.file || w.url), t("punct.period", ".")));
       if (videos.windows?.length) out.append(shelf(videos.windows));
     }
@@ -246,17 +256,17 @@
       const first = k.mac[0];
       out.append(el("h2", { class: "sr-only", text: "macOS" }),
         el("h3", { text: t("srv.macShadow", "Share this Mac's own screen: FreeRDP's shadow server") }),
-        el("p", { text: t("srv.macWhy", "FreeRDP's shadow server for macOS shares the Mac's own screen and its sound: the desktop of the user who is logged in, in their session (not the login window). It shares that one desktop and starts no sessions of its own. The picture is AV2 for the clients that offer it (the kit's FreeRDP clients and FreeRDP Web), AV1 for the others that have it, else H.264 from the Mac's own VideoToolbox; the login is your macOS account.") }),
-        el("p", { text: t("srv.macInstall", "In Terminal, for your Mac's processor: download, unpack, copy the app to Applications and its LaunchAgent, which starts it now and at each login, on 127.0.0.1:3389:") }));
+        el("p", { text: t("srv.macWhy", "FreeRDP's shadow server for macOS shares the Mac's own screen and its sound: the login window, then the desktop of the user who logs in, on the same connection. It shares that one screen and starts no sessions of its own. The picture is AV2 for the clients that offer it (the kit's FreeRDP clients and FreeRDP Web), AV1 for the others that have it, else H.264 from the Mac's own VideoToolbox; the login is a local macOS account.") }),
+        el("p", { text: t("srv.macInstall", "In Terminal, as an administrator, for your Mac's processor: download, unpack and run the installer with sudo. It puts the app in Applications, the server as a root LaunchDaemon on 127.0.0.1:3388, there before anyone logs in, and its agent at the login window and in each session:") }));
       const list = el("div", { class: "distros" });
       for (const m of k.mac) list.append(el("section", { class: "distro", "aria-label": "macOS " + m.platform }, el("h5", { text: m.platform }), copyable(m.command)));
       out.append(list);
       // the same for both processors: the permissions, the restart, the removal
-      if (first.kickstart) out.append(el("p", { text: t("srv.macAllow", "The first start asks for two permissions: in System Settings, Privacy & Security, allow FreeRDP Shadow under Screen & System Audio Recording (the picture and the sound) and under Accessibility (the keyboard and the mouse). Then restart it:") }),
+      if (first.kickstart) out.append(el("p", { text: t("srv.macAllow", "Then allow two permissions: in System Settings, Privacy & Security, allow freerdp-shadow-agent (in /Applications/FreeRDP-Shadow.app/Contents/MacOS) under Screen & System Audio Recording (the picture and the sound) and under Accessibility (the keyboard and the mouse). The grant holds at the login window too. Then restart the agent, as yourself, not with sudo:") }),
         copyable(first.kickstart));
       else if (first.then) out.append(el("p", { text: first.then }));
       if (first.remove) out.append(el("p", { class: "hint", text: t("srv.macRemove", "To remove it:") }), copyable(first.remove));
-      const files = el("p", { class: "hint" }, t("srv.macMore", "After an update, macOS asks for both permissions again (the app is signed ad hoc, so macOS knows only that build): remove FreeRDP Shadow from both lists, then allow the new one. How to reach it through SSH, and the rest: README.txt in the archive, "));
+      const files = el("p", { class: "hint" }, t("srv.macMore", "After an update, macOS asks for both permissions again (the app is signed ad hoc, so macOS knows only that build): remove freerdp-shadow-agent from both lists, then allow the new one. A Mac restarted with FileVault on shows its disk-unlock screen before macOS starts, and no RDP server can show that screen. Without root, for your own session only, the archive also has the LaunchAgent app. How to reach it through SSH, and the rest: README.txt in the archive, "));
       k.mac.forEach((m, i) => files.append(i ? t("list.sep", ", ") : "", link(m.url, m.file || m.url)));
       files.append(t("punct.period", "."));
       out.append(files);

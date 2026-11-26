@@ -182,11 +182,25 @@ for (const id of ["linux", "windows", "macos", "notes", "server-ubuntu", "server
 }
 await ev("document.querySelector('.tabs a[href=\"#linux\"]').click(), true");
 // the session manager: its section only when the kit writes the field, which it does once a host confirms it
-const withSesman = { ...want, sesman: { command: "sudo systemctl enable --now freerdp-shadow-sesman.service", headless: "sudo groupadd -f freerdp-headless", remove: "sudo rm -r /opt/freerdp-host" } };
+const withSesman = { ...want, sesman: { unit: "freerdp-shadow-sesman.service",
+  platforms: [{ platform: "x86_64", file: "freerdp-host-1-linux-x86_64.tar.xz", url: "https://example.org/freerdp-host-1-linux-x86_64.tar.xz", command: "curl -LO https://example.org/freerdp-host-1-linux-x86_64.tar.xz && sudo systemctl enable --now freerdp-shadow-sesman.service" },
+    { platform: "ARM64", file: "freerdp-host-1-linux-aarch64.tar.xz", url: "https://example.org/freerdp-host-1-linux-aarch64.tar.xz", command: "curl -LO https://example.org/freerdp-host-1-linux-aarch64.tar.xz && sudo systemctl enable --now freerdp-shadow-sesman.service" },
+    { platform: "bad", url: "http://example.org/x", command: "never shown" }],
+  headless: "sudo groupadd -f freerdp-headless", remove: "sudo rm -r /opt/freerdp-host" } };
 await open(JSON.stringify(withSesman));
-check("the session manager: its section, its commands and its warning, with the field",
-  same(await ev("[...document.querySelectorAll('#session-manager ~ .copyable pre')].map((p) => p.textContent).slice(0, 3)"), [withSesman.sesman.command, withSesman.sesman.headless, withSesman.sesman.remove])
+check("the session manager: first, a command per processor (a link that is not https left out), its commands and its warning, with the field",
+  same(await ev("[...document.querySelectorAll('#session-manager ~ .copyable pre, #session-manager ~ .distros pre')].map((p) => p.textContent).slice(0, 4)"),
+    [withSesman.sesman.platforms[0].command, withSesman.sesman.platforms[1].command, withSesman.sesman.headless, withSesman.sesman.remove])
   && /before any password/.test(await ev("document.querySelector('#linux .warn')?.textContent") || "") && /WebSocket gateway/.test(await ev("document.querySelector('#linux .warn')?.textContent") || ""));
+check("the session manager before the user unit, which follows with its own heading and the hint: one or the other",
+  await ev("(() => { const s = document.getElementById('session-manager'), u = document.getElementById('user-unit'); return !!s && !!u && !!(s.compareDocumentPosition(u) & Node.DOCUMENT_POSITION_FOLLOWING); })()") === true
+  && /install one or the other/.test(await ev("[...document.querySelectorAll('#linux .hint')].map((p) => p.textContent).join(' ')") || ""));
+check("the user unit's commands follow its heading, every Linux command on 3388 or none",
+  same(await ev("[...document.querySelectorAll('#user-unit ~ .distros pre')].map((p) => p.textContent)"), usable.map((l) => l.command))
+  && !/3389|3391/.test(await ev("(() => { let t = '', e = document.getElementById('linux-shadow'); while (e && e.id !== 'xrdp') { t += e.textContent + ' '; e = e.nextElementSibling; } return t; })()") || ""));
+await open(JSON.stringify({ ...want, sesman: { command: "an older shape", remove: "x" } }));
+check("a session manager with no command per processor (an older shape): no section, the user unit alone, no heading for it",
+  await ev("!document.getElementById('session-manager') && !document.getElementById('user-unit') && !!document.getElementById('linux-shadow')"));
 const noLinux = { ...withSesman }; delete noLinux.linux;
 await open(JSON.stringify(noLinux));
 check("an older install.json without the Linux host: no shadow section and no session manager, xrdp still there",

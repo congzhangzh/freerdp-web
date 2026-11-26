@@ -15,6 +15,25 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261126.1
+
+- **Get a server: the session manager first on Linux, 3388 everywhere, the Mac's root server.** The
+  page's own sentences had not followed the kit since its port round (kit 20261125.4) and the Mac
+  daemon mode: they said the Linux user unit, the Windows service and the Mac app listen on 3389,
+  the session manager on 3391 and "optional", the Mac server "not the login window", and named the
+  permission "FreeRDP Shadow". Now, from the product owner's text in four languages: on Linux the
+  session manager comes first (as root, /opt/freerdp-host, 127.0.0.1:3388, the GNOME session of
+  the user who connects), a command per processor, then "Without root: the user unit" and "install
+  one or the other"; Windows on 3388, its own Remote Desktop keeps 3389; the Mac installs a root
+  LaunchDaemon with its agent at the login window and in each session, the permissions go to
+  freerdp-shadow-agent, FileVault's unlock screen is out of reach.
+- install.json's `sesman` is now `{ platforms: [{ platform, file, url, command }], unit, headless,
+  ssh, log, remove }`, one command per processor (kit 20261126 and newer writes it); the older shape
+  (one `command`) shows no session manager.
+- Tests: `test-server.mjs` checks the session manager's commands per processor (a link that is not
+  https left out), its place before the user unit, the hint, no 3389 or 3391 in the Linux host's
+  part, and nothing for the older shape.
+
 ## 20261117.2
 
 - **About reads the kit's new MANIFEST.** Since kit e462e7c / 8129436 a client's MANIFEST also has
