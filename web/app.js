@@ -2065,9 +2065,12 @@ function sessionEnded(unexpected, why = "") {
   if (badOption) {
     retry.count = 0; endCapture();
     const reason = [...connLog].reverse().map((l) => /\[ERROR\]\[com\.freerdp\.client\.common\.cmdline\] - \[(?!parse_command_line)[^\]]*\]: (.*)$/.exec(l)).find(Boolean)?.[1] ?? "";
-    const option = badOption[1];
-    showEnd(t("end.badOption", `FreeRDP refused the option ${option}${reason ? ": " + reason : ""}. Change it in Extra options and connect again.`,
-      { option, reason: reason ? ": " + reason : "" }), false);
+    // the option as the user typed it: FreeRDP names it without its slash; the separator is each
+    // language's own (a full-width colon in Chinese and Japanese, a no-break space before it in French)
+    const option = /^[/+-]/.test(badOption[1]) ? badOption[1] : "/" + badOption[1];
+    const why = reason ? t("end.reasonSep", ": ") + reason : "";
+    showEnd(t("end.badOption", `FreeRDP refused the option ${option}${why}. Change it in Extra options and connect again.`,
+      { option, reason: why }), false);
     return;
   }
   const passwordRefused = connLog.some((l) => LOGON_FAILED.test(l));
