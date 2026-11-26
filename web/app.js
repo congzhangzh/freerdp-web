@@ -272,7 +272,10 @@ function hardware(codec) {
   }
   return hwDecoder[codec];
 }
-const hwText = (h) => h === true ? t("info.hardware", "hardware") : h === false ? t("info.software", "software") : t("info.checking", "checking…");
+// "hardware" here is the browser's own answer to isConfigSupported(prefer-hardware), not a decoder
+// it names (a virtual M1 without AV1 hardware answers yes in Firefox), so the word says so (the
+// product owner, 2026-11-26); FreeRDP's own decoder counters keep "info.hardware" below
+const hwText = (h) => h === true ? t("info.hardwareReported", "hardware, as the browser reports") : h === false ? t("info.software", "software") : t("info.checking", "checking…");
 // the codec strings the hardware is asked about: AV1 Main (4:2:0) and H.264 High, as Info does
 const HW = { av1: "av01.0.13M.08", h264: "avc1.640028" };
 const codecEnv = () => ({ av1Hardware: hardware(HW.av1) === true });
