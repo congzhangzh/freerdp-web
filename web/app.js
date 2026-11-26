@@ -2058,6 +2058,18 @@ function sessionEnded(unexpected, why = "") {
       local ? localPage(conn.mixed) : null);
     return;
   }
+  // FreeRDP refused its command line (an Extra option it doesn't take, or two that exclude each
+  // other): the same line fails the same way every time, so no retry; the bar says which option and
+  // FreeRDP's own reason, once (the product owner's spec, 2026-11-26)
+  const badOption = connLog.map((l) => /Command line parsing failed at '([^']*)'/.exec(l)).find(Boolean);
+  if (badOption) {
+    retry.count = 0; endCapture();
+    const reason = [...connLog].reverse().map((l) => /\[ERROR\]\[com\.freerdp\.client\.common\.cmdline\] - \[(?!parse_command_line)[^\]]*\]: (.*)$/.exec(l)).find(Boolean)?.[1] ?? "";
+    const option = badOption[1];
+    showEnd(t("end.badOption", `FreeRDP refused the option ${option}${reason ? ": " + reason : ""}. Change it in Extra options and connect again.`,
+      { option, reason: reason ? ": " + reason : "" }), false);
+    return;
+  }
   const passwordRefused = connLog.some((l) => LOGON_FAILED.test(l));
   if (passwordRefused || conn.refused) {
     again.forget(); retry.count = 0; endCapture();

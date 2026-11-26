@@ -103,6 +103,13 @@ test("selected host builds exact WASM argv including its password; extra options
     assert.throws(()=>connectionArgs({...host(),extra},"800x600"));
   assert.throws(()=>vault.use(a,async()=>{}),/synchronous/);
 });
+test("Extra options win over the page's /dynamic-resolution: /smart-sizing (FreeRDP refuses both) or the user's own", () => {
+  const resize=(extra="")=>connectionArgs({...host(),extra},"800x600").filter(a=>/^[/+-](dynamic-resolution|smart-sizing)/.test(a));
+  assert.deepEqual(resize(),["/dynamic-resolution"]);
+  assert.deepEqual(resize("/smart-sizing"),["/smart-sizing"]); assert.deepEqual(resize("/smart-sizing:1280x720"),["/smart-sizing:1280x720"]);
+  assert.deepEqual(resize("-dynamic-resolution"),["-dynamic-resolution"]); assert.deepEqual(resize("/gfx:AV1 +dynamic-resolution"),["+dynamic-resolution"]);
+  assert.deepEqual(resize("/smart-sizingx"),["/dynamic-resolution","/smart-sizingx"]);
+});
 test("the screen's scale goes to the server at connect above 100 %, clamped to 500; Extra options win", () => {
   const scale=(s,extra="")=>connectionArgs({...host(),extra},"3024x1964",s).filter(a=>/^\/scale/.test(a));
   assert.deepEqual(scale(undefined),[]); assert.deepEqual(scale(100),[]); assert.deepEqual(scale(90),[]);

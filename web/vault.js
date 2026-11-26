@@ -338,8 +338,13 @@
   // starts at the right size; FreeRDP then keeps that scale for the session's later layouts
   function connectionArgs(host, size, scale = 100) {
     const value = validateHost(host);
+    const extra = value.extra.split(/\s+/).filter(Boolean);
+    // Extra options win over the page's own /dynamic-resolution: FreeRDP refuses it together with
+    // /smart-sizing ("mutually exclusive"), the one way to fit a server that keeps its size (a shadow
+    // server) into a smaller window, and a user's own [/+-]dynamic-resolution says what they want
+    const ownResize = !extra.some(a => /^[/+-](smart-sizing|dynamic-resolution)(?::|$)/i.test(a));
     const args = ["/v:" + value.host, "/u:" + value.username, "/p:" + value.password,
-      "/cert:ignore", "/size:" + size, "/dynamic-resolution", ...value.extra.split(/\s+/).filter(Boolean)];
+      "/cert:ignore", "/size:" + size, ...(ownResize ? ["/dynamic-resolution"] : []), ...extra];
     if (!args.some(a => /^[/+-](sound|audio-mode)/.test(a))) args.push("/sound");
     // a dropped network: FreeRDP reconnects by itself with the session's own credentials (every
     // 5 s, 20 times by default), and the server gives back the same desktop; -auto-reconnect: off
