@@ -15,6 +15,25 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261126.2
+
+- **Extra options win over the page's resize option.** The page always passed
+  /dynamic-resolution, and FreeRDP refuses it together with /smart-sizing ("mutually
+  exclusive"), so /smart-sizing in Extra options ended every session at connect. Now the page
+  leaves /dynamic-resolution out when Extra options name /smart-sizing or their own
+  [/+-]dynamic-resolution (vault.js `connectionArgs`, a test in vault.test.cjs). This matters for
+  the shadow servers (Windows, Mac), which cannot follow the window's size: /smart-sizing scales
+  their desktop into the window instead of showing a 1:1 corner.
+- **A command line FreeRDP refuses is not retried.** The end bar names the option as typed and
+  FreeRDP's reason ("Command line parsing failed at …" and its last cmdline error), once, and says
+  to change it in Extra options; each language has its own separator (`end.reasonSep`) and the
+  French label is in guillemets (the product owner's review).
+- **Info: the browser's hardware answer is labelled as the browser's.** The "hardware" word next to
+  a decoder came only from `VideoDecoder.isConfigSupported` with prefer-hardware, which a browser
+  may answer yes and still decode in software (the GitHub macOS runner: VideoToolbox -12906,
+  dav1d). It now reads "hardware, as the browser reports" (`info.hardwareReported`, four
+  languages); FreeRDP's own decoder counters (the `<codec> results` rows) keep "hardware".
+
 ## 20261126.1
 
 - **Get a server: the session manager first on Linux, 3388 everywhere, the Mac's root server.** The
