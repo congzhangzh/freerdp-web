@@ -1,8 +1,8 @@
 {
   "recorded": {
-    "kit": "0d06e5888d93b12ce81dde00b7d11ace1d85babe",
-    "web": "web-20261127.2-0d06e5888d93",
-    "xrdp": "xrdp-20261127.2-0d06e5888d93",
+    "kit": "0271883a566038b8e69b91453147fce9786930c0",
+    "web": "web-20261127.3-0271883a5660",
+    "xrdp": "xrdp-20261127.3-0271883a5660",
     "pipewire-module-xrdp": "pipewire-module-xrdp-20261031.1-1b78a2c01cc2"
   },
   "videos": [
@@ -205,6 +205,39 @@
       "id": "mac-host",
       "aliases": [
         "mac-host"
+      ]
+    },
+    {
+      "title": "FreeRDP shadow server + Windows Server 2025, native client, AV1",
+      "src": "demo/windows-native.mp4",
+      "poster": "demo/windows-native.jpg",
+      "caption": "The kit's native client (sdl-freerdp) on a Windows Server 2025 machine of the CI, to FreeRDP's shadow server on the same machine (loopback, no network in between): the server shares only the first monitor (/monitors:0), where Edge plays web video, and the client's window sits on a second, virtual monitor, so it doesn't show itself. AV1 4:2:0, decoded in software (dav1d: the CI machine has no GPU); the label's rate is the server encoder's own (the CI machine has no sound card, so no sound here). Big Buck Bunny © Blender Foundation, CC BY 3.0.",
+      "recorded": {
+        "recorded": "2026-11-27T04:13:41Z",
+        "run": "45937246567",
+        "run_attempt": "1",
+        "kit": "0271883a566038b8e69b91453147fce9786930c0",
+        "mean_fps": 16.6,
+        "written_fps": 25.6,
+        "label": "AV1 4:2:0 · dav1d (software) · 17/s"
+      },
+      "i18n": {
+        "zh": {
+          "title": "FreeRDP 影子服务器 + Windows Server 2025，原生客户端，AV1",
+          "caption": "在 CI 的一台 Windows Server 2025 机器上，套件的原生客户端（sdl-freerdp）连接同一台机器上的 FreeRDP 影子服务器（本机回环，中间没有网络）：服务器只共享第一个显示器（/monitors:0），Edge 在那里播放网页视频；客户端窗口放在第二个虚拟显示器上，所以画面里不会出现它自己。AV1 4:2:0，软件解码（dav1d：CI 机器没有 GPU）；标签上的帧率是服务器编码器自己的数字（CI 机器没有声卡，所以这里没有声音）。Big Buck Bunny © Blender Foundation，CC BY 3.0。"
+        },
+        "ja": {
+          "title": "FreeRDP シャドウサーバー + Windows Server 2025、ネイティブ クライアント、AV1",
+          "caption": "CI の Windows Server 2025 マシン上で、キットのネイティブ クライアント（sdl-freerdp）から同じマシンの FreeRDP シャドウサーバーに接続します（ループバックで、間にネットワークはありません）。サーバーは 1 台目のモニター（/monitors:0）だけを共有し、そこで Edge が Web 動画を再生します。クライアントのウィンドウは 2 台目の仮想モニターにあるため、画面に自分自身は映りません。AV1 4:2:0、ソフトウェアでデコードしています（dav1d：CI マシンには GPU がありません）。ラベルのレートはサーバーのエンコーダー自身の値です（CI マシンにはサウンドカードがないため、音声はありません）。Big Buck Bunny © Blender Foundation、CC BY 3.0。"
+        },
+        "fr": {
+          "title": "Serveur miroir FreeRDP + Windows Server 2025, client natif, AV1",
+          "caption": "Le client natif du kit (sdl-freerdp), sur une machine Windows Server 2025 de la CI, vers le serveur miroir de FreeRDP sur la même machine (boucle locale, aucun réseau entre les deux) : le serveur ne partage que le premier écran (/monitors:0), où Edge lit une vidéo web, et la fenêtre du client se trouve sur un second écran, virtuel, pour qu’elle ne se montre pas elle-même. AV1 4:2:0, décodé en logiciel (dav1d : la machine de CI n’a pas de GPU) ; le débit de l’étiquette est celui de l’encodeur du serveur (la machine de CI n’a pas de carte son, donc pas de son ici). Big Buck Bunny © Blender Foundation, CC BY 3.0."
+        }
+      },
+      "id": "windows-shadow-native-client",
+      "aliases": [
+        "windows-native"
       ]
     }
   ],
