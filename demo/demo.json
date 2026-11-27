@@ -1,8 +1,8 @@
 {
   "recorded": {
-    "kit": "0271883a566038b8e69b91453147fce9786930c0",
-    "web": "web-20261127.3-0271883a5660",
-    "xrdp": "xrdp-20261127.3-0271883a5660",
+    "kit": "ac35738eb27e5ad50a7c7f8d71a8b4eac33704f5",
+    "web": "web-20261127.7-ac35738eb27e",
+    "xrdp": "xrdp-20261127.6-ac35738eb27e",
     "pipewire-module-xrdp": "pipewire-module-xrdp-20261031.1-1b78a2c01cc2"
   },
   "videos": [
@@ -213,13 +213,13 @@
       "poster": "demo/windows-native.jpg",
       "caption": "The kit's native client (sdl-freerdp) on a Windows Server 2025 machine of the CI, to FreeRDP's shadow server on the same machine (loopback, no network in between): the server shares only the first monitor (/monitors:0), where Edge plays web video, and the client's window sits on a second, virtual monitor, so it doesn't show itself. AV1 4:2:0, decoded in software (dav1d: the CI machine has no GPU); the label's rate is the server encoder's own (the CI machine has no sound card, so no sound here). Big Buck Bunny © Blender Foundation, CC BY 3.0.",
       "recorded": {
-        "recorded": "2026-11-27T04:13:41Z",
-        "run": "45937246567",
+        "recorded": "2026-11-27T21:28:35Z",
+        "run": "46068278928",
         "run_attempt": "1",
-        "kit": "0271883a566038b8e69b91453147fce9786930c0",
-        "mean_fps": 16.6,
+        "kit": "ac35738eb27e5ad50a7c7f8d71a8b4eac33704f5",
+        "mean_fps": 21.8,
         "written_fps": 25.6,
-        "label": "AV1 4:2:0 · dav1d (software) · 17/s"
+        "label": "AV1 4:2:0 · dav1d (software) · 22/s"
       },
       "i18n": {
         "zh": {
@@ -242,26 +242,6 @@
     }
   ],
   "clients": [
-    {
-      "title": "xrdp + GNOME Wayland, AV1, freerdp-tk release",
-      "src": "demo/freerdp-tk-release.mp4",
-      "poster": "demo/freerdp-tk-release.jpg",
-      "caption": "freerdp-tk, the connection window that comes with the kit's native clients, on a Linux desktop (Debian 13): the Linux client unpacked from the kit's release, freerdp-tk started from it (it takes the release's own FreeRDP, though Debian's is installed too), a connection filled in and saved, the password kept in the system keyring. The kit's FreeRDP connects in AV1 to rdp-release-kit's xrdp with GNOME on Wayland (Fedora 45): a terminal, then Firefox there with web video and WebGL, with sound; then freerdp-tk is started again and a double-click on the saved connection logs in, the password from the keyring. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD.",
-      "i18n": {
-        "zh": {
-          "title": "xrdp + GNOME Wayland，AV1，freerdp-tk 发布版",
-          "caption": "freerdp-tk 是 kit 原生客户端自带的连接窗口，这里在 Linux 桌面（Debian 13）上：从 kit 的发布包解压 Linux 客户端，从中启动 freerdp-tk（它用发布包自带的 FreeRDP，尽管系统也装了 Debian 的），填写并保存一个连接，密码存入系统钥匙环。kit 的 FreeRDP 以 AV1 连接 rdp-release-kit 的 xrdp，GNOME on Wayland（Fedora 45）：打开终端，然后在那里的 Firefox 里播放网页视频和 WebGL，带声音；之后再次启动 freerdp-tk，双击保存的连接即可登录，密码来自钥匙环。Big Buck Bunny © Blender Foundation，CC BY 3.0；WebGL Aquarium © Google，BSD。"
-        },
-        "ja": {
-          "title": "xrdp + GNOME Wayland、AV1、freerdp-tk リリース版",
-          "caption": "freerdp-tk は kit のネイティブ クライアントに付属する接続ウィンドウで、ここでは Linux デスクトップ（Debian 13）上で使います。kit のリリースから Linux クライアントを展開し、そこから freerdp-tk を起動します（Debian の FreeRDP も入っていますが、リリース同梱の FreeRDP を使います）。接続を入力して保存し、パスワードはシステムのキーリングに保存します。kit の FreeRDP が AV1 で rdp-release-kit の xrdp と Wayland 上の GNOME（Fedora 45）に接続し、端末を開いてから、そこで Firefox の Web 動画と WebGL を音声付きで再生します。そのあと freerdp-tk を再び起動し、保存した接続をダブルクリックすると、キーリングのパスワードでログインします。Big Buck Bunny © Blender Foundation、CC BY 3.0。WebGL Aquarium © Google、BSD。"
-        },
-        "fr": {
-          "title": "xrdp + GNOME Wayland, AV1, freerdp-tk (version publiée)",
-          "caption": "freerdp-tk, la fenêtre de connexion fournie avec les clients natifs du kit, sur un bureau Linux (Debian 13) : le client Linux décompressé depuis la version du kit, freerdp-tk lancé depuis celui-ci (il prend le FreeRDP de la version, même si celui de Debian est installé aussi), une connexion remplie et enregistrée, le mot de passe gardé dans le trousseau du système. Le FreeRDP du kit se connecte en AV1 au xrdp de rdp-release-kit avec GNOME sous Wayland (Fedora 45) : un terminal, puis Firefox avec une vidéo web et du WebGL, avec le son ; puis freerdp-tk est relancé et un double-clic sur la connexion enregistrée ouvre la session, avec le mot de passe du trousseau. Big Buck Bunny © Blender Foundation, CC BY 3.0 ; WebGL Aquarium © Google, BSD."
-        }
-      }
-    },
     {
       "title": "xrdp + GNOME Wayland, AV1, freerdp-tk uvx",
       "src": "demo/freerdp-tk-uvx.mp4",
