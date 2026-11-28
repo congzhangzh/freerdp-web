@@ -2174,7 +2174,7 @@ function showCamera() {
   box.disabled = !cameraReady || !secure || cameraH264 === false;
   $("cameraNote").hidden = cameraReady;
   const insecure = t("set.cameraInsecure", "The camera needs the secure page (https or localhost)");
-  const noH264 = t("set.cameraNoH264", "This browser can't encode the camera picture (it needs H.264 video encoding); try Chrome or Edge");
+  const noH264 = t("set.cameraNoH264", "This browser can't encode the camera picture (it needs H.264 video encoding); try Chrome, Edge or Safari");
   box.parentElement.title = !cameraReady ? t("set.cameraNone", "This build of the client has no camera support")
     : !secure ? insecure : cameraH264 === false ? noH264
     : t("set.cameraTitle", "Send this browser's camera to the remote session (the browser asks first)");
