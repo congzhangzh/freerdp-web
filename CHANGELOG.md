@@ -15,6 +15,16 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261128.1
+
+- **FreeRDP Web shares this browser's camera** (tick Camera in the options; the browser asks once,
+  then the camera runs only while an app on the remote side reads it). Sent as H.264 by the
+  browser's own encoder (WebCodecs), at the size and rate the server asks for (640x480 to 1280x720,
+  about 1 to 3 Mbit/s), with a key frame only when streaming starts; only on the secure page (https
+  or localhost). Chrome tested end to end (into the kit's Linux server and Windows 11's own Remote
+  Desktop); Safari reports support; Edge (Chromium, like Chrome) not tried yet. A browser that
+  can't encode H.264 shows why the option is off.
+
 ## 20261126.2
 
 - **Extra options win over the page's resize option.** The page always passed
