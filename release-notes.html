@@ -33,6 +33,11 @@
   <!-- shown only in Chinese (i18n.js): the entries below stay in English -->
   <p class="note" data-i18n="notes.english" data-i18n-only="zh ja fr" hidden></p>
 
+  <h2>20261128.1 <span class="muted">· 28 November 2026</span></h2>
+  <ul>
+    <li><b>FreeRDP Web shares this browser's camera</b> (tick Camera in the options; the browser asks once, then the camera runs only while an app on the remote side reads it). Sent as H.264 by the browser's own encoder (WebCodecs), at the size and rate the server asks for (640x480 to 1280x720, about 1 to 3 Mbit/s), with a key frame only when streaming starts; only on the secure page (https or localhost). Chrome tested end to end (into the kit's Linux server and Windows 11's own Remote Desktop); Safari reports support; Edge (Chromium, like Chrome) not tried yet. A browser that can't encode H.264 shows why the option is off.</li>
+  </ul>
+
   <h2>20261126.2 <span class="muted">· 26 November 2026</span></h2>
   <ul>
     <li><b>Extra options</b>: /smart-sizing works (the page no longer adds /dynamic-resolution next to it or next to your own); an option FreeRDP refuses ends the session once, with the option and FreeRDP's reason, instead of retrying.</li>
