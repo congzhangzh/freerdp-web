@@ -3,7 +3,7 @@
 // generated ones of the same kind, so a hand-written /gfx:... never meets a generated /gfx.
 (function (root) {
   "use strict";
-  const DEFAULTS = Object.freeze({ audio: true, mic: false, clipboard: true, codec: "auto", strategy: "recommended", scale: "auto", screens: "separate" });
+  const DEFAULTS = Object.freeze({ audio: true, mic: false, camera: false, clipboard: true, codec: "auto", strategy: "recommended", scale: "auto", screens: "separate" });
   // the Custom list a fresh page starts from (Least data's), kept apart from DEFAULTS: it matters
   // only while Video is Custom
   // what each kind of option looks like on the command line (FreeRDP accepts / + -)
@@ -11,6 +11,7 @@
     video: /^[/+-]gfx(?::|$)/i,
     audio: /^[/+-](?:sound|audio-mode)(?::|$)/i,
     mic: /^[/+-](?:microphone|mic)(?::|$)/i,
+    camera: /^[/+-]dvc:rdpecam(?:,|$)/i,
     clipboard: /^[/+-]clipboard(?::|$)/i,
     network: /^[/+-]network(?::|$)/i,
     compression: /^[/+-](?:compression|compression-level|z)(?::|$)/i,
@@ -100,7 +101,7 @@
     if (!(s.strategy in STRATEGIES)) s.strategy = DEFAULTS.strategy;
     s.scale = String(s.scale); if (!SCALES.includes(s.scale)) s.scale = DEFAULTS.scale;
     if (!SCREENS.includes(s.screens)) s.screens = DEFAULTS.screens;
-    s.audio = s.audio !== false; s.mic = s.mic === true; s.clipboard = s.clipboard !== false;
+    s.audio = s.audio !== false; s.mic = s.mic === true; s.camera = s.camera === true; s.clipboard = s.clipboard !== false;
     return s;
   }
   // [kind, option] pairs for the settings, before Extra options are applied
@@ -110,6 +111,8 @@
       ["video", list ? gfx(list) : "/gfx"],
       ["audio", s.audio ? "/sound" : "/audio-mode:2"],   // 2: the server plays nothing
       ...(s.mic ? [["mic", "/microphone"]] : []),        // off: the browser never asks for it
+      // the browser's cameras (FreeRDP's rdpecam "emscripten" backend); off: never asked for
+      ...(s.camera ? [["camera", "/dvc:rdpecam,sys:emscripten"]] : []),
       ["clipboard", s.clipboard ? "+clipboard" : "-clipboard"],
       ...STRATEGIES[s.strategy],
       ...(s.scale === "auto" ? [] : [["scale", "/scale-desktop:" + s.scale]]),

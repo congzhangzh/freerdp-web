@@ -286,13 +286,14 @@ const setRadio = (name, value) => { const r = document.querySelector(`input[name
 // Video's Custom list, as the host stores it; Least data and Least CPU show their own list
 let codecRows = FreeRDPOptions.normalize({}).codecs;
 function readSession() {
-  return FreeRDPOptions.normalize({ audio: $("optAudio").checked, mic: $("optMic").checked, clipboard: $("optClipboard").checked,
+  return FreeRDPOptions.normalize({ audio: $("optAudio").checked, mic: $("optMic").checked,
+    camera: $("optCamera").checked && !$("optCamera").disabled, clipboard: $("optClipboard").checked,
     codec: radio("codec"), codecs: codecRows, strategy: radio("strategy"), scale: radio("scale"), screens: radio("screens") });
 }
 function showSession(session) {
   const s = FreeRDPOptions.normalize(session);
   codecRows = s.codecs;
-  $("optAudio").checked = s.audio; $("optMic").checked = s.mic; $("optClipboard").checked = s.clipboard;
+  $("optAudio").checked = s.audio; $("optMic").checked = s.mic; $("optCamera").checked = s.camera; $("optClipboard").checked = s.clipboard;
   setRadio("codec", s.codec); setRadio("strategy", s.strategy); setRadio("scale", s.scale); setRadio("screens", s.screens);
   setRadio("keys", FreeRDPKeyboard.get());
   updateSessionText();
@@ -400,6 +401,7 @@ const SCREENS_HINTS = {
   span: { i18n: "hint.screensSpan", text: "One desktop as wide as all the screens: a maximized window covers every one of them." },
 };
 const KIND_NAMES = { video: { i18n: "set.video", text: "Video" }, audio: { i18n: "set.sound", text: "Sound" }, mic: { i18n: "set.mic", text: "Microphone" },
+  camera: { i18n: "set.camera", text: "Camera" },
   clipboard: { i18n: "set.clipboard", text: "Clipboard" }, network: { i18n: "set.priority", text: "Priority" },
   compression: { i18n: "set.priority", text: "Priority" }, scale: { i18n: "set.scale", text: "Remote scale" } };
 // what Automatic sends: the screen's scale, above 100 % (vault.js connectionArgs)
@@ -428,7 +430,7 @@ function updateSessionText() {
     list([s.codec !== "auto" && label("codec", s.codec), s.strategy !== "recommended" && label("strategy", s.strategy),
      s.scale !== "auto" && t("set.scaleSummary", "scale " + label("scale", s.scale), { scale: label("scale", s.scale) }),
      s.screens !== "separate" && label("screens", s.screens),
-     !s.audio && t("set.noSound", "no sound"), s.mic && t("set.micSummary", "microphone"), !s.clipboard && t("set.noClipboard", "no clipboard")].filter(Boolean));
+     !s.audio && t("set.noSound", "no sound"), s.mic && t("set.micSummary", "microphone"), s.camera && t("set.cameraSummary", "camera"), !s.clipboard && t("set.noClipboard", "no clipboard")].filter(Boolean));
   $("preview").textContent = FreeRDPOptions.resolve(s, extra, codecEnv()).join(" ");
   updateSummary();
 }
@@ -538,6 +540,8 @@ function moduleConfig() {
   freerdpClipboardFileData: (stream, ok, bytes) => filesData(stream, ok, bytes),
   // with All screens, the screens the canvas is split into (Separate screens; "All screens", below)
   freerdpMonitors: () => screensMonitors(),
+  // the browser could not open a camera the server started (rdpecam "emscripten")
+  onFreerdpCameraError: (e) => log("[page] camera: " + (e?.name ? e.name + ": " + e.message : e)),
   onRuntimeInitialized() {
     runtimeReady = true; resolveRuntime(true);
     $("go").disabled = false; goReady = true; showGo(); status("ready", "status.ready"); window.freerdpPageReady = true;
@@ -545,6 +549,8 @@ function moduleConfig() {
     if (typeof Module._audin_emscripten_release === "function") {
       $("optMic").disabled = false; $("micNote").hidden = true; micReady = true; showMicTitle();
     }
+    // a client built with the browser camera backend (FreeRDP's rdpecam "emscripten")
+    if (typeof Module._camera_emscripten_release === "function") { cameraReady = true; showCamera(); updateSessionText(); }
     if (autoconnect) { autoconnect = false; connect(); }   // the first client only
   },
   onExit(code) {
@@ -1830,6 +1836,9 @@ async function connect(againPassword = null, retrying = false) {
   checkSelection();
   if (!await runtime) throw new Error(t("status.noRuntime", "WebAssembly runtime unavailable."));
   checkSelection();
+  // the cameras the client offers the server; each opens only when the server reads it
+  if (readSession().camera) { Module.freerdpCameraH264 = cameraH264 !== false; Module.freerdpCameras = await cameraList(); }
+  checkSelection();
   if ($("fs").checked) { if (filling || fillByDefault()) setFill(true); else await enterFullscreen(); }
   // SDL3 applies FreeRDP's windowed state with document.exitFullscreen(); the page owns full
   // screen, so ignore programmatic exits (toggleFullscreen and holding Esc still work).
@@ -2156,6 +2165,57 @@ $("connectForm").addEventListener("submit", (e) => { e.preventDefault(); connect
 // already put the HTML's own words in it). Lines that come and go (the end bar, the toasts) keep
 // the language they were said in.
 let goReady = false, micReady = false;
+// Camera: only in a secure context (https or localhost), in a client built with it, in a browser
+// that encodes H.264 (WebCodecs; the camera goes out as H.264 only). Turning it on asks the browser
+// once (the tracks stop at once); the camera opens only when the server reads it.
+let cameraReady = false, cameraDenied = false, cameraH264 = null;   // null: not known yet
+function showCamera() {
+  const box = $("optCamera"), secure = window.isSecureContext;
+  box.disabled = !cameraReady || !secure || cameraH264 === false;
+  $("cameraNote").hidden = cameraReady;
+  const insecure = t("set.cameraInsecure", "The camera needs the secure page (https or localhost)");
+  const noH264 = t("set.cameraNoH264", "This browser can't encode the camera picture (it needs H.264 video encoding); try Chrome or Edge");
+  box.parentElement.title = !cameraReady ? t("set.cameraNone", "This build of the client has no camera support")
+    : !secure ? insecure : cameraH264 === false ? noH264
+    : t("set.cameraTitle", "Send this browser's camera to the remote session (the browser asks first)");
+  const reason = cameraReady && !secure ? insecure : cameraReady && cameraH264 === false ? noH264
+    : cameraDenied ? t("set.cameraDenied", "The browser refused the camera; it stays off") : "";
+  $("cameraReason").textContent = reason; $("cameraReason").hidden = !reason;
+}
+// the encoder the client asks for at 640x480 (camera_emscripten.c: Constrained Baseline 3.0, 1 Mbit/s)
+const CAMERA_H264 = { codec: "avc1.42E01E", width: 640, height: 480, bitrate: 1000000, framerate: 30,
+  latencyMode: "realtime", avc: { format: "avc" } };
+(async () => {
+  try { cameraH264 = typeof VideoEncoder === "function" && (await VideoEncoder.isConfigSupported(CAMERA_H264)).supported === true; }
+  catch (e) { cameraH264 = false; }
+  log("[page] H.264 encoding for the camera: " + (cameraH264 ? "yes" : "no"));
+  showCamera(); updateSessionText();
+})();
+const videoInputs = async () => (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "videoinput");
+const cameraOnce = async () => (await navigator.mediaDevices.getUserMedia({ video: true, audio: false })).getTracks().forEach((tr) => tr.stop());
+async function askCamera() {
+  cameraDenied = false; showCamera();
+  try { await cameraOnce(); log("[page] camera allowed"); }
+  catch (e) {
+    log("[page] camera refused: " + (e?.name || e));
+    $("optCamera").checked = false; cameraDenied = true; showCamera();
+    HostsUI.update({ session: readSession() }); updateSessionText();
+  }
+}
+$("optCamera").addEventListener("change", () => {
+  if ($("optCamera").checked) askCamera(); else { cameraDenied = false; showCamera(); }
+});
+// the browser's cameras for the client (Module.freerdpCameras); names need the permission, which a
+// setting saved earlier may not have in this browser yet: ask then
+async function cameraList() {
+  try {
+    let devs = await videoInputs();
+    if (!devs.some((d) => d.label)) { await cameraOnce(); devs = await videoInputs(); }
+    const list = devs.map((d) => ({ deviceId: d.deviceId, label: d.label }));
+    log("[page] cameras: " + (list.map((c) => c.label || "(no name)").join(", ") || "none, the browser's default"));
+    return list;
+  } catch (e) { log("[page] no camera list: " + (e?.name || e)); return []; }
+}
 function showGo() { $("go").textContent = goReady ? t("form.connect", "Connect") : t("form.loading", "Loading…"); }
 function showMicTitle() {
   $("optMic").parentElement.title = micReady ? t("set.micTitle", "Send this browser's microphone to the remote session (the browser asks first)")
@@ -2163,7 +2223,7 @@ function showMicTitle() {
 }
 function showFsButton() { $("tbFs").textContent = document.fullscreenElement || filling ? t("tb.window", "Window") : t("tb.fullscreen", "Full screen"); }
 globalThis.FreeRDPi18n?.onChange(() => {
-  showTargetLabel(); showGo(); showMicTitle(); showFsButton(); showPinTitle(); showScreensButton(); showDirectHint(); showLogView();
+  showTargetLabel(); showGo(); showMicTitle(); showCamera(); showFsButton(); showPinTitle(); showScreensButton(); showDirectHint(); showLogView();
   updateSessionText(); showHotkeys(); updateRoute(); status(...statusLine);
 });
 

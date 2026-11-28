@@ -137,9 +137,12 @@
         <label><input id="optAudio" type="checkbox" checked> <span data-i18n="set.sound">Sound</span></label>
         <label title="This build of the client has no microphone support"><input id="optMic" type="checkbox" disabled>
           <span data-i18n="set.mic">Microphone</span> <small class="muted" id="micNote" data-i18n="set.micNote">(not in this build)</small></label>
+        <label title="This build of the client has no camera support"><input id="optCamera" type="checkbox" disabled>
+          <span data-i18n="set.camera">Camera</span> <small class="muted" id="cameraNote" data-i18n="set.cameraNote">(not in this build)</small></label>
         <label><input id="optClipboard" type="checkbox" checked> <span data-i18n="set.clipboard">Clipboard</span></label>
         <label><input id="fs" type="checkbox"> <span data-i18n="set.fullscreen">Full screen</span></label>
       </div>
+      <p class="hint muted" id="cameraReason" hidden></p>
     </fieldset>
     <fieldset>
       <legend data-i18n="set.video">Video</legend>
