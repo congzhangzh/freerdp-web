@@ -183,6 +183,9 @@ check("zh: server.html is <html lang=\"zh-Hans\"> with a Chinese title", await z
 check("zh: the cards' headings and labels in Chinese, the sessions and commands as install.json has them",
   [I.ZH["srv.shadowName"], "启动服务", "全部文件及校验和："].every((s) => kit.includes(s)) && kit.includes("Wayland: GNOME, KDE Plasma, sway")
   && await zh.ev("[...document.querySelectorAll('#kit .copyable button')].every((b) => b.textContent === '复制')"), kit.split("\n").slice(0, 4).join(" | "));
+check("zh: rdp-kit-server first, in Chinese; the lead's release-kit link keeps its own words (srv.kit, not srv.kitEasy)",
+  await zh.ev(text("#linux-kit")) === "最简单的方式：rdp-kit-server" && await zh.ev(text("#linux-steps")) === "或者一步一步来"
+  && await zh.ev(text('a[data-i18n="srv.kit"]')) === "发布工具包");
 await zh.screenshot("i18n-server-wide.png");
 await zh.ev("(() => { const s = document.getElementById('lang'); s.value = 'en'; s.dispatchEvent(new Event('change')); return true; })()"); await sleep(300);
 const kitEn = await zh.ev("document.getElementById('kit').textContent") || "";

@@ -9,7 +9,8 @@
 // to any section opening its tabs; a card per distribution, each command with a Copy button that
 // copies it; the start command; the Linux host; the session manager only when install.json has it;
 // no client on it; the link to all files; no sideways scrolling at phone width in any tab; without install.json, or with a broken one, only the link to the kit's latest
-// release. Get a client: the two ways in the browser, uvx, the offline pack, pip, freerdp-tk, its
+// release. rdp-kit-server first in each system's tab, then "Or step by step" and the tab's own steps.
+// Get a client: the two ways in the browser, uvx, the offline pack, pip, freerdp-tk, its
 // videos, the same fallback. Every page's header links to both, Get a client right after Get a server, and none
 // to "Install as app" any more. Screenshots go to the out
 // dir (default out/). CHROME=<binary> picks another Chrome or Chromium.
@@ -108,7 +109,7 @@ check("a tab per system, then Notes, and a tab per family of distributions",
 check("Linux and its first family show at first, and only they", same(await shown("system"), ["linux"]) && same(await shown("family"), ["server-debian"])
   && same(await current("system"), ["#linux"]) && same(await current("family"), ["#server-debian"]));
 check("under Linux: the shadow server, xrdp, the desktop's own server",
-  same(await ev("[...document.querySelectorAll('#linux h3')].map((h) => h.id)"), ["linux-shadow", "xrdp", "linux-own"]));
+  same(await ev("[...document.querySelectorAll('#linux h3')].map((h) => h.id)"), ["linux-kit", "linux-steps", "linux-shadow", "xrdp", "linux-own"]));
 check("the safety line is above the tabs, with its link, and Then connect is gone",
   await ev("!!document.querySelector('main > p a[href=\"safety.html\"]') && document.querySelector('main > p a[href=\"safety.html\"]').compareDocumentPosition(document.querySelector('.tabs')) === Node.DOCUMENT_POSITION_FOLLOWING")
   && await ev("![...document.querySelectorAll('main h2')].some((h) => h.textContent === 'Then connect')"));
@@ -139,16 +140,17 @@ const old = await ev("document.querySelectorAll('#kit [data-tab=family] .distro'
 check("an older install.json's sessions stay one line", old.includes("Sessions: " + want.server[1].sessions), old.split("\n").slice(0, 2).join(" | "));
 const pres = await ev("[...document.querySelectorAll('#kit .copyable')].map((c) => [c.querySelector('pre').textContent, !!c.querySelector('button[data-copy]')])");
 const usable = want.linux.filter((l) => l.url.startsWith("https:"));
-const commands = [...usable.map((l) => l.command), want.linux[0].kickstart, want.linux[0].remove,
+const kitServer = ["uvx rdp-kit-server install", "uvx rdp-kit-server doctor", "uvx rdp-kit-server uninstall"];
+const commands = [...kitServer, ...usable.map((l) => l.command), want.linux[0].kickstart, want.linux[0].remove,
   want.server[0].command, want.server[0].more[0].command, want.server[1].command, want.server[2].command, want.server[3].command, want.start,
-  want.windows.command, want.windows.remove,
-  want.mac[0].command, want.mac[1].command, "launchctl kickstart -k gui/$(id -u)/org.freerdp.shadow", want.mac[0].remove,
+  ...kitServer, want.windows.command, want.windows.remove,
+  ...kitServer, want.mac[0].command, want.mac[1].command, "launchctl kickstart -k gui/$(id -u)/org.freerdp.shadow", want.mac[0].remove,
   ...(want.av2 ? [want.av2.command] : [])];
 check("every command, the more ones and the start one, has a Copy button", JSON.stringify(pres) === JSON.stringify(commands.map((c) => [c, true])),
   `${pres.length} commands`);
 // what the button hands the clipboard (the system clipboard stays untouched)
 await ev("window.__copied = null; navigator.clipboard.writeText = async (t) => { window.__copied = t; }; true");
-const copyAt = usable.length + 2 + 3;   // the Fedora 45 card's: after the Linux host's commands, and Debian's two and Ubuntu's
+const copyAt = 3 + usable.length + 2 + 3;   // the Fedora 45 card's: after rdp-kit-server's three, the Linux host's commands, and Debian's two and Ubuntu's
 await ev(`document.querySelectorAll('#kit .copyable button')[${copyAt}].click(), true`); await sleep(300);
 const copied = String(await ev("window.__copied"));
 check("Copy copies the command exactly", copied === want.server[2].command && await ev(`document.querySelectorAll('#kit .copyable button')[${copyAt}].textContent`) === "Copied", copied.slice(0, 60));
@@ -164,8 +166,16 @@ check("the Linux host: a card per processor (a link that is not https left out),
   same(await ev("[...document.querySelectorAll('#linux-shadow ~ .distros section[aria-label^=Linux] h5')].map((h) => h.textContent)"), usable.map((l) => l.platform))
   && await ev(`${JSON.stringify(usable.map((l) => l.url))}.every((u) => [...document.querySelectorAll('#linux a')].some((a) => a.href === u))`));
 check("no session manager without its field", await ev("!document.getElementById('session-manager')"));
+for (const [system, extra] of [["linux", "On Linux it picks the way itself"], ["windows", ""], ["macos", "Then allow FreeRDP Shadow"]])
+  check(`${system}: rdp-kit-server first (install, doctor, uninstall), then "Or step by step"`,
+    await ev(`(() => { const p = document.getElementById('${system}'); const h = [...p.querySelectorAll('h3')];
+      return h[0]?.id === '${system}-kit' && h[0].textContent === 'The easy way: rdp-kit-server' && h[1]?.id === '${system}-steps' && h[1].textContent === 'Or step by step'; })()`) === true
+    && same(await ev(`(() => { const out = []; let e = document.getElementById('${system}-kit').nextElementSibling;
+      while (e && e.id !== '${system}-steps') { if (e.matches('.copyable')) out.push(e.querySelector('pre').textContent); e = e.nextElementSibling; } return out; })()`),
+      ["uvx rdp-kit-server install", "uvx rdp-kit-server doctor", "uvx rdp-kit-server uninstall"])
+    && (!extra || (await ev(`document.getElementById('${system}-kit').parentElement.textContent`)).includes(extra)));
 check("Windows: its tab has its own Remote Desktop and the shadow server, the archive linked",
-  await ev("document.querySelectorAll('#windows h3').length") === 2 && await ev(`[...document.querySelectorAll('#windows a')].some((a) => a.href === ${JSON.stringify(want.windows.url)})`));
+  await ev("document.querySelectorAll('#windows h3').length") === 4 && await ev(`[...document.querySelectorAll('#windows a')].some((a) => a.href === ${JSON.stringify(want.windows.url)})`));
 check("the Windows host's video in its tab, the Mac host's in its own",
   await ev("document.querySelector('#windows video')?.getAttribute('src')") === "demo/windows-host.mp4" && await ev("document.querySelector('#macos video')?.getAttribute('src')") === "demo/mac-host.mp4"
   && await ev("document.querySelectorAll('#kit video').length") === 2);
