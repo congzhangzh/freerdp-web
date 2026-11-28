@@ -15,6 +15,15 @@ How fast the client is, measured, and why: [20261025.1](#202610251), the JSPI bu
 35 % smaller download, connects about 30 % sooner, half the processor time or less while
 idle).
 
+## 20261128.2
+
+- **Get a server: rdp-kit-server first.** Each system's tab (Linux, Windows, macOS) starts with
+  the easy way, `uvx rdp-kit-server install`, with `doctor` to check it and `uninstall` to remove
+  exactly what it added; then "Or step by step", the tab's steps as before.
+- **A link to a section of Get a client works.** The page draws that part after the browser has
+  looked for the section, so a link such as client.html#pip opened the top of the page; it now
+  scrolls to the section, as Get a server's links do.
+
 ## 20261128.1
 
 - **FreeRDP Web shares this browser's camera** (tick Camera in the options; the browser asks once,
