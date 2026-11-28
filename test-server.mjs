@@ -243,6 +243,11 @@ check("the clients table: platform and file link, a link that is not https left 
 check("uvx and pip each with their line and a Copy button, around the offline pack's table", await ev("document.querySelector('#clients + h3')?.id") === "pip"
   && same(await ev("[...document.querySelectorAll('#native .copyable')].map((c) => [c.querySelector('pre').textContent, !!c.querySelector('button[data-copy]')])"),
     [["uvx freerdp-tk", true], ["pip install freerdp-tk", true]]));
+// opened with the section in its address: the page draws it after the browser looked for it
+await open(sample, "client.html#pip");
+check("client.html#pip, opened afresh, scrolls to With pip", Math.abs(await ev("document.getElementById('pip').getBoundingClientRect().top")) < 40,
+  `top ${await ev("document.getElementById('pip').getBoundingClientRect().top")}`);
+await open(sample, "client.html");
 const clips = await ev("[...document.querySelectorAll('#native figure.clip')].map((f) => [f.querySelector('b').textContent, f.querySelector('video').getAttribute('src'), f.querySelector('video').getAttribute('poster'), f.querySelector('video').preload])");
 check("demo.json's freerdp-tk videos, each with its title and poster, loading nothing before play",
   JSON.stringify(clips) === JSON.stringify(JSON.parse(demoJson).clients.map((c) => [c.title, c.src, c.poster, "none"])), JSON.stringify(clips.map((c) => c[0])));

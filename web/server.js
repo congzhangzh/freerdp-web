@@ -344,9 +344,11 @@
       const videos = () => (server ? { windows: clips(d, "windows"), mac: clips(d, "mac") } : clips(d, "clients"));
       const show = () => (server ? renderServer(k, into, videos()) : renderClients(k, into, videos()));
       show();
+      // the address's section, drawn only now (the browser looked for it before): on both pages,
+      // so a link such as client.html#uvx lands there too
+      fromAddress(into);
+      addEventListener("hashchange", () => fromAddress(into));
       if (server) {
-        fromAddress(into);
-        addEventListener("hashchange", () => fromAddress(into));
         // a tab changes what shows without moving the page, and its address can still be copied
         into.addEventListener("click", (e) => {
           const a = e.target.closest?.(".tabs a");
