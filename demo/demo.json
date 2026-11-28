@@ -1,8 +1,8 @@
 {
   "recorded": {
-    "kit": "4ca11ca4bd0022e8f09abe30b1634d87a2ddc2d0",
-    "web": "web-20261128.2-4ca11ca4bd00",
-    "xrdp": "xrdp-20261128.2-4ca11ca4bd00",
+    "kit": "0cd5fa1480608514b9229fa87f80410a02bf39d9",
+    "web": "web-20261128.3-0cd5fa148060",
+    "xrdp": "xrdp-20261128.3-0cd5fa148060",
     "pipewire-module-xrdp": "pipewire-module-xrdp-20261031.1-1b78a2c01cc2"
   },
   "videos": [
@@ -213,14 +213,13 @@
       "poster": "demo/windows-native.jpg",
       "caption": "The kit's native client (sdl-freerdp) on a Windows Server 2025 machine of the CI, to FreeRDP's shadow server on the same machine (loopback, no network in between): the server shares only the first monitor (/monitors:0), where Edge plays web video, and the client's window sits on a second, virtual monitor, so it doesn't show itself. AV1 4:2:0, decoded in software (dav1d: the CI machine has no GPU); the label's rate is the server encoder's own (the CI machine has no sound card, so no sound here). Big Buck Bunny © Blender Foundation, CC BY 3.0.",
       "recorded": {
-        "recorded": "2026-11-27T21:28:35Z",
-        "run": "46068278928",
+        "recorded": "2026-11-28T15:55:38Z",
+        "run": "46161035628",
         "run_attempt": "1",
-        "kit": "ac35738eb27e5ad50a7c7f8d71a8b4eac33704f5",
-        "mean_fps": 21.8,
+        "kit": "0cd5fa1480608514b9229fa87f80410a02bf39d9",
+        "mean_fps": 16.5,
         "written_fps": 25.6,
-        "label": "AV1 4:2:0 · dav1d (software) · 22/s",
-        "reused_from": "20261127.3"
+        "label": "AV1 4:2:0 · dav1d (software) · 16/s"
       },
       "i18n": {
         "zh": {
