@@ -1,8 +1,8 @@
 {
   "recorded": {
-    "kit": "6d3d66f3a412c934dcedafed862a4fadf8ecc0ed",
-    "web": "web-20261128.5-6d3d66f3a412",
-    "xrdp": "xrdp-20261128.5-6d3d66f3a412",
+    "kit": "9cb92dfb35a7f6e64a73709fcbe0a2ae3401e31e",
+    "web": "web-20261128.6-9cb92dfb35a7",
+    "xrdp": "xrdp-20261128.6-9cb92dfb35a7",
     "pipewire-module-xrdp": "pipewire-module-xrdp-20261031.1-1b78a2c01cc2"
   },
   "videos": [
@@ -104,6 +104,28 @@
       ]
     },
     {
+      "title": "gnome-remote-desktop + GNOME Wayland",
+      "src": "demo/grd-gnome.mp4",
+      "poster": "demo/grd-gnome.jpg",
+      "caption": "gnome-remote-desktop with GNOME Shell on Wayland, headless, on Debian 13: the same visit, with GNOME Console started from the search. Big Buck Bunny © Blender Foundation, CC BY 3.0; WebGL Aquarium © Google, BSD.",
+      "i18n": {
+        "zh": {
+          "caption": "gnome-remote-desktop 与 Wayland 上的 GNOME Shell，无头模式，Debian 13：同样的流程，从搜索中打开 GNOME Console。Big Buck Bunny © Blender Foundation，CC BY 3.0；WebGL Aquarium © Google，BSD。"
+        },
+        "ja": {
+          "caption": "gnome-remote-desktop と Wayland 上の GNOME Shell（ヘッドレス、Debian 13）です。同じ流れで、検索から GNOME Console を開きます。Big Buck Bunny © Blender Foundation、CC BY 3.0。WebGL Aquarium © Google、BSD。"
+        },
+        "fr": {
+          "caption": "gnome-remote-desktop avec GNOME Shell sous Wayland, sans écran, sur Debian 13 : la même visite, avec GNOME Console ouvert depuis la recherche. Big Buck Bunny © Blender Foundation, CC BY 3.0 ; WebGL Aquarium © Google, BSD."
+        }
+      },
+      "id": "gnome-remote-desktop",
+      "aliases": [
+        "demo-gnome",
+        "grd-gnome"
+      ]
+    },
+    {
       "title": "FreeRDP shadow server + Linux, two screens, AV1",
       "src": "demo/shadow-multimon.mp4",
       "poster": "demo/shadow-multimon.jpg",
@@ -191,13 +213,13 @@
       "poster": "demo/windows-native.jpg",
       "caption": "The kit's native client (sdl-freerdp) on a Windows Server 2025 machine of the CI, to FreeRDP's shadow server on the same machine (loopback, no network in between): the server shares only the first monitor (/monitors:0), where Edge plays web video, and the client's window sits on a second, virtual monitor, so it doesn't show itself. AV1 4:2:0, decoded in software (dav1d: the CI machine has no GPU); the label's rate is the server encoder's own (the CI machine has no sound card, so no sound here). Big Buck Bunny © Blender Foundation, CC BY 3.0.",
       "recorded": {
-        "recorded": "2026-11-28T17:29:05Z",
-        "run": "46169268440",
-        "run_attempt": "1",
-        "kit": "6d3d66f3a412c934dcedafed862a4fadf8ecc0ed",
-        "mean_fps": 20.9,
-        "written_fps": 25.2,
-        "label": "AV1 4:2:0 · dav1d (software) · 21/s"
+        "recorded": "2026-11-28T18:52:49Z",
+        "run": "46176358712",
+        "run_attempt": "2",
+        "kit": "9cb92dfb35a7f6e64a73709fcbe0a2ae3401e31e",
+        "mean_fps": 16.1,
+        "written_fps": 25.6,
+        "label": "AV1 4:2:0 · dav1d (software) · 16/s"
       },
       "i18n": {
         "zh": {

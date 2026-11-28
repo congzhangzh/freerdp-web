@@ -169,6 +169,20 @@
     }
   }
 
+  // rdp-kit-server, at the top of each system's panel (the beginner's way), then "Or step by step"
+  // and the panel's own steps, unchanged
+  const kitServer = (system, more) => [
+    el("h3", { id: system + "-kit", text: t("srv.kitEasy", "The easy way: rdp-kit-server") }),
+    el("p", { text: t("srv.kitWhy", "One command installs FreeRDP's server the way this system expects, on 127.0.0.1:3388. It asks for administrator rights once and says what it adds. You need uv.") }),
+    copyable("uvx rdp-kit-server install"),
+    ...(more ? [el("p", { text: more })] : []),
+    el("p", { class: "hint", text: t("srv.kitCheck", "Check it any time; a problem comes with its fix:") }),
+    copyable("uvx rdp-kit-server doctor"),
+    el("p", { class: "hint", text: t("srv.kitRemove", "Remove exactly what it added, nothing else:") }),
+    copyable("uvx rdp-kit-server uninstall"),
+    el("h3", { id: system + "-steps", text: t("srv.byHand", "Or step by step") }),
+  ];
+
   // Get a server: a tab per system and Notes. Linux has the shadow server, xrdp (a tab per family
   // of distributions, a card per release, the start command) and the desktop's own server
   function renderServer(k, into, videos = {}) {
@@ -181,7 +195,8 @@
       return p;
     };
     let out = panel("linux", "Linux");
-    out.append(el("h2", { class: "sr-only", text: "Linux" }));
+    out.append(el("h2", { class: "sr-only", text: "Linux" }),
+      ...kitServer("linux", t("srv.kitLinux", "On Linux it picks the way itself: the session manager on GNOME, your own desktop on another one (--mode chooses it yourself).")));
     const ways = el("ul", {});
     if (k.linux.length) ways.append(el("li", {}, el("a", { href: "#linux-shadow", text: t("srv.shadowName", "FreeRDP's shadow server") }), t("srv.waysShadow", ": this computer's own screen, the session that is already there.")));
     ways.append(el("li", {}, el("a", { href: "#xrdp", text: "xrdp" }), t("srv.waysXrdp", ": a desktop of its own for each login; the computer needs no screen and nobody logged in.")),
@@ -239,7 +254,7 @@
     if (k.windows) out = panel("windows", "Windows");
     if (k.windows) {
       const w = k.windows;
-      out.append(el("h2", { class: "sr-only", text: "Windows" }),
+      out.append(el("h2", { class: "sr-only", text: "Windows" }), ...kitServer("windows"),
         el("h3", { text: t("srv.winRdp", "Its own Remote Desktop: nothing to install") }),
         el("p", { text: t("srv.winRdpWhy", "Windows Server, and Windows Pro and Enterprise, have a Remote Desktop server of their own: turn it on (Settings, System, Remote Desktop), and FreeRDP Web reaches it through a gateway on that PC, as it reaches xrdp. Each user gets a session of their own, with its sound.") }),
         el("h3", { text: t("srv.winShadow", "Share this PC's own screen: FreeRDP's shadow server") }),
@@ -255,6 +270,7 @@
     if (k.mac.length) {
       const first = k.mac[0];
       out.append(el("h2", { class: "sr-only", text: "macOS" }),
+        ...kitServer("macos", t("srv.kitMac", "Then allow FreeRDP Shadow under Screen & System Audio Recording and Accessibility; doctor tells you if one is missing.")),
         el("h3", { text: t("srv.macShadow", "Share this Mac's own screen: FreeRDP's shadow server") }),
         el("p", { text: t("srv.macWhy", "FreeRDP's shadow server for macOS shares the Mac's own screen and its sound: the login window, then the desktop of the user who logs in, on the same connection. It shares that one screen and starts no sessions of its own. The picture is AV2 for the clients that offer it (the kit's FreeRDP clients and FreeRDP Web), AV1 for the others that have it, else H.264 from the Mac's own VideoToolbox; the login is a local macOS account.") }),
         el("p", { text: t("srv.macInstall", "In Terminal, as an administrator, for your Mac's processor: download, unpack and run the installer with sudo. It puts the app in Applications, the server as a root LaunchDaemon on 127.0.0.1:3388, there before anyone logs in, and its agent at the login window and in each session:") }));
@@ -328,9 +344,11 @@
       const videos = () => (server ? { windows: clips(d, "windows"), mac: clips(d, "mac") } : clips(d, "clients"));
       const show = () => (server ? renderServer(k, into, videos()) : renderClients(k, into, videos()));
       show();
+      // the address's section, drawn only now (the browser looked for it before): on both pages,
+      // so a link such as client.html#uvx lands there too
+      fromAddress(into);
+      addEventListener("hashchange", () => fromAddress(into));
       if (server) {
-        fromAddress(into);
-        addEventListener("hashchange", () => fromAddress(into));
         // a tab changes what shows without moving the page, and its address can still be copied
         into.addEventListener("click", (e) => {
           const a = e.target.closest?.(".tabs a");
